@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Derja Express</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Derja">
+<meta name="theme-color" content="#0b0c0f">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/png;base64,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">
+<style>
+/* Écran d'app iOS sombre : résultat en haut, gros bouton micro au pouce en bas */
+:root{
+  --bg:#0b0c0f; --surface:#17181d; --surface-2:#22242b; --line:#2e3038;
+  --fg:#f4f5f7; --muted:#9a9ca6; --accent:#3d8bff; --accent-ink:#ffffff;
+  --rec:#ff453a; --warn:#ffb340; --danger:#ff6961;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;
+  --arab:"Geeza Pro","SF Arabic","Noto Naskh Arabic",Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+[hidden]{display:none!important}
+.app{display:flex;flex-direction:column;min-height:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:640px;margin:0 auto}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding-block:12px 8px}
+h1{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
+h1 small{display:block;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0}
+.icon-btn{appearance:none;border:0;background:var(--surface-2);color:var(--fg);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{flex:1;display:flex;flex-direction:column;gap:20px;padding-block:8px 24px}
+.card{background:var(--surface);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.setup{border:1px solid color-mix(in srgb,var(--accent) 50%,transparent)}
+.setup h2{margin:0;font-size:18px}
+.setup p,.setup ol{margin:0;color:var(--muted);font-size:14px}
+.setup ol{padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.setup a{color:var(--accent)}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
+.tag{background:var(--surface-2);color:var(--muted);border-radius:6px;padding:1px 6px;letter-spacing:.02em;text-transform:none;font-weight:500}
+.fr-src{color:var(--muted);font-size:15px;overflow-wrap:anywhere}
+.big{font-family:var(--display);font-size:30px;font-weight:650;line-height:1.2;letter-spacing:-.01em;overflow-wrap:anywhere}
+.arabe{font-family:var(--arab);font-size:26px;direction:rtl;text-align:right;line-height:1.6;overflow-wrap:anywhere}
+.arabe.small{font-size:20px}
+.heard{font-size:13px;color:var(--muted);border-left:2px solid var(--line);padding-left:10px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;font:600 15px var(--sans);background:var(--surface-2);color:var(--fg);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.mam{border-top:1px solid var(--line);padding-top:12px;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px;margin:0}
+.mam dt{font-weight:650;white-space:nowrap}
+.mam dd{margin:0;color:var(--muted)}
+.extra{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+.extra b{color:var(--fg);font-weight:600}
+.status{color:var(--muted);font-size:15px;display:flex;align-items:center;gap:10px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+.err{color:var(--danger);font-size:15px}
+.hist h2{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.hist ul{list-style:none;margin:0;padding:0;background:var(--surface);border-radius:14px;overflow:hidden}
+.hist li+li{border-top:1px solid var(--line)}
+.hist button{appearance:none;border:0;background:none;color:var(--fg);width:100%;text-align:left;padding:12px 14px;display:flex;flex-direction:column;gap:2px;cursor:pointer;font:inherit}
+.hist .h-a{font-weight:600}
+.hist .h-b{color:var(--muted);font-size:14px}
+.hist .empty{padding:14px;color:var(--muted);font-size:14px}
+.composer{position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line)}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:10px;padding:2px}
+.seg button{appearance:none;border:0;background:none;color:var(--muted);font:600 14px var(--sans);padding:8px 4px;border-radius:8px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.mic{appearance:none;border:0;width:100%;min-height:72px;border-radius:20px;background:var(--accent);color:var(--accent-ink);font:650 17px var(--sans);display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;transition:background .15s}
+.mic.rec{background:var(--rec)}
+.mic:disabled{opacity:.45}
+.mic .t{font-variant-numeric:tabular-nums}
+.row{display:flex;gap:10px;align-items:flex-end}
+textarea,input[type=text],input[type=password],select{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:14px;padding:12px 14px;font:16px var(--sans)}
+textarea{resize:none;min-height:48px;max-height:140px}
+textarea::placeholder,input::placeholder{color:var(--muted)}
+.go{height:48px;padding:0 16px;border-radius:14px}
+/* Feuille de réglages */
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet-in{background:var(--surface);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px;max-height:88%;overflow:auto}
+.sheet h2{margin:0;font-size:20px}
+.sheet h3{margin:0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:8px}
+.field label,.field .lbl{font-size:14px;font-weight:600}
+.field p{margin:0;font-size:13px;color:var(--muted)}
+.field p a{color:var(--accent)}
+.sheet input[type=text],.sheet input[type=password],.sheet select{background:var(--surface-2)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+details summary{cursor:pointer;color:var(--muted);font-size:14px;font-weight:600}
+details[open] summary{margin-bottom:12px}
+/* Plein écran à montrer */
+.full{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:24px;padding:calc(24px + env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px));text-align:center;cursor:pointer}
+.full .arabe{font-size:clamp(36px,11vw,72px);text-align:center;line-height:1.5}
+.full .sub{color:var(--muted);font-size:15px}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}.mic{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Derja Express<small>Français ⇄ tunisien</small></h1>
+    <button class="icon-btn" id="openSettings" aria-label="Réglages">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="card setup" id="setup" hidden>
+      <h2>Active le micro en 2 minutes</h2>
+      <ol>
+        <li>Crée un compte gratuit sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a> (sans carte bancaire).</li>
+        <li>Dans « API Keys », touche « Create API Key » et copie la clé.</li>
+        <li>Colle-la ici. Elle reste sur ton iPhone.</li>
+      </ol>
+      <div class="row">
+        <input type="password" id="setupKey" placeholder="gsk_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="btn primary" type="button" id="setupSave">Enregistrer</button>
+      </div>
+    </section>
+    <section class="card" id="result" aria-live="polite"></section>
+    <section class="hist">
+      <h2>Historique</h2>
+      <ul id="histList"></ul>
+    </section>
+  </main>
+
+  <form class="composer" id="composer">
+    <div class="seg" role="group" aria-label="Sens de traduction">
+      <button type="button" data-dir="fr2tn">Je parle · FR → TN</button>
+      <button type="button" data-dir="tn2fr">J'écoute · TN → FR</button>
+    </div>
+    <button type="button" class="mic" id="mic">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      <span id="micLabel">Maintiens et parle</span>
+    </button>
+    <div class="row">
+      <textarea id="txt" rows="1" placeholder="Ou écris ta phrase" enterkeyhint="send" autocomplete="off"></textarea>
+      <button type="submit" class="btn go" id="go">Traduire</button>
+    </div>
+  </form>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 id="sheetTitle">Réglages</h2>
+      <button class="btn" id="closeSettings" type="button">OK</button>
+    </div>
+
+    <h3>Services</h3>
+    <div class="field">
+      <label for="groqKey">Clé Groq (voix et traduction gratuite)</label>
+      <input type="password" id="groqKey" placeholder="gsk_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <p>À créer sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>. Gratuit, environ 2 000 phrases par jour.</p>
+    </div>
+    <div class="field">
+      <span class="lbl">Moteur de traduction</span>
+      <div class="seg" role="group" id="segEngine">
+        <button type="button" data-e="groq">Groq · gratuit</button>
+        <button type="button" data-e="claude">Claude · payant</button>
+      </div>
+      <p>Claude comprend mieux le tunisien, pour quelques centimes par conversation.</p>
+    </div>
+    <div class="field" id="claudeField">
+      <label for="claudeKey">Clé Claude</label>
+      <input type="password" id="claudeKey" placeholder="sk-ant-…" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <p>À créer sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>, après avoir ajouté quelques dollars de crédit.</p>
+    </div>
+    <details>
+      <summary>Modèles (avancé)</summary>
+      <div class="field">
+        <label for="whisperModel">Reconnaissance vocale (Groq)</label>
+        <input type="text" id="whisperModel" autocapitalize="off" spellcheck="false">
+        <label for="groqModel">Traduction Groq</label>
+        <input type="text" id="groqModel" autocapitalize="off" spellcheck="false">
+        <label for="claudeModel">Traduction Claude</label>
+        <input type="text" id="claudeModel" autocapitalize="off" spellcheck="false">
+        <button class="btn" type="button" id="resetModels" style="align-self:flex-start">Modèles par défaut</button>
+      </div>
+    </details>
+
+    <h3>Traduction</h3>
+    <div class="field">
+      <span class="lbl">Après la traduction</span>
+      <div class="seg" role="group" id="segValid">
+        <button type="button" data-v="immediate">Lire tout de suite</button>
+        <button type="button" data-v="valider">Je valide d'abord</button>
+      </div>
+    </div>
+    <div class="field">
+      <span class="lbl">Registre du tunisien</span>
+      <div class="seg" role="group" id="segReg">
+        <button type="button" data-r="naturel">Naturel</button>
+        <button type="button" data-r="pur">Tunisien pur</button>
+      </div>
+      <p>Naturel garde les mots français courants, comme on parle vraiment.</p>
+    </div>
+
+    <h3>Voix</h3>
+    <div class="field">
+      <label for="rate">Vitesse de la voix arabe : <span id="rateVal"></span></label>
+      <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
+      <label for="voice">Voix arabe</label>
+      <div class="row"><select id="voice"></select><button class="btn" type="button" id="testVoice">Tester</button></div>
+      <p id="voiceInfo"></p>
+    </div>
+
+    <h3>Données</h3>
+    <div class="field">
+      <button class="btn" type="button" id="clearHist" style="color:var(--danger);align-self:flex-start">Effacer l'historique</button>
+      <p id="clearMsg"></p>
+    </div>
+  </div>
+</div>
+
+<div class="full" id="full" hidden role="dialog" aria-label="Phrase à montrer">
+  <div class="arabe" id="fullArabe"></div>
+  <div class="sub" id="fullSub"></div>
+  <div class="sub">Touche l'écran pour fermer</div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = "derja-express-v1";
+  const MODELS = { whisperModel: "whisper-large-v3", groqModel: "llama-3.3-70b-versatile", claudeModel: "claude-haiku-5-5" };
+  const EXAMPLE = {
+    dir: "fr2tn", example: true,
+    francais: "Je voudrais l'addition, s'il vous plaît",
+    arabizi: "n7eb el 7seb ya3aychek",
+    arabe: "نحب الحساب يعيشك",
+    mot_a_mot: [{tn:"n7eb",fr:"je voudrais"},{tn:"el 7seb",fr:"l'addition"},{tn:"ya3aychek",fr:"s'il te plaît (litt. « qu'il te fasse vivre »)"}],
+    variante: null,
+    note: "Formule polie et chaleureuse, très courante au café ou au restaurant."
+  };
+
+  const state = { dir:"fr2tn", engine:"groq", groqKey:"", claudeKey:"", ...MODELS,
+    validation:"immediate", registre:"naturel", rate:0.9, voiceURI:"", history:[] };
+  try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+
+  let current = state.history[0] || EXAMPLE;
+  let showMam = false, busy = false, phase = "", errorMsg = "";
+
+  // ---------- Voix de synthèse ----------
+  const synth = window.speechSynthesis;
+  let arVoice = null, frVoice = null;
+  const pickVoice = () => {
+    if (!synth) return;
+    const all = synth.getVoices();
+    frVoice = all.find(v => /^fr[-_]FR/i.test(v.lang)) || all.find(v => /^fr/i.test(v.lang)) || null;
+    const ar = all.filter(v => /^ar/i.test(v.lang));
+    $("voice").replaceChildren(new Option("Automatique", ""), ...ar.map(v => new Option(v.name + " (" + v.lang + ")", v.voiceURI)));
+    const chosen = ar.find(v => v.voiceURI === state.voiceURI);
+    $("voice").value = chosen ? chosen.voiceURI : "";
+    arVoice = chosen || ar.find(v => /TN/i.test(v.lang)) || ar[0] || null;
+    $("voiceInfo").textContent = ar.length ? ar.length + " voix arabe(s) disponible(s)." : "Aucune voix arabe trouvée : installes-en une dans Réglages iOS > Accessibilité > Contenu énoncé > Voix > Arabe.";
+  };
+  if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
+  const speak = (text, fr = false) => {
+    if (!synth || !text) return;
+    try {
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const v = fr ? frVoice : arVoice;
+      u.lang = v ? v.lang : (fr ? "fr-FR" : "ar-SA");
+      if (v) u.voice = v;
+      u.rate = fr ? 1 : state.rate;
+      synth.speak(u);
+    } catch {}
+  };
+
+  // ---------- Rendu ----------
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const mamHtml = t => showMam && Array.isArray(t.mot_a_mot) && t.mot_a_mot.length
+    ? '<dl class="mam">' + t.mot_a_mot.map(g => '<dt>' + esc(g.tn) + '</dt><dd>' + esc(g.fr) + '</dd>').join("") + '</dl>' : "";
+
+  function renderResult() {
+    const r = $("result");
+    if (busy) { r.innerHTML = '<div class="status"><span class="dot"></span>' + esc(phase) + '</div>'; return; }
+    const t = current;
+    const err = errorMsg ? '<div class="err">' + esc(errorMsg) + '</div>' : "";
+    const primary = state.validation === "valider" && !t.example ? " primary" : "";
+    if (t.dir === "tn2fr") {
+      r.innerHTML = err +
+        '<div class="eyebrow">Français</div>' +
+        '<div class="big">' + esc(t.francais) + '</div>' +
+        '<div class="eyebrow">Ce qui a été dit</div>' +
+        '<div class="fr-src" lang="aeb-Latn">' + esc(t.arabizi) + '</div>' +
+        '<div class="arabe small" lang="aeb-Arab" dir="rtl">' + esc(t.arabe) + '</div>' +
+        (t.source && t.source !== t.arabe ? '<div class="heard">Entendu par le micro : <span dir="auto">' + esc(t.source) + '</span></div>' : "") +
+        '<div class="actions">' +
+          '<button class="btn' + primary + '" data-act="voixfr" type="button">Écouter</button>' +
+          '<button class="btn" data-act="mam" type="button" aria-expanded="' + showMam + '">Mot à mot</button>' +
+          '<button class="btn" data-act="edit" type="button">Corriger</button>' +
+        '</div>' + mamHtml(t) +
+        (t.variante ? '<div class="extra"><b>Autre sens possible :</b> ' + esc(typeof t.variante === "string" ? t.variante : (t.variante.francais || "")) + '</div>' : "") +
+        (t.note ? '<div class="extra">' + esc(t.note) + '</div>' : "");
+      return;
+    }
+    r.innerHTML = err +
+      '<div class="eyebrow">Tunisien' + (t.example ? ' <span class="tag">Exemple</span>' : "") + '</div>' +
+      '<div class="fr-src">« ' + esc(t.francais) + ' »</div>' +
+      '<div class="big" lang="aeb-Latn">' + esc(t.arabizi) + '</div>' +
+      '<div class="arabe" lang="aeb-Arab" dir="rtl">' + esc(t.arabe) + '</div>' +
+      '<div class="actions">' +
+        '<button class="btn' + primary + '" data-act="voix" type="button">Écouter</button>' +
+        '<button class="btn" data-act="ecran" type="button">Plein écran</button>' +
+        '<button class="btn" data-act="mam" type="button" aria-expanded="' + showMam + '">Mot à mot</button>' +
+        '<button class="btn" data-act="edit" type="button">Corriger</button>' +
+      '</div>' + mamHtml(t) +
+      (t.variante && t.variante.arabizi ? '<div class="extra"><b>Variante :</b> ' + esc(t.variante.arabizi) + (t.variante.arabe ? ' · <span dir="rtl" lang="aeb-Arab">' + esc(t.variante.arabe) + '</span>' : "") + '</div>' : "") +
+      (t.note ? '<div class="extra">' + esc(t.note) + '</div>' : "");
+  }
+
+  function renderHistory() {
+    const ul = $("histList");
+    if (!state.history.length) { ul.innerHTML = '<li class="empty">Tes phrases traduites apparaîtront ici.</li>'; return; }
+    ul.innerHTML = state.history.slice(0, 50).map((h, i) => '<li><button type="button" data-i="' + i + '">' + (h.dir === "tn2fr"
+      ? '<span class="h-a">← ' + esc(h.francais) + '</span><span class="h-b">' + esc(h.arabizi) + '</span>'
+      : '<span class="h-a">→ ' + esc(h.arabizi) + '</span><span class="h-b">' + esc(h.francais) + '</span>') + '</button></li>').join("");
+  }
+
+  function renderControls() {
+    const tn = state.dir === "tn2fr";
+    document.querySelectorAll(".composer [data-dir]").forEach(b => b.setAttribute("aria-pressed", b.dataset.dir === state.dir));
+    document.querySelectorAll("#segEngine [data-e]").forEach(b => b.setAttribute("aria-pressed", b.dataset.e === state.engine));
+    document.querySelectorAll("#segValid [data-v]").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === state.validation));
+    document.querySelectorAll("#segReg [data-r]").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === state.registre));
+    $("claudeField").hidden = state.engine !== "claude";
+    $("txt").placeholder = tn ? "Ou écris / colle du tunisien" : "Ou écris ta phrase en français";
+    $("txt").lang = tn ? "ar" : "fr";
+    $("setup").hidden = !!state.groqKey;
+    $("rate").value = state.rate;
+    $("rateVal").textContent = Math.round(state.rate * 100) + " %";
+    $("go").disabled = busy || recording;
+    $("mic").disabled = busy || !state.groqKey;
+    $("mic").classList.toggle("rec", recording);
+    $("micLabel").innerHTML = recording
+      ? 'Relâche pour traduire · <span class="t" id="micTime">0:00</span>'
+      : !state.groqKey ? "Ajoute ta clé Groq pour le micro"
+      : tn ? "Maintiens pendant qu'on te parle" : "Maintiens et parle en français";
+  }
+  const renderAll = () => { renderResult(); renderHistory(); renderControls(); };
+
+  // ---------- Appels aux services ----------
+  async function call(url, opts, svc) {
+    let r;
+    try { r = await fetch(url, opts); }
+    catch { throw { msg: "Impossible de joindre " + svc + ". Vérifie ta connexion internet." }; }
+    if (!r.ok) {
+      let detail = "";
+      try { const j = await r.json(); detail = (j.error && (j.error.message || j.error)) || ""; } catch {}
+      if (r.status === 401) throw { msg: "Clé " + svc + " refusée : vérifie-la dans les réglages." };
+      if (r.status === 429) throw { msg: "Quota " + svc + " atteint pour le moment. Réessaie dans une minute." };
+      if (r.status === 402 || /credit|billing/i.test(String(detail))) throw { msg: "Crédit " + svc + " épuisé : recharge ton compte ou passe sur Groq." };
+      throw { msg: svc + " a renvoyé une erreur (" + r.status + ") " + String(detail).slice(0, 160) };
+    }
+    return r.json();
+  }
+
+  const TN_HINT = "شنوة، برشا، توا، باهي، نحب، ماكش، علاش، وقتاش، فما، ياسر، يعيشك، بالله، زادة، كيفاش، نجم، مش، حاجة، خويا، أختي، ماو، يزي.";
+
+  async function transcribe(blob, dir) {
+    const ext = /mp4|m4a|aac/.test(blob.type) ? "m4a" : /ogg/.test(blob.type) ? "ogg" : "webm";
+    const fd = new FormData();
+    fd.append("file", blob, "audio." + ext);
+    fd.append("model", state.whisperModel || MODELS.whisperModel);
+    fd.append("language", dir === "tn2fr" ? "ar" : "fr");
+    fd.append("response_format", "json");
+    fd.append("temperature", "0");
+    if (dir === "tn2fr") fd.append("prompt", "Conversation en dialecte tunisien (derja), avec des mots français. " + TN_HINT);
+    const j = await call("https://api.groq.com/openai/v1/audio/transcriptions",
+      { method: "POST", headers: { Authorization: "Bearer " + state.groqKey }, body: fd }, "Groq");
+    return String(j.text || "").trim();
+  }
+
+  const parseJson = s => {
+    s = String(s || "");
+    try { return JSON.parse(s); } catch {}
+    const a = s.indexOf("{"), b = s.lastIndexOf("}");
+    if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)); } catch {} }
+    throw { msg: "La réponse du traducteur était mal formée. Réessaie." };
+  };
+
+  async function llm(prompt) {
+    if (state.engine === "claude") {
+      if (!state.claudeKey) throw { msg: "Ajoute ta clé Claude dans les réglages, ou choisis Groq." };
+      const j = await call("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": state.claudeKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: state.claudeModel || MODELS.claudeModel, max_tokens: 1200, temperature: 0.2, messages: [{ role: "user", content: prompt }] })
+      }, "Claude");
+      return parseJson((j.content || []).map(c => c.text || "").join(""));
+    }
+    const j = await call("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: "Bearer " + state.groqKey },
+      body: JSON.stringify({ model: state.groqModel || MODELS.groqModel, temperature: 0.2, response_format: { type: "json_object" }, messages: [{ role: "user", content: prompt }] })
+    }, "Groq");
+    return parseJson(j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content);
+  }
+
+  // ---------- Consignes de traduction ----------
+  const context = () => state.history.filter(h => h.at && Date.now() - h.at < 15 * 60000).slice(0, 4).reverse()
+    .map(h => (h.dir === "tn2fr" ? "- Interlocuteur : " : "- Moi : ") + h.arabizi + " (= " + h.francais + ")").join("\n");
+
+  const promptFr = fr => `Tu es un traducteur expert du dialecte tunisien (Derja), tel qu'on le parle à Tunis aujourd'hui.
+Traduis la phrase française ci-dessous en tunisien parlé, pour une conversation en face à face.
+
+Règles :
+- Registre : ${state.registre === "pur"
+    ? "tunisien « pur » : remplace les mots français par leur équivalent tunisien quand il existe."
+    : "naturel : garde les mots français couramment employés en Tunisie (bureau, normalement, voiture…), comme on parle vraiment."}
+- Celui qui parle (« je ») est un homme : accorde au masculin.
+- « Tu » : masculin par défaut (enti). Féminin (enty) ou pluriel (entouma) seulement si la phrase l'indique clairement. Le vouvoiement français devient le pluriel ou une formule de politesse tunisienne selon le contexte.
+- Arabizi : chiffres usuels (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ), orthographe la plus courante sur les réseaux sociaux tunisiens.
+- La phrase française vient d'une dictée vocale : corrige silencieusement les erreurs évidentes de reconnaissance.
+- "arabe" est exactement la même phrase que "arabizi", telle qu'un Tunisien l'écrirait, ENTIÈREMENT en lettres arabes, y compris les mots d'origine française (bureau → بيرو, normalement → نورمالمان). Aucune lettre latine ni chiffre dans ce champ : il sera lu par une voix de synthèse arabe.
+- "mot_a_mot" découpe la phrase tunisienne en groupes de mots, dans l'ordre, chacun avec son sens en français.
+- "variante" seulement si la phrase est vraiment ambiguë (objet {"arabizi","arabe"}), sinon null. "note" : une remarque d'usage ou culturelle courte, sinon chaîne vide.
+${context() ? "\nContexte, derniers échanges (du plus ancien au plus récent) :\n" + context() + "\n" : ""}
+Réponds uniquement avec un objet JSON de cette forme :
+{"francais":"phrase française corrigée","arabizi":"...","arabe":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}
+
+Phrase française : ${fr}`;
+
+  const promptTn = src => `Tu es un interprète expert du dialecte tunisien (Derja), tel qu'on le parle en Tunisie aujourd'hui.
+Un Tunisien vient de dire la phrase ci-dessous à un francophone. Traduis-la en français naturel et courant.
+
+Règles :
+- La phrase vient d'une reconnaissance vocale (Whisper) qui connaît mal le tunisien : mots déformés, tournures d'arabe standard, mots français écrits en lettres arabes. Elle peut aussi être en arabizi. Reconstitue ce qui a le plus probablement été dit en tunisien, en t'aidant du contexte de la conversation.
+- Le mélange tunisien / français est normal : garde le sens des mots français.
+- Traduis le sens, pas mot à mot : les expressions idiomatiques deviennent leur équivalent français. Garde le ton (familier, poli, taquin…).
+- "arabizi" et "arabe" : la phrase tunisienne reconstituée et corrigée, en arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ) et en lettres arabes.
+- "mot_a_mot" découpe la phrase tunisienne en groupes de mots, dans l'ordre, chacun avec son sens en français.
+- "variante" : une autre compréhension possible en français si la phrase est vraiment ambiguë ou mal reconnue, sinon null.
+- "note" : courte remarque utile (expression idiomatique, sous-entendu, mot incertain), sinon chaîne vide.
+${context() ? "\nContexte, derniers échanges (du plus ancien au plus récent) :\n" + context() + "\n" : ""}
+Réponds uniquement avec un objet JSON de cette forme :
+{"francais":"traduction française","arabizi":"...","arabe":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}
+
+Phrase en tunisien : ${src}`;
+
+  // ---------- Chaîne complète ----------
+  async function run({ audio, text }) {
+    if (busy) return;
+    const dir = state.dir;
+    busy = true; errorMsg = ""; showMam = false;
+    phase = audio ? "Écoute de l'enregistrement…" : "Traduction en cours…";
+    $("txt").blur();
+    renderAll();
+    let src = text;
+    try {
+      if (audio) {
+        src = await transcribe(audio, dir);
+        if (!src) throw { msg: "Je n'ai rien entendu. Rapproche le téléphone et maintiens le bouton pendant toute la phrase." };
+        phase = "Traduction en cours…"; renderResult();
+      }
+      const t = await llm(dir === "tn2fr" ? promptTn(src) : promptFr(src));
+      if (!t || typeof t.arabizi !== "string" || typeof t.arabe !== "string" || (dir === "tn2fr" && !t.francais)) throw { msg: "La réponse du traducteur était incomplète. Réessaie." };
+      t.francais = t.francais || src;
+      t.mot_a_mot = Array.isArray(t.mot_a_mot) ? t.mot_a_mot.filter(g => g && g.tn) : [];
+      Object.assign(t, { dir, source: src, at: Date.now() });
+      current = t;
+      state.history.unshift(t);
+      state.history = state.history.slice(0, 100);
+      save();
+      $("txt").value = "";
+      busy = false;
+      renderAll();
+      if (state.validation === "immediate") restitute(t);
+    } catch (e) {
+      busy = false;
+      errorMsg = (e && e.msg) || "Erreur inattendue. Réessaie.";
+      if (src && !text) $("txt").value = src;
+      renderAll();
+    }
+  }
+  const restitute = t => t.dir === "tn2fr" ? speak(t.francais, true) : speak(t.arabe);
+
+  // ---------- Micro : maintenir pour parler ----------
+  let recording = false, rec = null, stream = null, chunks = [], recStart = 0, held = false, timer = null;
+
+  async function startRec() {
+    if (busy || recording || !state.groqKey) return;
+    held = true;
+    if (synth) synth.cancel();
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    } catch {
+      errorMsg = "Micro refusé : autorise-le dans Réglages iOS > Safari > Microphone, puis réessaie.";
+      renderAll(); return;
+    }
+    if (!held) { // relâché pendant la demande d'autorisation
+      stream.getTracks().forEach(t => t.stop());
+      errorMsg = "Micro activé. Maintiens à nouveau le bouton pendant que tu parles.";
+      renderAll(); return;
+    }
+    const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || "";
+    try { rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined); }
+    catch { stream.getTracks().forEach(t => t.stop()); errorMsg = "L'enregistrement audio n'est pas pris en charge par ce navigateur."; renderAll(); return; }
+    chunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = onRecStop;
+    rec.start();
+    recStart = Date.now(); recording = true; errorMsg = "";
+    renderAll();
+    timer = setInterval(() => {
+      const s = Math.floor((Date.now() - recStart) / 1000), el = $("micTime");
+      if (el) el.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+      if (s >= 60) stopRec();
+    }, 250);
+  }
+  function stopRec() {
+    held = false;
+    if (rec && rec.state !== "inactive") rec.stop();
+  }
+  function onRecStop() {
+    clearInterval(timer);
+    const dur = Date.now() - recStart, type = (rec && rec.mimeType) || "audio/mp4";
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    rec = null; stream = null; recording = false;
+    const blob = new Blob(chunks, { type });
+    if (dur < 700 || blob.size < 1500) {
+      errorMsg = "Trop court : maintiens le bouton pendant toute la phrase.";
+      renderAll(); return;
+    }
+    run({ audio: blob });
+  }
+  const mic = $("mic");
+  mic.addEventListener("pointerdown", e => { e.preventDefault(); try { mic.setPointerCapture(e.pointerId); } catch {} startRec(); });
+  ["pointerup", "pointercancel"].forEach(ev => mic.addEventListener(ev, () => stopRec()));
+  mic.addEventListener("contextmenu", e => e.preventDefault());
+  mic.addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); startRec(); } });
+  mic.addEventListener("keyup", e => { if (e.key === " " || e.key === "Enter") stopRec(); });
+
+  // ---------- Événements ----------
+  const sendText = () => { const v = $("txt").value.trim(); if (v) run({ text: v }); };
+  $("composer").addEventListener("submit", e => { e.preventDefault(); sendText(); });
+  $("txt").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } });
+  $("txt").addEventListener("input", e => { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 140) + "px"; });
+
+  document.querySelectorAll(".composer [data-dir]").forEach(b => b.addEventListener("click", () => { state.dir = b.dataset.dir; save(); renderControls(); }));
+  document.querySelectorAll("#segEngine [data-e]").forEach(b => b.addEventListener("click", () => { state.engine = b.dataset.e; save(); renderControls(); }));
+  document.querySelectorAll("#segValid [data-v]").forEach(b => b.addEventListener("click", () => { state.validation = b.dataset.v; save(); renderAll(); }));
+  document.querySelectorAll("#segReg [data-r]").forEach(b => b.addEventListener("click", () => { state.registre = b.dataset.r; save(); renderControls(); }));
+  $("rate").addEventListener("input", e => { state.rate = Number(e.target.value); save(); renderControls(); });
+  $("voice").addEventListener("change", e => { state.voiceURI = e.target.value; save(); pickVoice(); });
+  $("testVoice").addEventListener("click", () => speak("مرحبا، شنوة أحوالك؟ نمشي للبيرو توا."));
+
+  const bindText = (id, key) => {
+    $(id).value = state[key] || "";
+    $(id).addEventListener("change", e => { state[key] = e.target.value.trim(); save(); renderControls(); });
+  };
+  bindText("groqKey", "groqKey"); bindText("claudeKey", "claudeKey");
+  bindText("whisperModel", "whisperModel"); bindText("groqModel", "groqModel"); bindText("claudeModel", "claudeModel");
+  $("resetModels").addEventListener("click", () => { Object.assign(state, MODELS); save(); ["whisperModel", "groqModel", "claudeModel"].forEach(k => $(k).value = state[k]); });
+  $("setupSave").addEventListener("click", () => {
+    const v = $("setupKey").value.trim();
+    if (!v) return;
+    state.groqKey = v; $("groqKey").value = v; save(); renderAll();
+  });
+
+  $("result").addEventListener("click", e => {
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (!act) return;
+    if (act === "voix") speak(current.arabe);
+    if (act === "voixfr") speak(current.francais, true);
+    if (act === "ecran") { $("fullArabe").textContent = current.arabe || ""; $("fullSub").textContent = current.arabizi || ""; $("full").hidden = false; }
+    if (act === "mam") { showMam = !showMam; renderResult(); }
+    if (act === "edit") {
+      state.dir = current.dir === "tn2fr" ? "tn2fr" : "fr2tn"; save(); renderControls();
+      $("txt").value = current.dir === "tn2fr" ? (current.source || current.arabizi || "") : (current.francais || "");
+      $("txt").focus();
+    }
+  });
+  $("histList").addEventListener("click", e => {
+    const b = e.target.closest("[data-i]");
+    if (!b) return;
+    current = state.history[Number(b.dataset.i)];
+    errorMsg = ""; showMam = false;
+    renderResult();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  $("openSettings").addEventListener("click", () => { $("clearMsg").textContent = ""; $("sheet").hidden = false; });
+  $("closeSettings").addEventListener("click", () => { $("sheet").hidden = true; });
+  $("sheet").addEventListener("click", e => { if (e.target.id === "sheet") $("sheet").hidden = true; });
+  let clearArmed = false;
+  $("clearHist").addEventListener("click", () => {
+    if (!clearArmed) { clearArmed = true; $("clearHist").textContent = "Confirmer l'effacement"; return; }
+    clearArmed = false; state.history = []; current = EXAMPLE; save();
+    $("clearHist").textContent = "Effacer l'historique"; $("clearMsg").textContent = "Historique effacé.";
+    renderAll();
+  });
+  $("full").addEventListener("click", () => { $("full").hidden = true; });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { $("full").hidden = true; $("sheet").hidden = true; } });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
