@@ -185,6 +185,12 @@ details[open] summary{margin-bottom:12px}
         <button type="button" data-l="gemini">Gemini · écoute directe</button>
       </div>
       <p>Gemini écoute l'audio lui-même, sans passer par une transcription en arabe standard : souvent bien meilleur sur le dialecte.</p>
+      <span class="lbl">Si Gemini est saturé</span>
+      <div class="seg" role="group" id="segFallback">
+        <button type="button" data-f="0">Réessayer le même modèle</button>
+        <button type="button" data-f="1">Basculer sur un modèle plus léger</button>
+      </div>
+      <p>« Même modèle » garde une qualité constante. L'offre payante de Google évite presque toujours la saturation.</p>
     </div>
     <div class="field" id="geminiField">
       <label for="geminiKey">Clé Gemini</label>
@@ -259,7 +265,7 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v1.7 · 21/10 18:38";
+  const VERSION = "v1.8 · 21/10 18:50";
   const KEY = "derja-express-v1";
   const GEMINI_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   const MODELS = { whisperModel: "whisper-large-v3", groqModel: "openai/gpt-oss-120b", claudeModel: "claude-haiku-5-5", geminiModel: "gemini-3.8-flash" };
@@ -273,7 +279,7 @@ details[open] summary{margin-bottom:12px}
     note: "Formule polie et chaleureuse, très courante au café ou au restaurant."
   };
 
-  const state = { micListen:"", micSpeak:"", dir:"fr2tn", engine:"groq", listen:"whisper", groqKey:"", claudeKey:"", geminiKey:"", ...MODELS,
+  const state = { geminiFallback:false, micListen:"", micSpeak:"", dir:"fr2tn", engine:"groq", listen:"whisper", groqKey:"", claudeKey:"", geminiKey:"", ...MODELS,
     validation:"immediate", registre:"naturel", rate:0.9, voiceURI:"", history:[] };
   try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch {}
   if (!state.groqModel || state.groqModel === "llama-3.3-70b-versatile") state.groqModel = MODELS.groqModel;
@@ -336,7 +342,7 @@ details[open] summary{margin-bottom:12px}
           '<button class="btn" data-act="edit" type="button">Corriger</button>' +
         '</div>' + mamHtml(t) +
         (t.variante ? '<div class="extra"><b>Autre sens possible :</b> ' + esc(typeof t.variante === "string" ? t.variante : (t.variante.francais || "")) + '</div>' : "") +
-        (t.note ? '<div class="extra">' + esc(t.note) + '</div>' : "");
+        (t.note ? '<div class="extra">' + esc(t.note) + '</div>' : "") + byline(t);
       return;
     }
     r.innerHTML = err +
@@ -351,7 +357,10 @@ details[open] summary{margin-bottom:12px}
         '<button class="btn" data-act="edit" type="button">Corriger</button>' +
       '</div>' + mamHtml(t) +
       (t.variante && t.variante.arabizi ? '<div class="extra"><b>Variante :</b> ' + esc(t.variante.arabizi) + (t.variante.arabe ? ' · <span dir="rtl" lang="aeb-Arab">' + esc(t.variante.arabe) + '</span>' : "") + '</div>' : "") +
-      (t.note ? '<div class="extra">' + esc(t.note) + '</div>' : "");
+      (t.note ? '<div class="extra">' + esc(t.note) + '</div>' : "") + byline(t);
+  }
+  function byline(t) {
+    return t.modele ? '<div class="heard">Traduit par ' + esc(t.modele) + (t.modele !== (state.geminiModel || MODELS.geminiModel) && /gemini/.test(t.modele) ? " (modèle de secours)" : "") + '</div>' : "";
   }
 
   function renderHistory() {
@@ -373,6 +382,7 @@ details[open] summary{margin-bottom:12px}
     document.querySelectorAll("#segValid [data-v]").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === state.validation));
     document.querySelectorAll("#segReg [data-r]").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === state.registre));
     $("claudeField").hidden = state.engine !== "claude";
+    document.querySelectorAll("#segFallback [data-f]").forEach(b => b.setAttribute("aria-pressed", (b.dataset.f === "1") === !!state.geminiFallback));
     document.querySelectorAll("#segListen [data-l]").forEach(b => b.setAttribute("aria-pressed", b.dataset.l === state.listen));
     $("geminiField").hidden = state.listen !== "gemini";
     $("txt").placeholder = tn ? "Ou écris / colle du tunisien" : "Ou écris ta phrase en français";
@@ -481,22 +491,30 @@ details[open] summary{margin-bottom:12px}
       contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64 } }, { text: promptListen() }] }],
       generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
     });
-    // Si un modèle est saturé (503) ou à court de quota (429), on bascule sur un modèle voisin
-    const models = [...new Set([state.geminiModel || MODELS.geminiModel, ...GEMINI_FALLBACKS])];
-    let j, lastErr;
-    for (let i = 0; i < models.length && !j; i++) {
-      if (i > 0) { phase = "Gemini est saturé, essai avec un autre modèle…"; renderResult(); await new Promise(r => setTimeout(r, 600)); }
+    // Saturé (503) : on réessaie le même modèle 3 fois ; on ne bascule sur un modèle plus léger que si le réglage l'autorise
+    const main = state.geminiModel || MODELS.geminiModel;
+    const plan = [main, main, main, ...(state.geminiFallback ? GEMINI_FALLBACKS.filter(m => m !== main) : [])];
+    const waits = [0, 1500, 3000, 600, 600, 600];
+    let j, used, lastErr;
+    for (let i = 0; i < plan.length && !j; i++) {
+      if (i > 0) {
+        phase = plan[i] === main ? "Gemini est saturé, nouvel essai (" + (i + 1) + "/3)…" : "Gemini est saturé, essai avec " + plan[i] + "…";
+        renderResult(); await new Promise(r => setTimeout(r, waits[i] || 600));
+      }
       try {
-        j = await call("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(models[i]) + ":generateContent",
+        j = await call("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(plan[i]) + ":generateContent",
           { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": state.geminiKey }, body }, "Gemini");
+        used = plan[i];
       } catch (e) {
         lastErr = e;
-        if (!e || ![429, 500, 502, 503, 504, 404].includes(e.status)) throw e;
+        if (!e || ![429, 500, 502, 503, 504].includes(e.status)) throw e;
       }
     }
     if (!j) throw lastErr;
     const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
-    return parseJson(parts.map(p => p.text || "").join(""));
+    const out = parseJson(parts.map(p => p.text || "").join(""));
+    if (out && typeof out === "object") out.modele = used;
+    return out;
   }
 
   // ---------- Consignes de traduction ----------
@@ -573,7 +591,10 @@ Réponds uniquement avec un objet JSON de cette forme :
         if (!src) throw { msg: "Je n'ai rien entendu. Rapproche le téléphone et maintiens le bouton pendant toute la phrase." };
         phase = "Traduction en cours…"; renderResult();
       }
-      if (!t) t = await llm(dir === "tn2fr" ? promptTn(src) : promptFr(src));
+      if (!t) {
+        t = await llm(dir === "tn2fr" ? promptTn(src) : promptFr(src));
+        if (t && typeof t === "object") t.modele = state.engine === "claude" ? (state.claudeModel || MODELS.claudeModel) : (state.groqModel || MODELS.groqModel);
+      }
       if (!t || typeof t.arabizi !== "string" || typeof t.arabe !== "string" || (dir === "tn2fr" && !t.francais)) throw { msg: "La réponse du traducteur était incomplète. Réessaie." };
       t.francais = t.francais || src;
       t.mot_a_mot = Array.isArray(t.mot_a_mot) ? t.mot_a_mot.filter(g => g && g.tn) : [];
@@ -692,6 +713,7 @@ Réponds uniquement avec un objet JSON de cette forme :
   }
   ["micListen", "micSpeak"].forEach(k => $(k).addEventListener("change", e => { state[k] = e.target.value; save(); }));
   $("detectMics").addEventListener("click", () => listMics(true));
+  document.querySelectorAll("#segFallback [data-f]").forEach(b => b.addEventListener("click", () => { state.geminiFallback = b.dataset.f === "1"; save(); renderControls(); }));
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener("devicechange", () => listMics(false));
   $("testVoice").addEventListener("click", () => speak("مرحبا، شنوة أحوالك؟ نمشي للبيرو توا."));
 
