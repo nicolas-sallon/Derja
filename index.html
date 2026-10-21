@@ -38,6 +38,8 @@ main{flex:1;display:flex;flex-direction:column;gap:20px;padding-block:8px 24px}
 .card{background:var(--surface);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .setup{border:1px solid color-mix(in srgb,var(--accent) 50%,transparent)}
 .setup h2{margin:0;font-size:18px}
+.update{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid color-mix(in srgb,var(--accent) 60%,transparent);font-size:15px}
+.ver{cursor:pointer}
 .setup p,.setup ol{margin:0;color:var(--muted);font-size:14px}
 .setup ol{padding-left:20px;display:flex;flex-direction:column;gap:4px}
 .setup a{color:var(--accent)}
@@ -111,6 +113,10 @@ details[open] summary{margin-bottom:12px}
   </header>
 
   <main>
+    <section class="card update" id="update" hidden>
+      <div>Nouvelle version disponible <b id="updVer"></b></div>
+      <button class="btn primary" type="button" id="updBtn">Mettre à jour</button>
+    </section>
     <section class="card setup" id="setup" hidden>
       <h2>Active le micro en 2 minutes</h2>
       <ol>
@@ -243,7 +249,7 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v1.4 · 21/10 18:04";
+  const VERSION = "v1.5 · 21/10 18:02";
   const KEY = "derja-express-v1";
   const GEMINI_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   const MODELS = { whisperModel: "whisper-large-v3", groqModel: "openai/gpt-oss-120b", claudeModel: "claude-haiku-5-5", geminiModel: "gemini-3.8-flash" };
@@ -701,6 +707,21 @@ Réponds uniquement avec un objet JSON de cette forme :
   document.addEventListener("keydown", e => { if (e.key === "Escape") { $("full").hidden = true; $("sheet").hidden = true; } });
 
   $("ver").textContent = "· " + VERSION;
+
+  // ---------- Mise à jour ----------
+  // Recharge en contournant le cache (une adresse jamais vue force GitHub et iOS à reprendre la page)
+  const freshReload = () => location.replace(location.pathname + "?v=" + Date.now());
+  async function checkUpdate() {
+    try {
+      const r = await fetch(location.pathname + "?check=" + Date.now(), { cache: "no-store" });
+      const m = (await r.text()).match(/const VERSION = "([^"]+)"/);
+      if (m && m[1] !== VERSION) { $("updVer").textContent = m[1]; $("update").hidden = false; }
+    } catch {}
+  }
+  $("updBtn").addEventListener("click", freshReload);
+  $("ver").addEventListener("click", freshReload);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); });
+  checkUpdate();
   renderAll();
 })();
 </script>
