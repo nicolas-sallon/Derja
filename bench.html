@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Banc d'écoute Derja</title>
+<style>
+/* Page de test technique, séparée de l'app : enregistrements -> plusieurs modèles -> notes */
+:root{
+  --bg:#0b0c0f; --surface:#17181d; --surface-2:#22242b; --line:#2e3038;
+  --fg:#f4f5f7; --muted:#9a9ca6; --accent:#3d8bff; --rec:#ff453a;
+  --good:#30d158; --mid:#ffb340; --bad:#ff6961;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 var(--sans);padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));max-width:760px;margin:0 auto}
+[hidden]{display:none!important}
+h1{font-size:24px;margin:4px 0 2px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+h2{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.card{background:var(--surface);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=text],input[type=password]{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:10px 12px;font:16px var(--sans)}
+.btn{appearance:none;border:0;border-radius:10px;padding:9px 12px;font:600 14px var(--sans);background:var(--surface-2);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff}
+.btn:disabled{opacity:.45}
+.mic{appearance:none;border:0;width:100%;min-height:60px;border-radius:14px;background:var(--accent);color:#fff;font:650 16px var(--sans);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;cursor:pointer}
+.mic.rec{background:var(--rec)}
+.models{display:flex;flex-wrap:wrap;gap:8px}
+.models label{background:var(--surface-2);border-radius:10px;padding:8px 10px;font-size:14px;display:flex;gap:6px;align-items:center}
+.clip{display:flex;flex-direction:column;gap:10px}
+.clip-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.clip-head b{font-size:15px}
+.ref{color:var(--muted);font-size:14px}
+.res{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:4px}
+.res .m{font-size:12px;font-weight:600;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.res .fr{font-size:17px;font-weight:600}
+.res .ent{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.res .err{color:var(--bad);font-size:13px}
+.rate{display:flex;gap:6px;margin-top:4px}
+.rate button{appearance:none;border:1px solid var(--line);background:none;color:var(--muted);border-radius:8px;padding:5px 9px;font:600 13px var(--sans);cursor:pointer}
+.rate button[aria-pressed="true"][data-r="ok"]{background:var(--good);border-color:var(--good);color:#000}
+.rate button[aria-pressed="true"][data-r="mid"]{background:var(--mid);border-color:var(--mid);color:#000}
+.rate button[aria-pressed="true"][data-r="ko"]{background:var(--bad);border-color:var(--bad);color:#000}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:12px}
+.scroll{overflow-x:auto}
+.muted{color:var(--muted);font-size:13px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);animation:p 1s infinite}
+@keyframes p{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}}
+</style>
+</head>
+<body>
+<h1>Banc d'écoute Derja</h1>
+<p class="sub">Page de test, hors de l'app. Le même enregistrement est envoyé à plusieurs modèles Gemini ; tu notes chaque traduction.</p>
+
+<div class="card">
+  <div class="row"><input type="password" id="key" placeholder="Clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="saveKey" type="button">Enregistrer</button></div>
+  <div class="models" id="models"></div>
+  <div class="row"><input type="text" id="extraModel" placeholder="Autre modèle (ex. gemini-3.7-flash)" autocapitalize="off" spellcheck="false"><button class="btn" id="addModel" type="button">Ajouter</button></div>
+</div>
+
+<h2>1 · Enregistrer une phrase</h2>
+<div class="card">
+  <input type="text" id="refText" placeholder="Ce qui a été dit (en français ou arabizi), pour comparer">
+  <button class="mic" id="mic" type="button">Maintiens pendant qu'on parle</button>
+  <div class="row"><label class="btn" for="file">Importer un fichier audio</label><input type="file" id="file" accept="audio/*" multiple hidden><span class="muted" id="recInfo">Les enregistrements restent sur cet appareil.</span></div>
+</div>
+
+<h2>2 · Résultats par modèle</h2>
+<div class="card scroll"><table id="summary"></table><div class="row"><button class="btn" id="copy" type="button">Copier le bilan</button><span class="muted" id="copyMsg"></span></div></div>
+
+<h2>3 · Phrases</h2>
+<div id="clips" style="display:flex;flex-direction:column;gap:12px"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const DEFAULT_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-pro"];
+  const CFG = "derja-bench-cfg";
+
+  // ---------- Réglages (clé reprise de l'app si présente) ----------
+  let cfg = { key: "", models: DEFAULT_MODELS.slice(), on: ["gemini-3.8-flash", "gemini-3.5-flash-lite"] };
+  try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG) || "{}")); } catch {}
+  if (!cfg.key) { try { cfg.key = (JSON.parse(localStorage.getItem("derja-express-v1") || "{}").geminiKey) || ""; } catch {} }
+  const saveCfg = () => { try { localStorage.setItem(CFG, JSON.stringify(cfg)); } catch {} };
+  $("key").value = cfg.key;
+  $("saveKey").onclick = () => { cfg.key = $("key").value.trim(); saveCfg(); $("saveKey").textContent = "Enregistrée"; };
+  function renderModels() {
+    $("models").innerHTML = cfg.models.map(m => '<label><input type="checkbox" value="' + esc(m) + '"' + (cfg.on.includes(m) ? " checked" : "") + '>' + esc(m) + '</label>').join("");
+    $("models").querySelectorAll("input").forEach(i => i.onchange = () => {
+      cfg.on = [...$("models").querySelectorAll("input:checked")].map(x => x.value); saveCfg();
+    });
+  }
+  $("addModel").onclick = () => { const m = $("extraModel").value.trim(); if (m && !cfg.models.includes(m)) { cfg.models.push(m); cfg.on.push(m); saveCfg(); renderModels(); } $("extraModel").value = ""; };
+  renderModels();
+
+  // ---------- Stockage des enregistrements (IndexedDB) ----------
+  let db;
+  const idb = () => db || (db = new Promise((ok, ko) => {
+    const r = indexedDB.open("derja-bench", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("clips", { keyPath: "id" });
+    r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error);
+  }));
+  const tx = async (mode, fn) => { const d = await idb(); return new Promise((ok, ko) => { const t = d.transaction("clips", mode); const s = t.objectStore("clips"); const out = fn(s); t.oncomplete = () => ok(out && out.result); t.onerror = () => ko(t.error); }); };
+  const putClip = c => tx("readwrite", s => s.put(c));
+  const delClip = id => tx("readwrite", s => s.delete(id));
+  const allClips = () => tx("readonly", s => s.getAll());
+
+  let clips = [];
+  const load = async () => { try { clips = (await allClips()).sort((a, b) => b.at - a.at); } catch { clips = []; $("recInfo").textContent = "Stockage indisponible (navigation privée ?) : les enregistrements ne seront pas gardés."; } render(); };
+
+  // ---------- Audio -> WAV 16 kHz mono, base64 ----------
+  async function toWav(blob) {
+    const AC = window.AudioContext || window.webkitAudioContext; const ac = new AC();
+    let buf; try { buf = await ac.decodeAudioData(await blob.arrayBuffer()); } finally { try { ac.close(); } catch {} }
+    const rate = 16000, len = Math.max(1, Math.ceil(buf.duration * rate));
+    const off = new OfflineAudioContext(1, len, rate); const s = off.createBufferSource(); s.buffer = buf; s.connect(off.destination); s.start();
+    const pcm = (await off.startRendering()).getChannelData(0);
+    const v = new DataView(new ArrayBuffer(44 + pcm.length * 2));
+    const w = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + pcm.length * 2, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) { const x = Math.max(-1, Math.min(1, pcm[i])); v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7fff, true); }
+    const bytes = new Uint8Array(v.buffer); let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return { b64: btoa(bin), secs: buf.duration };
+  }
+
+  // Même consigne que l'app (sans contexte de conversation)
+  const PROMPT = `Tu es un interprète expert du dialecte tunisien (Derja). Écoute l'extrait audio joint : un Tunisien parle à un francophone, en face à face, souvent avec des mots français mêlés.
+
+Étapes :
+1. "entendu" : transcris fidèlement et phonétiquement ce qui est prononcé, mot pour mot, en arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ). Ne corrige pas, ne traduis pas, ne remplace pas par de l'arabe standard. Les mots français restent écrits en français. Un passage inaudible devient [inaudible].
+2. "arabizi" et "arabe" : la phrase tunisienne telle que tu la comprends, en arabizi et en lettres arabes (identique à "entendu" si rien n'est à corriger).
+3. "francais" : la traduction en français naturel et courant. Traduis le sens, pas mot à mot, et garde le ton (familier, poli, taquin…).
+4. "mot_a_mot" : la phrase tunisienne découpée en groupes de mots, dans l'ordre, chacun avec son sens en français.
+5. "variante" : une autre compréhension possible en français si un passage est incertain, sinon null. "note" : courte remarque utile (expression idiomatique, mot incertain), sinon chaîne vide.
+
+Réponds uniquement avec un objet JSON de cette forme :
+{"entendu":"...","arabizi":"...","arabe":"...","francais":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}`;
+
+  const parseJson = s => { s = String(s || ""); try { return JSON.parse(s); } catch {} const a = s.indexOf("{"), b = s.lastIndexOf("}"); if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)); } catch {} } throw new Error("Réponse mal formée"); };
+
+  async function ask(model, b64) {
+    const t0 = performance.now();
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+      method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cfg.key },
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64 } }, { text: PROMPT }] }], generationConfig: { temperature: 0.2, responseMimeType: "application/json" } })
+    });
+    const ms = Math.round(performance.now() - t0);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((r.status === 503 ? "Saturé" : r.status === 429 ? "Quota atteint" : "Erreur " + r.status) + (j.error && j.error.message ? " · " + String(j.error.message).slice(0, 90) : ""));
+    const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
+    const out = parseJson(parts.map(p => p.text || "").join(""));
+    const u = j.usageMetadata || {};
+    return { francais: out.francais || "", entendu: out.entendu || out.arabizi || "", ms, tokIn: u.promptTokenCount || 0, tokOut: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) };
+  }
+
+  const busy = new Set();
+  async function runOne(clip, model) {
+    if (!cfg.key) { alertKey(); return; }
+    const k = clip.id + "|" + model; if (busy.has(k)) return;
+    busy.add(k); render();
+    clip.results = clip.results || {};
+    try {
+      const { b64 } = await toWav(clip.blob);
+      clip.results[model] = { ...(await ask(model, b64)), rating: (clip.results[model] || {}).rating || "" };
+    } catch (e) {
+      clip.results[model] = { error: e.message || "Échec", rating: "" };
+    }
+    busy.delete(k); await putClip(clip).catch(() => {}); render();
+  }
+  const runAll = clip => Promise.all(cfg.on.map(m => runOne(clip, m)));
+  const alertKey = () => { $("key").focus(); $("key").placeholder = "Colle d'abord ta clé Gemini ici"; };
+
+  // ---------- Enregistrement ----------
+  let rec, stream, chunks = [], t0 = 0, held = false;
+  async function startRec() {
+    held = true;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: true } }); }
+    catch { $("recInfo").textContent = "Micro refusé : autorise-le dans les réglages de Safari."; return; }
+    if (!held) { stream.getTracks().forEach(t => t.stop()); $("recInfo").textContent = "Micro activé : maintiens à nouveau."; return; }
+    const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+    rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined); chunks = [];
+    rec.ondataavailable = e => e.data && e.data.size && chunks.push(e.data);
+    rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); $("mic").classList.remove("rec"); $("mic").textContent = "Maintiens pendant qu'on parle";
+      if (Date.now() - t0 < 700) { $("recInfo").textContent = "Trop court."; return; }
+      await addClip(new Blob(chunks, { type: rec.mimeType || "audio/mp4" }), "Enregistrement");
+    };
+    rec.start(); t0 = Date.now(); $("mic").classList.add("rec"); $("mic").textContent = "Relâche pour enregistrer";
+  }
+  const stopRec = () => { held = false; if (rec && rec.state !== "inactive") rec.stop(); };
+  const mic = $("mic");
+  mic.addEventListener("pointerdown", e => { e.preventDefault(); try { mic.setPointerCapture(e.pointerId); } catch {} startRec(); });
+  ["pointerup", "pointercancel"].forEach(ev => mic.addEventListener(ev, stopRec));
+  mic.addEventListener("contextmenu", e => e.preventDefault());
+  $("file").onchange = async e => { for (const f of e.target.files) await addClip(f, f.name); e.target.value = ""; };
+
+  async function addClip(blob, name) {
+    const clip = { id: String(Date.now()) + Math.random().toString(36).slice(2, 6), at: Date.now(), name, ref: $("refText").value.trim(), blob, results: {} };
+    $("refText").value = "";
+    try { await putClip(clip); } catch {}
+    clips.unshift(clip); render(); runAll(clip);
+  }
+
+  // ---------- Rendu ----------
+  const LBL = { ok: "Juste", mid: "Approximatif", ko: "Faux" };
+  function render() {
+    const models = [...new Set([...cfg.on, ...clips.flatMap(c => Object.keys(c.results || {}))])];
+    // Bilan
+    const rows = models.map(m => {
+      const rs = clips.map(c => (c.results || {})[m]).filter(Boolean);
+      const done = rs.filter(r => !r.error), rated = rs.filter(r => r.rating);
+      const n = k => rated.filter(r => r.rating === k).length;
+      const avgMs = done.length ? Math.round(done.reduce((s, r) => s + r.ms, 0) / done.length / 100) / 10 : null;
+      return { m, ok: n("ok"), mid: n("mid"), ko: n("ko"), fail: rs.length - done.length, avg: avgMs };
+    });
+    $("summary").innerHTML = '<tr><th>Modèle</th><th>Juste</th><th>Approx.</th><th>Faux</th><th>Échecs</th><th>Temps moyen</th></tr>' +
+      (rows.length ? rows.map(r => '<tr><td>' + esc(r.m) + '</td><td>' + r.ok + '</td><td>' + r.mid + '</td><td>' + r.ko + '</td><td>' + r.fail + '</td><td>' + (r.avg == null ? "–" : r.avg + " s") + '</td></tr>').join("")
+        : '<tr><td colspan="6" class="muted">Coche des modèles puis enregistre une phrase.</td></tr>');
+    $("summary").dataset.text = rows.map(r => r.m + " : " + r.ok + " juste, " + r.mid + " approx., " + r.ko + " faux, " + r.fail + " échecs, " + (r.avg == null ? "–" : r.avg + " s")).join("\n");
+    // Phrases
+    $("clips").innerHTML = clips.length ? clips.map(c => {
+      const ms = [...new Set([...cfg.on, ...Object.keys(c.results || {})])];
+      return '<div class="card clip" data-id="' + c.id + '">' +
+        '<div class="clip-head"><div><b>' + esc(c.name) + '</b> <span class="muted">' + new Date(c.at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + '</span>' +
+          (c.ref ? '<div class="ref">Dit : ' + esc(c.ref) + '</div>' : "") + '</div>' +
+          '<div class="row"><button class="btn" data-a="play" type="button">▶︎ Écouter</button><button class="btn" data-a="all" type="button">Relancer</button><button class="btn" data-a="del" type="button">Supprimer</button></div></div>' +
+        ms.map(m => {
+          const r = (c.results || {})[m], running = busy.has(c.id + "|" + m);
+          return '<div class="res" data-m="' + esc(m) + '"><div class="m">' + esc(m) + (r && r.ms ? ' · ' + (r.ms / 1000).toFixed(1) + ' s' : "") + (r && r.tokIn ? ' · ' + r.tokIn + '+' + r.tokOut + ' tokens' : "") + '</div>' +
+            (running ? '<div class="muted"><span class="dot"></span> En cours…</div>'
+              : !r ? '<div class="row"><button class="btn" data-a="one" type="button">Lancer</button></div>'
+              : r.error ? '<div class="err">' + esc(r.error) + '</div><div class="row"><button class="btn" data-a="one" type="button">Réessayer</button></div>'
+              : '<div class="fr">' + esc(r.francais) + '</div><div class="ent">Entendu : ' + esc(r.entendu) + '</div>' +
+                '<div class="rate">' + ["ok", "mid", "ko"].map(k => '<button type="button" data-r="' + k + '" aria-pressed="' + (r.rating === k) + '">' + LBL[k] + '</button>').join("") + '</div>') +
+            '</div>';
+        }).join("") + '</div>';
+    }).join("") : '<div class="card muted">Aucune phrase pour l\'instant. Enregistre un proche, ou importe un mémo vocal.</div>';
+  }
+
+  $("clips").addEventListener("click", async e => {
+    const card = e.target.closest(".clip"); if (!card) return;
+    const clip = clips.find(c => c.id === card.dataset.id); if (!clip) return;
+    const a = e.target.closest("[data-a]")?.dataset.a, rBtn = e.target.closest("[data-r]"), res = e.target.closest(".res");
+    if (a === "play") { try { const u = URL.createObjectURL(clip.blob); const au = new Audio(u); au.onended = () => URL.revokeObjectURL(u); au.play(); } catch {} }
+    if (a === "all") runAll(clip);
+    if (a === "one" && res) runOne(clip, res.dataset.m);
+    if (a === "del") {
+      if (e.target.dataset.armed) { clips = clips.filter(c => c !== clip); await delClip(clip.id).catch(() => {}); render(); }
+      else { e.target.dataset.armed = "1"; e.target.textContent = "Confirmer"; }
+    }
+    if (rBtn && res) { const r = clip.results[res.dataset.m]; r.rating = r.rating === rBtn.dataset.r ? "" : rBtn.dataset.r; await putClip(clip).catch(() => {}); render(); }
+  });
+  $("copy").onclick = async () => {
+    const txt = "Bilan banc d'écoute Derja\n" + $("summary").dataset.text;
+    try { await navigator.clipboard.writeText(txt); $("copyMsg").textContent = "Copié : colle-le dans la conversation."; }
+    catch { $("copyMsg").textContent = txt; }
+  };
+
+  load();
+})();
+</script>
+</body>
+</html>
