@@ -342,6 +342,10 @@ details[open] summary{margin-bottom:12px}
       : '<span class="h-a">→ ' + esc(h.arabizi) + '</span><span class="h-b">' + esc(h.francais) + '</span>') + '</button></li>').join("");
   }
 
+  // Clé nécessaire au micro selon le sens et le mode d'écoute
+  const micKeyOk = () => state.dir === "tn2fr" && state.listen === "gemini" ? !!state.geminiKey : !!state.groqKey;
+  const micMissing = () => state.dir === "tn2fr" && state.listen === "gemini" ? "Ajoute ta clé Gemini pour le micro" : "Ajoute ta clé Groq pour le micro";
+
   function renderControls() {
     const tn = state.dir === "tn2fr";
     document.querySelectorAll(".composer [data-dir]").forEach(b => b.setAttribute("aria-pressed", b.dataset.dir === state.dir));
@@ -353,15 +357,15 @@ details[open] summary{margin-bottom:12px}
     $("geminiField").hidden = state.listen !== "gemini";
     $("txt").placeholder = tn ? "Ou écris / colle du tunisien" : "Ou écris ta phrase en français";
     $("txt").lang = tn ? "ar" : "fr";
-    $("setup").hidden = !!state.groqKey;
+    $("setup").hidden = !!state.groqKey || !!state.geminiKey;
     $("rate").value = state.rate;
     $("rateVal").textContent = Math.round(state.rate * 100) + " %";
     $("go").disabled = busy || recording;
-    $("mic").disabled = busy || !state.groqKey;
+    $("mic").disabled = busy || !micKeyOk();
     $("mic").classList.toggle("rec", recording);
     $("micLabel").innerHTML = recording
       ? 'Relâche pour traduire · <span class="t" id="micTime">0:00</span>'
-      : !state.groqKey ? "Ajoute ta clé Groq pour le micro"
+      : !micKeyOk() ? micMissing()
       : tn ? "Maintiens pendant qu'on te parle" : "Maintiens et parle en français";
   }
   const renderAll = () => { renderResult(); renderHistory(); renderControls(); };
@@ -416,6 +420,7 @@ details[open] summary{margin-bottom:12px}
       }, "Claude");
       return parseJson((j.content || []).map(c => c.text || "").join(""));
     }
+    if (!state.groqKey) throw { msg: "Ajoute ta clé Groq dans les réglages pour traduire du texte, ou choisis Claude." };
     const j = await call("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json", Authorization: "Bearer " + state.groqKey },
@@ -563,7 +568,7 @@ Réponds uniquement avec un objet JSON de cette forme :
   let recording = false, rec = null, stream = null, chunks = [], recStart = 0, held = false, timer = null;
 
   async function startRec() {
-    if (busy || recording || !state.groqKey) return;
+    if (busy || recording || !micKeyOk()) return;
     held = true;
     if (synth) synth.cancel();
     try {
