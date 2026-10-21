@@ -223,6 +223,16 @@ details[open] summary{margin-bottom:12px}
       <p>Naturel garde les mots français courants, comme on parle vraiment.</p>
     </div>
 
+    <h3>Micros</h3>
+    <div class="field">
+      <label for="micListen">Micro pour écouter (TN → FR)</label>
+      <select id="micListen"></select>
+      <label for="micSpeak">Micro pour parler (FR → TN)</label>
+      <select id="micSpeak"></select>
+      <button class="btn" type="button" id="detectMics" style="align-self:flex-start">Détecter les micros</button>
+      <p id="micInfo">Conseil : micro de l'iPhone pour écouter (tourne le bas du téléphone vers ton interlocuteur), AirPods pour parler.</p>
+    </div>
+
     <h3>Voix</h3>
     <div class="field">
       <label for="rate">Vitesse de la voix arabe : <span id="rateVal"></span></label>
@@ -249,7 +259,7 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v1.6 · 21/10 18:31";
+  const VERSION = "v1.7 · 21/10 18:38";
   const KEY = "derja-express-v1";
   const GEMINI_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   const MODELS = { whisperModel: "whisper-large-v3", groqModel: "openai/gpt-oss-120b", claudeModel: "claude-haiku-5-5", geminiModel: "gemini-3.8-flash" };
@@ -263,7 +273,7 @@ details[open] summary{margin-bottom:12px}
     note: "Formule polie et chaleureuse, très courante au café ou au restaurant."
   };
 
-  const state = { dir:"fr2tn", engine:"groq", listen:"whisper", groqKey:"", claudeKey:"", geminiKey:"", ...MODELS,
+  const state = { micListen:"", micSpeak:"", dir:"fr2tn", engine:"groq", listen:"whisper", groqKey:"", claudeKey:"", geminiKey:"", ...MODELS,
     validation:"immediate", registre:"naturel", rate:0.9, voiceURI:"", history:[] };
   try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch {}
   if (!state.groqModel || state.groqModel === "llama-3.3-70b-versatile") state.groqModel = MODELS.groqModel;
@@ -543,7 +553,7 @@ Réponds uniquement avec un objet JSON de cette forme :
 {"entendu":"...","arabizi":"...","arabe":"...","francais":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}`;
 
   // ---------- Chaîne complète ----------
-  let lastAudio = null, recUrl = null, recFor = null;
+  let lastAudio = null, recUrl = null, recFor = null, micUsed = "";
   async function run({ audio, text, dir = state.dir }) {
     if (busy) return;
     lastAudio = null;
@@ -568,7 +578,7 @@ Réponds uniquement avec un objet JSON de cette forme :
       t.francais = t.francais || src;
       t.mot_a_mot = Array.isArray(t.mot_a_mot) ? t.mot_a_mot.filter(g => g && g.tn) : [];
       Object.assign(t, { dir, source: src, at: Date.now(),
-        via: !audio ? "texte" : dir === "tn2fr" && state.listen === "gemini" ? "Gemini" : "Whisper" });
+        via: (!audio ? "texte" : dir === "tn2fr" && state.listen === "gemini" ? "Gemini" : "Whisper") + (audio && micUsed ? " · " + micUsed : "") });
       if (audio) { if (recUrl) URL.revokeObjectURL(recUrl); recUrl = URL.createObjectURL(audio); recFor = t; }
       current = t;
       state.history.unshift(t);
@@ -596,7 +606,14 @@ Réponds uniquement avec un objet JSON de cette forme :
     held = true;
     if (synth) synth.cancel();
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      const listening = state.dir === "tn2fr";
+      const id = listening ? state.micListen : state.micSpeak;
+      // En écoute, pas de réduction de bruit : elle efface les voix éloignées
+      const base = { echoCancellation: true, noiseSuppression: !listening, autoGainControl: true };
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: id ? { ...base, deviceId: { exact: id } } : base }); }
+      catch (e) { if (!id || (e && e.name === "NotAllowedError")) throw e; stream = await navigator.mediaDevices.getUserMedia({ audio: base }); }
+      const tr = stream.getAudioTracks()[0];
+      micUsed = tr && tr.label ? tr.label : "";
     } catch {
       errorMsg = "Micro refusé : autorise-le dans Réglages iOS > Safari > Microphone, puis réessaie.";
       renderAll(); return;
@@ -656,6 +673,26 @@ Réponds uniquement avec un objet JSON de cette forme :
   document.querySelectorAll("#segReg [data-r]").forEach(b => b.addEventListener("click", () => { state.registre = b.dataset.r; save(); renderControls(); }));
   $("rate").addEventListener("input", e => { state.rate = Number(e.target.value); save(); renderControls(); });
   $("voice").addEventListener("change", e => { state.voiceURI = e.target.value; save(); pickVoice(); });
+
+  // ---------- Choix des micros ----------
+  async function listMics(ask) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    try {
+      if (ask) { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach(t => t.stop()); }
+      const mics = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput" && d.deviceId && d.deviceId !== "default");
+      const named = mics.filter(d => d.label);
+      ["micListen", "micSpeak"].forEach(k => {
+        $(k).replaceChildren(new Option("Automatique (choix d'iOS)", ""), ...named.map(d => new Option(d.label, d.deviceId)));
+        $(k).value = named.some(d => d.deviceId === state[k]) ? state[k] : "";
+      });
+      $("micInfo").textContent = named.length
+        ? named.length + " micro(s) détecté(s). Conseil : micro de l'iPhone pour écouter, AirPods pour parler."
+        : "Touche « Détecter les micros » et autorise l'accès pour voir la liste.";
+    } catch { $("micInfo").textContent = "Accès au micro refusé : autorise-le dans Réglages iOS > Safari > Microphone."; }
+  }
+  ["micListen", "micSpeak"].forEach(k => $(k).addEventListener("change", e => { state[k] = e.target.value; save(); }));
+  $("detectMics").addEventListener("click", () => listMics(true));
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener("devicechange", () => listMics(false));
   $("testVoice").addEventListener("click", () => speak("مرحبا، شنوة أحوالك؟ نمشي للبيرو توا."));
 
   const bindText = (id, key) => {
@@ -697,7 +734,7 @@ Réponds uniquement avec un objet JSON de cette forme :
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
-  $("openSettings").addEventListener("click", () => { $("clearMsg").textContent = ""; $("sheet").hidden = false; });
+  $("openSettings").addEventListener("click", () => { $("clearMsg").textContent = ""; $("sheet").hidden = false; listMics(false); });
   $("closeSettings").addEventListener("click", () => { $("sheet").hidden = true; });
   $("sheet").addEventListener("click", e => { if (e.target.id === "sheet") $("sheet").hidden = true; });
   let clearArmed = false;
