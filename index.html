@@ -243,8 +243,9 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v1.3 · 21/10 17:56";
+  const VERSION = "v1.4 · 21/10 18:04";
   const KEY = "derja-express-v1";
+  const GEMINI_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   const MODELS = { whisperModel: "whisper-large-v3", groqModel: "openai/gpt-oss-120b", claudeModel: "claude-haiku-5-5", geminiModel: "gemini-3.8-flash" };
   const EXAMPLE = {
     dir: "fr2tn", example: true,
@@ -302,7 +303,7 @@ details[open] summary{margin-bottom:12px}
     const r = $("result");
     if (busy) { r.innerHTML = '<div class="status"><span class="dot"></span>' + esc(phase) + '</div>'; return; }
     const t = current;
-    const err = errorMsg ? '<div class="err">' + esc(errorMsg) + '</div>' : "";
+    const err = errorMsg ? '<div class="err">' + esc(errorMsg) + '</div>' + (lastAudio ? '<div class="actions"><button class="btn primary" data-act="retry" type="button">Réessayer avec le même enregistrement</button></div>' : "") : "";
     const primary = state.validation === "valider" && !t.example ? " primary" : "";
     if (t.dir === "tn2fr") {
       r.innerHTML = err +
@@ -381,9 +382,10 @@ details[open] summary{margin-bottom:12px}
       let detail = "";
       try { const j = await r.json(); detail = (j.error && (j.error.message || j.error)) || ""; } catch {}
       if (r.status === 401 || r.status === 403 || /API key not valid|API_KEY_INVALID/i.test(String(detail))) throw { msg: "Clé " + svc + " refusée : vérifie-la dans les réglages." };
-      if (r.status === 429) throw { msg: "Quota " + svc + " atteint pour le moment. Réessaie dans une minute." };
+      if (r.status === 429) throw { status: 429, msg: "Quota " + svc + " atteint pour le moment. Réessaie dans une minute." };
       if (r.status === 402 || /credit|billing/i.test(String(detail))) throw { msg: "Crédit " + svc + " épuisé : recharge ton compte ou passe sur Groq." };
-      throw { msg: svc + " a renvoyé une erreur (" + r.status + ") " + String(detail).slice(0, 160) };
+      if (r.status === 503 || r.status === 500 || r.status === 502 || r.status === 504) throw { status: r.status, msg: svc + " est saturé en ce moment. Touche Réessayer dans quelques secondes." };
+      throw { status: r.status, msg: svc + " a renvoyé une erreur (" + r.status + ") " + String(detail).slice(0, 160) };
     }
     return r.json();
   }
@@ -458,15 +460,24 @@ details[open] summary{margin-bottom:12px}
     if (!state.geminiKey) throw { msg: "Ajoute ta clé Gemini dans les réglages, ou repasse l'écoute sur Whisper." };
     let b64;
     try { b64 = await toWav(blob); } catch { throw { msg: "Impossible de lire l'enregistrement. Réessaie." }; }
-    const model = state.geminiModel || MODELS.geminiModel;
-    const j = await call("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": state.geminiKey },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64 } }, { text: promptListen() }] }],
-        generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
-      })
-    }, "Gemini");
+    const body = JSON.stringify({
+      contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64 } }, { text: promptListen() }] }],
+      generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+    });
+    // Si un modèle est saturé (503) ou à court de quota (429), on bascule sur un modèle voisin
+    const models = [...new Set([state.geminiModel || MODELS.geminiModel, ...GEMINI_FALLBACKS])];
+    let j, lastErr;
+    for (let i = 0; i < models.length && !j; i++) {
+      if (i > 0) { phase = "Gemini est saturé, essai avec un autre modèle…"; renderResult(); await new Promise(r => setTimeout(r, 600)); }
+      try {
+        j = await call("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(models[i]) + ":generateContent",
+          { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": state.geminiKey }, body }, "Gemini");
+      } catch (e) {
+        lastErr = e;
+        if (!e || ![429, 500, 502, 503, 504, 404].includes(e.status)) throw e;
+      }
+    }
+    if (!j) throw lastErr;
     const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
     return parseJson(parts.map(p => p.text || "").join(""));
   }
@@ -525,9 +536,10 @@ Réponds uniquement avec un objet JSON de cette forme :
 {"entendu":"...","arabizi":"...","arabe":"...","francais":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}`;
 
   // ---------- Chaîne complète ----------
-  async function run({ audio, text }) {
+  let lastAudio = null;
+  async function run({ audio, text, dir = state.dir }) {
     if (busy) return;
-    const dir = state.dir;
+    lastAudio = null;
     busy = true; errorMsg = ""; showMam = false;
     phase = audio ? "Écoute de l'enregistrement…" : "Traduction en cours…";
     $("txt").blur();
@@ -553,14 +565,15 @@ Réponds uniquement avec un objet JSON de cette forme :
       state.history.unshift(t);
       state.history = state.history.slice(0, 100);
       save();
-      $("txt").value = "";
+      if (!audio) $("txt").value = "";
       busy = false;
       renderAll();
       if (state.validation === "immediate") restitute(t);
     } catch (e) {
       busy = false;
       errorMsg = (e && e.msg) || "Erreur inattendue. Réessaie.";
-      if (src && !text) $("txt").value = src;
+      if (audio) lastAudio = { audio, dir };
+      if (src && !text && !(dir === "tn2fr" && state.listen === "gemini")) $("txt").value = src;
       renderAll();
     }
   }
@@ -657,6 +670,7 @@ Réponds uniquement avec un objet JSON de cette forme :
     if (act === "voix") speak(current.arabe);
     if (act === "voixfr") speak(current.francais, true);
     if (act === "ecran") { $("fullArabe").textContent = current.arabe || ""; $("fullSub").textContent = current.arabizi || ""; $("full").hidden = false; }
+    if (act === "retry" && lastAudio) { const a = lastAudio; run({ audio: a.audio, dir: a.dir }); return; }
     if (act === "mam") { showMam = !showMam; renderResult(); }
     if (act === "edit") {
       state.dir = current.dir === "tn2fr" ? "tn2fr" : "fr2tn"; save(); renderControls();
