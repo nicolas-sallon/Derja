@@ -249,7 +249,7 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v1.5 · 21/10 18:02";
+  const VERSION = "v1.6 · 21/10 18:31";
   const KEY = "derja-express-v1";
   const GEMINI_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   const MODELS = { whisperModel: "whisper-large-v3", groqModel: "openai/gpt-oss-120b", claudeModel: "claude-haiku-5-5", geminiModel: "gemini-3.8-flash" };
@@ -318,7 +318,8 @@ details[open] summary{margin-bottom:12px}
         '<div class="eyebrow">Ce qui a été dit</div>' +
         '<div class="fr-src" lang="aeb-Latn">' + esc(t.arabizi) + '</div>' +
         '<div class="arabe small" lang="aeb-Arab" dir="rtl">' + esc(t.arabe) + '</div>' +
-        (t.source && t.source !== t.arabe ? '<div class="heard">Entendu par le micro : <span dir="auto">' + esc(t.source) + '</span></div>' : "") +
+        (t.source && t.source !== t.arabe ? '<div class="heard">Entendu par le micro (' + esc(t.via || "") + ') : <span dir="auto">' + esc(t.source) + '</span></div>' : "") +
+        (recFor === t ? '<div class="actions"><button class="btn" data-act="play" type="button">▶︎ Réécouter l\'enregistrement</button></div>' : "") +
         '<div class="actions">' +
           '<button class="btn' + primary + '" data-act="voixfr" type="button">Écouter</button>' +
           '<button class="btn" data-act="mam" type="button" aria-expanded="' + showMam + '">Mot à mot</button>' +
@@ -406,7 +407,7 @@ details[open] summary{margin-bottom:12px}
     fd.append("language", dir === "tn2fr" ? "ar" : "fr");
     fd.append("response_format", "json");
     fd.append("temperature", "0");
-    if (dir === "tn2fr") fd.append("prompt", "Conversation en dialecte tunisien (derja), avec des mots français. " + TN_HINT);
+    if (dir === "tn2fr") fd.append("prompt", "حكاية بالدارجة التونسية. " + TN_HINT);
     const j = await call("https://api.groq.com/openai/v1/audio/transcriptions",
       { method: "POST", headers: { Authorization: "Bearer " + state.groqKey }, body: fd }, "Groq");
     return String(j.text || "").trim();
@@ -542,7 +543,7 @@ Réponds uniquement avec un objet JSON de cette forme :
 {"entendu":"...","arabizi":"...","arabe":"...","francais":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}`;
 
   // ---------- Chaîne complète ----------
-  let lastAudio = null;
+  let lastAudio = null, recUrl = null, recFor = null;
   async function run({ audio, text, dir = state.dir }) {
     if (busy) return;
     lastAudio = null;
@@ -566,7 +567,9 @@ Réponds uniquement avec un objet JSON de cette forme :
       if (!t || typeof t.arabizi !== "string" || typeof t.arabe !== "string" || (dir === "tn2fr" && !t.francais)) throw { msg: "La réponse du traducteur était incomplète. Réessaie." };
       t.francais = t.francais || src;
       t.mot_a_mot = Array.isArray(t.mot_a_mot) ? t.mot_a_mot.filter(g => g && g.tn) : [];
-      Object.assign(t, { dir, source: src, at: Date.now() });
+      Object.assign(t, { dir, source: src, at: Date.now(),
+        via: !audio ? "texte" : dir === "tn2fr" && state.listen === "gemini" ? "Gemini" : "Whisper" });
+      if (audio) { if (recUrl) URL.revokeObjectURL(recUrl); recUrl = URL.createObjectURL(audio); recFor = t; }
       current = t;
       state.history.unshift(t);
       state.history = state.history.slice(0, 100);
@@ -676,6 +679,7 @@ Réponds uniquement avec un objet JSON de cette forme :
     if (act === "voix") speak(current.arabe);
     if (act === "voixfr") speak(current.francais, true);
     if (act === "ecran") { $("fullArabe").textContent = current.arabe || ""; $("fullSub").textContent = current.arabizi || ""; $("full").hidden = false; }
+    if (act === "play" && recUrl) { try { new Audio(recUrl).play(); } catch {} return; }
     if (act === "retry" && lastAudio) { const a = lastAudio; run({ audio: a.audio, dir: a.dir }); return; }
     if (act === "mam") { showMam = !showMam; renderResult(); }
     if (act === "edit") {
