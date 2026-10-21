@@ -171,6 +171,19 @@ details[open] summary{margin-bottom:12px}
       <input type="password" id="claudeKey" placeholder="sk-ant-…" autocomplete="off" autocapitalize="off" spellcheck="false">
       <p>À créer sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>, après avoir ajouté quelques dollars de crédit.</p>
     </div>
+    <div class="field">
+      <span class="lbl">Écoute du tunisien</span>
+      <div class="seg" role="group" id="segListen">
+        <button type="button" data-l="whisper">Whisper + traduction</button>
+        <button type="button" data-l="gemini">Gemini · écoute directe</button>
+      </div>
+      <p>Gemini écoute l'audio lui-même, sans passer par une transcription en arabe standard : souvent bien meilleur sur le dialecte.</p>
+    </div>
+    <div class="field" id="geminiField">
+      <label for="geminiKey">Clé Gemini</label>
+      <input type="password" id="geminiKey" placeholder="AIza…" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <p>Gratuite, à créer avec ton compte Google sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.</p>
+    </div>
     <details>
       <summary>Modèles (avancé)</summary>
       <div class="field">
@@ -180,6 +193,8 @@ details[open] summary{margin-bottom:12px}
         <input type="text" id="groqModel" autocapitalize="off" spellcheck="false">
         <label for="claudeModel">Traduction Claude</label>
         <input type="text" id="claudeModel" autocapitalize="off" spellcheck="false">
+        <label for="geminiModel">Écoute Gemini</label>
+        <input type="text" id="geminiModel" autocapitalize="off" spellcheck="false">
         <button class="btn" type="button" id="resetModels" style="align-self:flex-start">Modèles par défaut</button>
       </div>
     </details>
@@ -228,7 +243,7 @@ details[open] summary{margin-bottom:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const KEY = "derja-express-v1";
-  const MODELS = { whisperModel: "whisper-large-v3", groqModel: "llama-3.3-70b-versatile", claudeModel: "claude-haiku-5-5" };
+  const MODELS = { whisperModel: "whisper-large-v3", groqModel: "openai/gpt-oss-120b", claudeModel: "claude-haiku-5-5", geminiModel: "gemini-3.8-flash" };
   const EXAMPLE = {
     dir: "fr2tn", example: true,
     francais: "Je voudrais l'addition, s'il vous plaît",
@@ -239,9 +254,10 @@ details[open] summary{margin-bottom:12px}
     note: "Formule polie et chaleureuse, très courante au café ou au restaurant."
   };
 
-  const state = { dir:"fr2tn", engine:"groq", groqKey:"", claudeKey:"", ...MODELS,
+  const state = { dir:"fr2tn", engine:"groq", listen:"whisper", groqKey:"", claudeKey:"", geminiKey:"", ...MODELS,
     validation:"immediate", registre:"naturel", rate:0.9, voiceURI:"", history:[] };
   try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch {}
+  if (!state.groqModel || state.groqModel === "llama-3.3-70b-versatile") state.groqModel = MODELS.groqModel;
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
 
   let current = state.history[0] || EXAMPLE;
@@ -333,6 +349,8 @@ details[open] summary{margin-bottom:12px}
     document.querySelectorAll("#segValid [data-v]").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === state.validation));
     document.querySelectorAll("#segReg [data-r]").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === state.registre));
     $("claudeField").hidden = state.engine !== "claude";
+    document.querySelectorAll("#segListen [data-l]").forEach(b => b.setAttribute("aria-pressed", b.dataset.l === state.listen));
+    $("geminiField").hidden = state.listen !== "gemini";
     $("txt").placeholder = tn ? "Ou écris / colle du tunisien" : "Ou écris ta phrase en français";
     $("txt").lang = tn ? "ar" : "fr";
     $("setup").hidden = !!state.groqKey;
@@ -356,7 +374,7 @@ details[open] summary{margin-bottom:12px}
     if (!r.ok) {
       let detail = "";
       try { const j = await r.json(); detail = (j.error && (j.error.message || j.error)) || ""; } catch {}
-      if (r.status === 401) throw { msg: "Clé " + svc + " refusée : vérifie-la dans les réglages." };
+      if (r.status === 401 || r.status === 403 || /API key not valid|API_KEY_INVALID/i.test(String(detail))) throw { msg: "Clé " + svc + " refusée : vérifie-la dans les réglages." };
       if (r.status === 429) throw { msg: "Quota " + svc + " atteint pour le moment. Réessaie dans une minute." };
       if (r.status === 402 || /credit|billing/i.test(String(detail))) throw { msg: "Crédit " + svc + " épuisé : recharge ton compte ou passe sur Groq." };
       throw { msg: svc + " a renvoyé une erreur (" + r.status + ") " + String(detail).slice(0, 160) };
@@ -401,9 +419,49 @@ details[open] summary{margin-bottom:12px}
     const j = await call("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json", Authorization: "Bearer " + state.groqKey },
-      body: JSON.stringify({ model: state.groqModel || MODELS.groqModel, temperature: 0.2, response_format: { type: "json_object" }, messages: [{ role: "user", content: prompt }] })
+      body: JSON.stringify(Object.assign({ model: state.groqModel || MODELS.groqModel, temperature: 0.2, messages: [{ role: "user", content: prompt }] },
+        /gpt-oss/.test(state.groqModel || MODELS.groqModel) ? { reasoning_effort: "low" } : {}))
     }, "Groq");
     return parseJson(j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content);
+  }
+
+  // Audio du micro -> WAV 16 kHz mono (format accepté partout)
+  async function toWav(blob) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ac = new AC();
+    let buf;
+    try { buf = await ac.decodeAudioData(await blob.arrayBuffer()); } finally { try { ac.close(); } catch {} }
+    const rate = 16000, len = Math.max(1, Math.ceil(buf.duration * rate));
+    const off = new OfflineAudioContext(1, len, rate);
+    const s = off.createBufferSource(); s.buffer = buf; s.connect(off.destination); s.start();
+    const pcm = (await off.startRendering()).getChannelData(0);
+    const out = new DataView(new ArrayBuffer(44 + pcm.length * 2));
+    const w = (o, str) => { for (let i = 0; i < str.length; i++) out.setUint8(o + i, str.charCodeAt(i)); };
+    w(0, "RIFF"); out.setUint32(4, 36 + pcm.length * 2, true); w(8, "WAVE"); w(12, "fmt ");
+    out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true);
+    out.setUint32(24, rate, true); out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true);
+    w(36, "data"); out.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) { const v = Math.max(-1, Math.min(1, pcm[i])); out.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true); }
+    const bytes = new Uint8Array(out.buffer);
+    let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+
+  async function geminiListen(blob) {
+    if (!state.geminiKey) throw { msg: "Ajoute ta clé Gemini dans les réglages, ou repasse l'écoute sur Whisper." };
+    let b64;
+    try { b64 = await toWav(blob); } catch { throw { msg: "Impossible de lire l'enregistrement. Réessaie." }; }
+    const model = state.geminiModel || MODELS.geminiModel;
+    const j = await call("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": state.geminiKey },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64 } }, { text: promptListen() }] }],
+        generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+      })
+    }, "Gemini");
+    const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
+    return parseJson(parts.map(p => p.text || "").join(""));
   }
 
   // ---------- Consignes de traduction ----------
@@ -447,6 +505,18 @@ Réponds uniquement avec un objet JSON de cette forme :
 
 Phrase en tunisien : ${src}`;
 
+  const promptListen = () => `Tu es un interprète expert du dialecte tunisien (Derja). Écoute l'extrait audio joint : un Tunisien parle à un francophone, en face à face, souvent avec des mots français mêlés.
+
+Étapes :
+1. "entendu" : transcris fidèlement et phonétiquement ce qui est prononcé, mot pour mot, en arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ). Ne corrige pas, ne traduis pas, ne remplace pas par de l'arabe standard. Les mots français restent écrits en français. Un passage inaudible devient [inaudible].
+2. "arabizi" et "arabe" : la phrase tunisienne telle que tu la comprends, en arabizi et en lettres arabes (identique à "entendu" si rien n'est à corriger).
+3. "francais" : la traduction en français naturel et courant. Traduis le sens, pas mot à mot, et garde le ton (familier, poli, taquin…).
+4. "mot_a_mot" : la phrase tunisienne découpée en groupes de mots, dans l'ordre, chacun avec son sens en français.
+5. "variante" : une autre compréhension possible en français si un passage est incertain, sinon null. "note" : courte remarque utile (expression idiomatique, mot incertain), sinon chaîne vide.
+${context() ? "\nContexte, derniers échanges (du plus ancien au plus récent) :\n" + context() + "\n" : ""}
+Réponds uniquement avec un objet JSON de cette forme :
+{"entendu":"...","arabizi":"...","arabe":"...","francais":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}`;
+
   // ---------- Chaîne complète ----------
   async function run({ audio, text }) {
     if (busy) return;
@@ -457,12 +527,17 @@ Phrase en tunisien : ${src}`;
     renderAll();
     let src = text;
     try {
-      if (audio) {
+      let t;
+      if (audio && dir === "tn2fr" && state.listen === "gemini") {
+        phase = "Gemini écoute et traduit…"; renderResult();
+        t = await geminiListen(audio);
+        src = (t && (t.entendu || t.arabizi)) || "";
+      } else if (audio) {
         src = await transcribe(audio, dir);
         if (!src) throw { msg: "Je n'ai rien entendu. Rapproche le téléphone et maintiens le bouton pendant toute la phrase." };
         phase = "Traduction en cours…"; renderResult();
       }
-      const t = await llm(dir === "tn2fr" ? promptTn(src) : promptFr(src));
+      if (!t) t = await llm(dir === "tn2fr" ? promptTn(src) : promptFr(src));
       if (!t || typeof t.arabizi !== "string" || typeof t.arabe !== "string" || (dir === "tn2fr" && !t.francais)) throw { msg: "La réponse du traducteur était incomplète. Réessaie." };
       t.francais = t.francais || src;
       t.mot_a_mot = Array.isArray(t.mot_a_mot) ? t.mot_a_mot.filter(g => g && g.tn) : [];
@@ -560,7 +635,9 @@ Phrase en tunisien : ${src}`;
   };
   bindText("groqKey", "groqKey"); bindText("claudeKey", "claudeKey");
   bindText("whisperModel", "whisperModel"); bindText("groqModel", "groqModel"); bindText("claudeModel", "claudeModel");
-  $("resetModels").addEventListener("click", () => { Object.assign(state, MODELS); save(); ["whisperModel", "groqModel", "claudeModel"].forEach(k => $(k).value = state[k]); });
+  bindText("geminiKey", "geminiKey"); bindText("geminiModel", "geminiModel");
+  document.querySelectorAll("#segListen [data-l]").forEach(b => b.addEventListener("click", () => { state.listen = b.dataset.l; save(); renderControls(); }));
+  $("resetModels").addEventListener("click", () => { Object.assign(state, MODELS); save(); ["whisperModel", "groqModel", "claudeModel", "geminiModel"].forEach(k => $(k).value = state[k]); });
   $("setupSave").addEventListener("click", () => {
     const v = $("setupKey").value.trim();
     if (!v) return;
