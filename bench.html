@@ -86,7 +86,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v7 · 22/10 21:50";
+  const VERSION = "banc v8 · 22/10 21:54";
   // Un « modèle » peut porter des options : « · low » = réflexion réduite, « · essentiel » = réponse courte
   const VARIANTS = ["gemini-3.8-flash", "gemini-3.8-flash · low", "gemini-3.8-flash · low · essentiel"];
   const WHISPER = "whisper-large-v3 + gpt-oss-120b"; // chaîne Groq : Whisper transcrit, puis gpt-oss traduit (comme dans l'app)
@@ -364,7 +364,6 @@ Phrase entendue : `;
   <div class="models" id="vList"></div>
   <div class="row">
     <button class="btn" id="vDesign" type="button">Créer une voix « homme tunisien »</button>
-    <button class="btn" id="vLib" type="button">Chercher les voix arabes de Google</button>
   </div>
   <div class="row"><input type="text" id="vId" placeholder="Identifiant d'une voix (voice_…)" autocapitalize="off" spellcheck="false"><input type="text" id="vName" placeholder="Nom (ex. Tunisien AI Studio)"><button class="btn" id="vAdd" type="button">Ajouter</button></div>
   <p class="muted" id="vInfo">Gemini 3.8 Flash TTS, débité sur tes crédits Gemini (quelques fractions de centime par phrase).</p>
@@ -389,6 +388,9 @@ Phrase entendue : `;
   // Voix : « iphone », voix Gemini prédéfinies, voix conçue, voix de la bibliothèque Google
   let vs = { on: ["iphone", "Charon", "Orus"], extra: [], ratings: [] };
   try { Object.assign(vs, JSON.parse(localStorage.getItem(VKEY) || "{}")); } catch {}
+  // Les voix chargées depuis la bibliothèque Google sont retirées (aucune n'est tunisienne)
+  vs.extra = (vs.extra || []).filter(v => !/^Google · /.test(v.label));
+  vs.on = vs.on.filter(id => id === "iphone" || id.startsWith("voice_") || / · lite$/.test(id) || /^[A-Z][a-z]+$/.test(id) || vs.extra.some(v => v.id === id));
   if (!vs.lite) { vs.on = [...new Set([...vs.on, "Charon · lite", "Orus · lite"])]; vs.lite = 1; }
   const saveV = () => { try { localStorage.setItem(VKEY, JSON.stringify(vs)); } catch {} };
   const PREBUILT = ["Charon", "Orus", "Puck", "Algenib", "Achird", "Sadaltager", "Kore", "Aoede", "Sulafat"];
@@ -435,10 +437,24 @@ Phrase entendue : `;
   };
 
   // iPhone : voix arabe du navigateur
+  // Une seule lecture à la fois ; le bouton devient « Arrêter » pendant la lecture
+  let playing = null; // { row, audio }
+  const stopPlay = () => {
+    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch {}
+    if (playing && playing.audio) { try { playing.audio.pause(); } catch {} }
+    playing = null;
+  };
+  const play = r => {
+    stopPlay();
+    const done = () => { if (playing && playing.row === r) { playing = null; render(); } };
+    if (r.id === "iphone") { const u = speakIphone(r.text); playing = { row: r }; if (u) { u.onend = done; u.onerror = done; } }
+    else if (r.url) { const a = new Audio(r.url); playing = { row: r, audio: a }; a.onended = done; a.onerror = done; a.play().catch(done); }
+    render();
+  };
   const speakIphone = text => {
     const s = window.speechSynthesis; if (!s) throw new Error("Synthèse vocale indisponible");
     const ar = s.getVoices().filter(v => /^ar/i.test(v.lang));
-    s.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = ar[0] ? ar[0].lang : "ar-SA"; if (ar[0]) u.voice = ar[0]; u.rate = 0.9; s.speak(u);
+    s.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = ar[0] ? ar[0].lang : "ar-SA"; if (ar[0]) u.voice = ar[0]; u.rate = 0.9; s.speak(u); return u;
   };
 
   async function gemTts(voiceId, text) {
@@ -458,7 +474,8 @@ Phrase entendue : `;
   let rows = [];
   async function go() {
     const text = $("vText").value.trim(); if (!text) return;
-    const batch = vs.on.map(id => ({ id, text, status: "run" }));
+    const known = new Set(allVoices().map(v => v.id));
+    const batch = vs.on.filter(id => known.has(id)).map(id => ({ id, text, status: "run" }));
     rows = [...batch, ...rows]; render();
     for (const r of batch) {
       if (r.id === "iphone") { r.status = "ok"; r.ms = 0; continue; }
@@ -481,13 +498,13 @@ Phrase entendue : `;
       '<div class="ent" dir="rtl">' + esc(r.text) + '</div>' +
       (r.status === "run" ? '<div class="muted"><span class="dot"></span> Génération…</div>'
         : r.status === "err" ? '<div class="err">' + esc(r.err) + '</div>'
-        : '<div class="row"><button class="btn" data-a="play" type="button">▶︎ Écouter</button></div><div class="rate">' + ["ok", "mid", "ko"].map(k => '<button type="button" data-r="' + k + '" aria-pressed="' + (r.rating === k) + '">' + LBL[k] + '</button>').join("") + '</div>') +
+        : '<div class="row"><button class="btn' + (playing && playing.row === r ? ' primary' : '') + '" data-a="play" type="button">' + (playing && playing.row === r ? '■ Arrêter' : '▶︎ Écouter') + '</button></div><div class="rate">' + ["ok", "mid", "ko"].map(k => '<button type="button" data-r="' + k + '" aria-pressed="' + (r.rating === k) + '">' + LBL[k] + '</button>').join("") + '</div>') +
       '</div></div>').join("");
   }
   $("vRows").onclick = e => {
     const card = e.target.closest("[data-i]"); if (!card) return;
     const r = rows[Number(card.dataset.i)];
-    if (e.target.closest("[data-a=play]")) { if (r.id === "iphone") speakIphone(r.text); else if (r.url) new Audio(r.url).play(); }
+    if (e.target.closest("[data-a=play]")) { if (playing && playing.row === r) { stopPlay(); render(); } else play(r); }
     const rb = e.target.closest("[data-r]");
     if (rb) {
       vs.ratings = vs.ratings.filter(x => x !== r.rec);
@@ -525,22 +542,6 @@ Phrase entendue : `;
     } catch (e) { $("vInfo").textContent = "Création impossible : " + e.message + (/load failed|failed to fetch|networkerror/i.test(e.message) ? ". Google bloque cet appel depuis une page web : crée la voix dans AI Studio et colle son identifiant ci-dessus." : ""); }
   };
 
-  // Bibliothèque de voix Google : voix arabes
-  $("vLib").onclick = async () => {
-    $("vInfo").textContent = "Recherche des voix arabes…";
-    try {
-      let j = await api("voices?language_code=ar&page_size=200", { method: "GET" });
-      let list = j.voices || j.items || [];
-      if (!list.length) { j = await api("voices?search=arabic&page_size=200", { method: "GET" }); list = j.voices || j.items || []; }
-      const found = list.map(v => ({ id: v.id || v.name || v.voice_id,
-        label: "Google · " + [v.display_name || v.displayName || v.id, v.gender, v.accent, v.region_code || v.regionCode, v.language_code || v.languageCode].filter(Boolean).join(" · ") })).filter(v => v.id);
-      const before = vs.extra.length;
-      found.forEach(f => { if (!vs.extra.some(x => x.id === f.id)) vs.extra.push(f); });
-      saveV(); render();
-      const tn = found.filter(f => /tn|tunis/i.test(f.label));
-      $("vInfo").textContent = found.length ? found.length + " voix arabes trouvées (" + (vs.extra.length - before) + " nouvelles)" + (tn.length ? ", dont " + tn.length + " tunisienne(s) !" : ", aucune marquée tunisienne.") + " Coche celles à tester." : "Aucune voix arabe dans la bibliothèque.";
-    } catch (e) { $("vInfo").textContent = "Recherche impossible : " + e.message; }
-  };
 
   render();
 })();
