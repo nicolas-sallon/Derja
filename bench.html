@@ -86,7 +86,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v6 · 22/10 21:14";
+  const VERSION = "banc v7 · 22/10 21:50";
   // Un « modèle » peut porter des options : « · low » = réflexion réduite, « · essentiel » = réponse courte
   const VARIANTS = ["gemini-3.8-flash", "gemini-3.8-flash · low", "gemini-3.8-flash · low · essentiel"];
   const WHISPER = "whisper-large-v3 + gpt-oss-120b"; // chaîne Groq : Whisper transcrit, puis gpt-oss traduit (comme dans l'app)
@@ -380,7 +380,8 @@ Phrase entendue : `;
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const VKEY = "derja-bench-voices";
-  const TTS = "gemini-3.8-flash-tts";
+  const TTS = "gemini-3.8-flash-tts", TTS_LITE = "gemini-3.8-flash-lite-tts";
+  // Une voix suivie de « · lite » est générée par le modèle allégé (plus rapide, moins cher)
   const API = "https://generativelanguage.googleapis.com/v1beta/";
   const key = () => { try { return JSON.parse(localStorage.getItem("derja-bench-cfg") || "{}").key || ""; } catch { return ""; } };
   const SAMPLES = ["نحب الحساب يعيشك", "شنوة أحوالك؟ لاباس عليك؟", "نتلاقاو توا قدام القهوة، ماو بعيد", "يعيشك، نجم نشري زوز خبزات؟"];
@@ -388,9 +389,11 @@ Phrase entendue : `;
   // Voix : « iphone », voix Gemini prédéfinies, voix conçue, voix de la bibliothèque Google
   let vs = { on: ["iphone", "Charon", "Orus"], extra: [], ratings: [] };
   try { Object.assign(vs, JSON.parse(localStorage.getItem(VKEY) || "{}")); } catch {}
+  if (!vs.lite) { vs.on = [...new Set([...vs.on, "Charon · lite", "Orus · lite"])]; vs.lite = 1; }
   const saveV = () => { try { localStorage.setItem(VKEY, JSON.stringify(vs)); } catch {} };
   const PREBUILT = ["Charon", "Orus", "Puck", "Algenib", "Achird", "Sadaltager", "Kore", "Aoede", "Sulafat"];
-  const allVoices = () => [{ id: "iphone", label: "iPhone (voix de base)" }, ...PREBUILT.map(v => ({ id: v, label: "Gemini · " + v })), ...vs.extra];
+  const LITE = ["Charon", "Orus"].map(v => ({ id: v + " · lite", label: "Gemini Lite · " + v }));
+  const allVoices = () => [{ id: "iphone", label: "iPhone (voix de base)" }, ...PREBUILT.map(v => ({ id: v, label: "Gemini · " + v })), ...LITE, ...vs.extra];
   const labelOf = id => (allVoices().find(v => v.id === id) || { label: id }).label;
 
   function renderList() {
@@ -438,12 +441,13 @@ Phrase entendue : `;
     s.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = ar[0] ? ar[0].lang : "ar-SA"; if (ar[0]) u.voice = ar[0]; u.rate = 0.9; s.speak(u);
   };
 
-  async function gemTts(voice, text) {
+  async function gemTts(voiceId, text) {
+    const lite = / · lite$/.test(voiceId), voice = voiceId.replace(/ · lite$/, "");
     const part = { text };
     const style = $("vStyle").value.trim();
     if (style) part.speech_metadata = { style };
     const t0 = performance.now();
-    const j = await api("models/" + TTS + ":generateContent", { method: "POST", body: JSON.stringify({
+    const j = await api("models/" + (lite ? TTS_LITE : TTS) + ":generateContent", { method: "POST", body: JSON.stringify({
       contents: [{ role: "user", parts: [part] }],
       generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { voice } } } }) });
     const a = findAudio(j); if (!a) throw new Error("Aucun son dans la réponse");
