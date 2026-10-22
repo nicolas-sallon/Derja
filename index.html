@@ -76,6 +76,7 @@ main{flex:1;display:flex;flex-direction:column;gap:20px;padding-block:8px 24px}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.4)}
 .mic{appearance:none;border:0;width:100%;min-height:72px;border-radius:20px;background:var(--accent);color:var(--accent-ink);font:650 17px var(--sans);display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;transition:background .15s}
 .mic.rec{background:var(--rec)}
+.hint{margin:0;font-size:12px;color:var(--muted);text-align:center}
 .mic:disabled{opacity:.45}
 .mic .t{font-variant-numeric:tabular-nums}
 .row{display:flex;gap:10px;align-items:flex-end}
@@ -146,6 +147,7 @@ details[open] summary{margin-bottom:12px}
       <textarea id="txt" rows="1" placeholder="Ou écris ta phrase" enterkeyhint="send" autocomplete="off"></textarea>
       <button type="submit" class="btn go" id="go">Traduire</button>
     </div>
+    <p class="hint">Rappel : désactive le mode silencieux de l'iPhone pour entendre la voix.</p>
   </form>
 </div>
 
@@ -230,7 +232,7 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v2.4 · 22/10 23:34";
+  const VERSION = "v2.5 · 22/10 23:42";
   const KEY = "derja-express-v1";
   const MODELS = { geminiModel: "gemini-3.8-flash", claudeModel: "claude-haiku-5-5" };
   const EXAMPLE = {
@@ -278,20 +280,16 @@ details[open] summary{margin-bottom:12px}
       u.lang = v ? v.lang : (fr ? "fr-FR" : "ar-SA");
       if (v) u.voice = v;
       u.rate = fr ? 1 : 0.9;
-      setSession("playback");
       synth.speak(u);
     } catch {}
   };
 
   // Voix tunisienne : Gemini Flash-Lite TTS (Orus ou Charon), lue en continu dès les premiers morceaux reçus
   const TTS_MODEL = "gemini-3.8-flash-lite-tts";
-  // iOS : « play-and-record » pendant qu'on parle (micro disponible), « playback » ensuite (le son sort même en mode silencieux)
-  const setSession = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
   // Le contexte audio doit être créé ou relancé pendant un geste (toucher, relâcher) pour pouvoir jouer ensuite
   let ctx = null;
-  // Circuit audio neuf, créé APRÈS le passage en mode « lecture » : sinon iOS peut le laisser sur l'écouteur d'appel
+  // Circuit audio neuf, créé pendant le geste ; le mode audio de l'iPhone est laissé à iOS
   const freshCtx = () => {
-    setSession("playback");
     try { if (ctx) ctx.close(); } catch {}
     try { const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC(); ctx.resume(); } catch { ctx = null; }
   };
@@ -317,7 +315,7 @@ details[open] summary{margin-bottom:12px}
     stopAudio();
     const my = ttsSeq;
     if (!state.geminiKey) { speakIos(text, false); return; }
-    setSession("playback"); ensureCtx();
+    ensureCtx();
     ttsLoading = true; renderResult();
     const ab = new AbortController(); ttsAbort = ab;
     let next = 0, carry = null, started = false;
@@ -329,7 +327,6 @@ details[open] summary{margin-bottom:12px}
       if (carry) { const m = new Uint8Array(carry.length + u8.length); m.set(carry); m.set(u8, carry.length); u8 = m; carry = null; }
       if (u8.length % 2) { carry = u8.slice(-1); u8 = u8.subarray(0, u8.length - 1); }
       const n = u8.length / 2; if (!n) return;
-      if (!started) setSession("playback"); // réaffirmé juste avant le premier son
       const mr = String(a.mime).match(/rate=(\d+)/), rate = mr ? Number(mr[1]) : 24000;
       const dv = new DataView(u8.buffer, u8.byteOffset, u8.length), buf = ctx.createBuffer(1, n, rate), ch = buf.getChannelData(0);
       for (let i = 0; i < n; i++) ch[i] = dv.getInt16(i * 2, true) / 32768;
@@ -684,12 +681,11 @@ Réponds uniquement avec ce JSON : {"mot_a_mot":[{"tn":"...","fr":"..."}],"varia
     if (busy || capturing || !keyOk()) return;
     held = true;
     stopAudio();
-    setSession("play-and-record"); // le micro doit rester disponible pendant la parole
     if (state.dir === "fr2tn" && SR && !srBroken) startApple(); else startRec();
   }
   function stopCapture() {
     held = false;
-    freshCtx(); // relâchement = geste : mode « lecture » d'abord, puis circuit audio neuf pour la voix
+    freshCtx(); // relâchement = geste : circuit audio prêt pour la voix
     if (sr) { try { sr.stop(); } catch {} }
     else if (rec && rec.state !== "inactive") rec.stop();
   }
