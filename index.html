@@ -230,7 +230,7 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v2.3 · 22/10 23:23";
+  const VERSION = "v2.4 · 22/10 23:34";
   const KEY = "derja-express-v1";
   const MODELS = { geminiModel: "gemini-3.8-flash", claudeModel: "claude-haiku-5-5" };
   const EXAMPLE = {
@@ -278,6 +278,7 @@ details[open] summary{margin-bottom:12px}
       u.lang = v ? v.lang : (fr ? "fr-FR" : "ar-SA");
       if (v) u.voice = v;
       u.rate = fr ? 1 : 0.9;
+      setSession("playback");
       synth.speak(u);
     } catch {}
   };
@@ -288,14 +289,15 @@ details[open] summary{margin-bottom:12px}
   const setSession = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
   // Le contexte audio doit être créé ou relancé pendant un geste (toucher, relâcher) pour pouvoir jouer ensuite
   let ctx = null;
-  const ensureCtx = () => {
-    try {
-      if (!ctx || ctx.state === "closed") { const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC(); }
-      if (ctx.state !== "running") ctx.resume();
-    } catch {}
+  // Circuit audio neuf, créé APRÈS le passage en mode « lecture » : sinon iOS peut le laisser sur l'écouteur d'appel
+  const freshCtx = () => {
+    setSession("playback");
+    try { if (ctx) ctx.close(); } catch {}
+    try { const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC(); ctx.resume(); } catch { ctx = null; }
   };
-  document.addEventListener("pointerup", ensureCtx, true);
-  document.addEventListener("click", ensureCtx, true);
+  const ensureCtx = () => { try { if (!ctx || ctx.state === "closed") freshCtx(); else if (ctx.state !== "running") ctx.resume(); } catch {} };
+  // Les autres touches (Traduire, Écouter, Tester…) préparent aussi la lecture ; jamais pendant que le micro écoute
+  document.addEventListener("click", e => { if (!capturing && !(e.target.closest && e.target.closest("#mic"))) ensureCtx(); }, true);
   let ttsSeq = 0, ttsLoading = false, ttsAbort = null, sources = [];
   const stopAudio = () => {
     ttsSeq++; ttsLoading = false;
@@ -327,6 +329,7 @@ details[open] summary{margin-bottom:12px}
       if (carry) { const m = new Uint8Array(carry.length + u8.length); m.set(carry); m.set(u8, carry.length); u8 = m; carry = null; }
       if (u8.length % 2) { carry = u8.slice(-1); u8 = u8.subarray(0, u8.length - 1); }
       const n = u8.length / 2; if (!n) return;
+      if (!started) setSession("playback"); // réaffirmé juste avant le premier son
       const mr = String(a.mime).match(/rate=(\d+)/), rate = mr ? Number(mr[1]) : 24000;
       const dv = new DataView(u8.buffer, u8.byteOffset, u8.length), buf = ctx.createBuffer(1, n, rate), ch = buf.getChannelData(0);
       for (let i = 0; i < n; i++) ch[i] = dv.getInt16(i * 2, true) / 32768;
@@ -686,7 +689,7 @@ Réponds uniquement avec ce JSON : {"mot_a_mot":[{"tn":"...","fr":"..."}],"varia
   }
   function stopCapture() {
     held = false;
-    setSession("playback"); ensureCtx(); // relâchement = geste : la voix pourra partir dès la traduction
+    freshCtx(); // relâchement = geste : mode « lecture » d'abord, puis circuit audio neuf pour la voix
     if (sr) { try { sr.stop(); } catch {} }
     else if (rec && rec.state !== "inactive") rec.stop();
   }
