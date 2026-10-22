@@ -6,12 +6,12 @@
 <meta name="robots" content="noindex">
 <title>Banc d'essai Derja</title>
 <style>
-/* Page de test technique, séparée de l'app : chaîne complète français -> tunisien, chronométrée */
+/* Page de test technique, séparée de l'app : écoute continue tunisien -> français */
 :root{
   --bg:#0b0c0f; --surface:#17181d; --surface-2:#22242b; --line:#2e3038;
-  --fg:#f4f5f7; --muted:#9a9ca6; --accent:#3d8bff; --rec:#ff453a; --good:#30d158; --bad:#ff6961;
+  --fg:#f4f5f7; --muted:#9a9ca6; --accent:#3d8bff; --rec:#ff453a;
+  --good:#30d158; --mid:#ffb340; --bad:#ff6961; --quiet:#4a4d57;
   --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
-  --arab:"Geeza Pro","SF Arabic","Noto Naskh Arabic",Arial,sans-serif;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -24,21 +24,35 @@ h2{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
 .card{background:var(--surface);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 input[type=text],input[type=password]{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:10px 12px;font:16px var(--sans)}
+input[type=range]{flex:1;accent-color:var(--accent)}
 .btn{appearance:none;border:0;border-radius:10px;padding:9px 12px;font:600 14px var(--sans);background:var(--surface-2);color:var(--fg);cursor:pointer}
 .btn.primary{background:var(--accent);color:#fff}
-.btn:disabled{opacity:.45}
-.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:10px;padding:2px;flex:1;min-width:200px}
-.seg button{appearance:none;border:0;background:none;color:var(--muted);font:600 14px var(--sans);padding:8px 4px;border-radius:8px;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.4)}
-.mic{appearance:none;border:0;width:100%;min-height:60px;border-radius:14px;background:var(--accent);color:#fff;font:650 16px var(--sans);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;cursor:pointer}
-.mic.rec{background:var(--rec)}
-.mic:disabled{opacity:.45}
-.lbl{font-size:13px;color:var(--muted);min-width:70px}
-.out .tn{font-size:24px;font-weight:650;overflow-wrap:anywhere}
-.out .ar{font:22px/1.6 var(--arab);direction:rtl;text-align:right}
-.steps{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-variant-numeric:tabular-nums;font-size:14px;border-top:1px solid var(--line);padding-top:10px}
-.steps span:nth-child(even){text-align:right;font-weight:600}
-.err{color:var(--bad);font-size:14px}
+.btn.big{width:100%;min-height:56px;font-size:17px;border-radius:14px}
+.btn.big.on{background:var(--rec)}
+.tog{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px}
+.tog small{display:block;color:var(--muted);font-size:12px}
+.tog input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+/* Jauge de niveau : gris = silence / bruit, vert = voix captée, rouge = saturation */
+.meter{position:relative;height:28px;border-radius:8px;background:linear-gradient(90deg,var(--surface-2) 0%,var(--surface-2) 85%,color-mix(in srgb,var(--bad) 25%,var(--surface-2)) 85%);overflow:hidden}
+.meter .fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:8px;background:var(--quiet);transition:width 60ms linear}
+.meter .fill.voice{background:var(--good)}
+.meter .fill.clip{background:var(--bad)}
+.meter .th{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--fg);border-radius:2px;left:0}
+.meter .nf{position:absolute;top:0;bottom:0;width:2px;background:var(--muted);opacity:.6;left:0}
+.state{display:flex;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums}
+.state b.voice{color:var(--good)} .state b.warn{color:var(--mid)} .state b.clip{color:var(--bad)}
+.feed{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto}
+.sub-line{background:var(--surface-2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.sub-line .meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;gap:8px;flex-wrap:wrap}
+.sub-line .who{font-weight:700;color:var(--accent)}
+.sub-line .fr{font-size:17px;font-weight:600}
+.sub-line .tn{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.sub-line .err{color:var(--bad);font-size:14px}
+.rate{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.rate button{appearance:none;border:1px solid var(--line);background:none;color:var(--muted);border-radius:8px;padding:4px 8px;font:600 12px var(--sans);cursor:pointer}
+.rate button[aria-pressed="true"].ok{background:var(--good);border-color:var(--good);color:#000}
+.rate button[aria-pressed="true"].mid{background:var(--mid);border-color:var(--mid);color:#000}
+.rate button[aria-pressed="true"].ko{background:var(--bad);border-color:var(--bad);color:#000}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
 th,td{text-align:left;padding:7px 5px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--muted);font-weight:600;font-size:12px}
@@ -46,272 +60,340 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 .muted{color:var(--muted);font-size:13px}
 .upd{flex-direction:row;justify-content:space-between;align-items:center;flex-wrap:wrap;margin:8px 0 12px;border:1px solid var(--accent)}
 .verl{cursor:pointer;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.meter .fill{transition:none}}
 </style>
 </head>
 <body>
 <div class="card upd" id="update" hidden><span>Nouvelle version disponible <b id="updVer"></b></span><button class="btn primary" id="updBtn" type="button">Mettre à jour</button></div>
 <h1>Banc d'essai Derja</h1>
-<p class="sub"><span id="ver" class="verl"></span> · Chaîne complète français → tunisien, comme dans l'app : reconnaissance d'Apple, traduction Gemini 3.8 Flash (low), voix Gemini Lite. Compare la lecture classique et la lecture en continu.</p>
+<p class="sub"><span id="ver" class="verl"></span> · Écoute continue tunisien → français. L'app découpe la conversation sur les pauses et Gemini 3.8 Flash (low) traduit chaque passage en sous-titres.</p>
 
 <div class="card">
   <div class="row"><input type="password" id="key" placeholder="Clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="saveKey" type="button">Enregistrer</button></div>
-  <div class="row"><span class="lbl">Lecture</span><div class="seg" id="segMode"><button type="button" data-m="classic">Classique</button><button type="button" data-m="stream">En continu</button></div></div>
-  <div class="row"><span class="lbl">Voix</span><div class="seg" id="segVoice"><button type="button" data-v="Orus">Orus</button><button type="button" data-v="Charon">Charon</button></div></div>
-  <p class="muted" id="silentInfo"></p>
 </div>
 
-<h2>1 · Parle ou écris en français</h2>
+<h2>1 · Écoute</h2>
 <div class="card">
-  <button class="mic" id="mic" type="button">Maintiens et parle en français</button>
-  <div class="row"><input type="text" id="txt" placeholder="Ou écris ta phrase" enterkeyhint="go"><button class="btn primary" id="go" type="button">Lancer</button><button class="btn" id="stop" type="button">■ Arrêter</button></div>
+  <button class="btn primary big" id="toggle" type="button">Démarrer l'écoute</button>
+  <div class="meter" aria-hidden="true"><div class="fill" id="fill"></div><div class="nf" id="nf"></div><div class="th" id="th"></div></div>
+  <div class="state"><b id="state">Arrêté</b><span id="stateR" class="muted"></span></div>
+  <p class="muted">Jauge : gris = silence ou bruit de fond, vert = voix bien captée, rouge = saturation. Le trait blanc est le seuil de parole, le trait gris le bruit de fond mesuré.</p>
 </div>
 
-<h2>2 · Dernier essai</h2>
-<div class="card out" id="out"><span class="muted">Les chronomètres démarrent quand tu relâches le bouton ou touches « Lancer ».</span></div>
+<h2>2 · Réglages à comparer</h2>
+<div class="card">
+  <label class="tog"><span>Nettoyage du son<small>Filtre de la bande vocale et mise à niveau du volume</small></span><input type="checkbox" id="optClean"></label>
+  <label class="tog"><span>Réduction de bruit de l'iPhone<small>S'applique au prochain démarrage</small></span><input type="checkbox" id="optNs"></label>
+  <label class="tog"><span>Distinguer les personnes<small>P1, P2… d'après la description des voix</small></span><input type="checkbox" id="optSpk"></label>
+  <div class="row"><span class="muted" style="min-width:130px">Pause de découpe : <b id="pauseVal"></b></span><input type="range" id="optPause" min="0.3" max="1.5" step="0.1"></div>
+  <div class="row"><span class="muted" style="min-width:130px">Seuil : <b id="thVal"></b></span><input type="range" id="optTh" min="0" max="30" step="1"></div>
+  <p class="muted">Seuil à 0 = automatique (bruit de fond + 8 dB). Au-delà, le seuil est forcé à cette marge en dB au-dessus de -60 dB. Un passage de moins de 2 s attend la suite ; après 2,5 s de silence, il part quand même s'il dure au moins 0,6 s. Maximum 20 s par passage.</p>
+</div>
 
-<h2>3 · Comparaison</h2>
-<div class="card scroll"><table id="log"></table><div class="row"><button class="btn" id="copy" type="button">Copier le bilan</button><button class="btn" id="clear" type="button">Effacer</button><span class="muted" id="copyMsg"></span></div></div>
+<h2>3 · Sous-titres</h2>
+<div class="card"><div class="feed" id="feed"><span class="muted">Les traductions s'afficheront ici, les plus récentes en bas.</span></div></div>
+
+<h2>4 · Mesures</h2>
+<div class="card scroll"><table id="stats"></table><div class="row"><button class="btn" id="copy" type="button">Copier le bilan</button><button class="btn" id="clear" type="button">Effacer</button><span class="muted" id="copyMsg"></span></div></div>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v11 · 22/10 23:16";
-  const API = "https://generativelanguage.googleapis.com/v1beta/models/";
-  const TXT_MODEL = "gemini-3.8-flash", TTS_MODEL = "gemini-3.8-flash-lite-tts";
-  const CFG = "derja-bench-chain";
+  const VERSION = "banc v12 · 23/10 00:36";
+  const MODEL = "gemini-3.8-flash";
+  const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
+  const CFG = "derja-bench-listen";
 
-  // ---------- Réglages (clé reprise des anciennes pages de test ou de l'app si présente) ----------
-  let cfg = { key: "", mode: "stream", voice: "Orus", log: [] };
+  // ---------- Réglages ----------
+  let cfg = { key: "", clean: true, ns: false, spk: false, pause: 0.5, th: 0, log: [] };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG) || "{}")); } catch {}
-  if (!cfg.key) for (const k of ["derja-bench-cfg", "derja-express-v1"]) {
+  if (!cfg.key) for (const k of ["derja-bench-chain", "derja-express-v1"]) {
     try { const o = JSON.parse(localStorage.getItem(k) || "{}"); cfg.key = o.key || o.geminiKey || ""; } catch {}
     if (cfg.key) break;
   }
-  // Nettoyage des données des anciens bancs (écoute, voix)
-  ["derja-bench-cfg", "derja-bench-voices", "derja-bench-stream"].forEach(k => { try { localStorage.removeItem(k); } catch {} });
-  try { indexedDB.deleteDatabase("derja-bench"); } catch {}
+  try { localStorage.removeItem("derja-bench-chain"); } catch {} // ancien banc français -> tunisien
   const save = () => { try { localStorage.setItem(CFG, JSON.stringify(cfg)); } catch {} };
   save();
   $("key").value = cfg.key;
   $("saveKey").onclick = () => { cfg.key = $("key").value.trim(); save(); $("saveKey").textContent = "Enregistrée"; };
-  const seg = (id, attr, prop) => {
-    const btns = document.querySelectorAll("#" + id + " [data-" + attr + "]");
-    const sync = () => btns.forEach(b => b.setAttribute("aria-pressed", b.dataset[attr] === cfg[prop]));
-    btns.forEach(b => b.onclick = () => { cfg[prop] = b.dataset[attr]; save(); sync(); });
-    sync();
-  };
-  seg("segMode", "m", "mode"); seg("segVoice", "v", "voice");
+  const bindBox = (id, k) => { $(id).checked = !!cfg[k]; $(id).onchange = e => { cfg[k] = e.target.checked; save(); if (k === "clean") applyFilter(); }; };
+  bindBox("optClean", "clean"); bindBox("optNs", "ns"); bindBox("optSpk", "spk");
+  const showRanges = () => { $("pauseVal").textContent = cfg.pause.toFixed(1) + " s"; $("thVal").textContent = cfg.th ? "forcé +" + cfg.th + " dB" : "automatique"; };
+  $("optPause").value = cfg.pause; $("optTh").value = cfg.th;
+  $("optPause").oninput = e => { cfg.pause = Number(e.target.value); save(); showRanges(); };
+  $("optTh").oninput = e => { cfg.th = Number(e.target.value); save(); showRanges(); };
+  showRanges();
 
-  // ---------- Audio ----------
-  // Déclare la page comme lecteur audio : sur les iOS récents, le son sort même en mode silencieux
-  // « playback » ignore l'interrupteur silencieux mais coupe le micro : on ne l'active qu'une fois la parole terminée
-  const silentOk = !!navigator.audioSession;
-  const setSession = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
-  $("silentInfo").textContent = silentOk
-    ? "Mode silencieux : la lecture en continu devrait sortir même avec l'interrupteur silencieux activé."
-    : "Mode silencieux non contournable ici : désactive l'interrupteur silencieux pour la lecture en continu.";
-  const player = new Audio();
-  const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
-  let unlocked = false;
-  const unlock = () => { if (unlocked) return; unlocked = true; try { player.src = SILENT; const p = player.play(); if (p) p.catch(() => {}); } catch {} };
-  let ctx = null;
-  const newCtx = () => { // créé pendant le geste (exigence d'iOS)
-    try { if (ctx) ctx.close(); } catch {}
-    const AC = window.AudioContext || window.webkitAudioContext;
-    ctx = new AC(); try { ctx.resume(); } catch {}
-  };
-  const b64bytes = b64 => { const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return u8; };
-  const findAudio = o => {
-    if (!o || typeof o !== "object") return null;
-    const d = o.inlineData || o.inline_data;
-    if (d && d.data) return { data: d.data, mime: d.mimeType || d.mime_type || "audio/wav" };
-    for (const k in o) { const f = findAudio(o[k]); if (f) return f; }
-    return null;
-  };
-  const rateOf = mime => { const m = String(mime).match(/rate=(\d+)/); return m ? Number(m[1]) : 24000; };
-  const isWav = u8 => u8[0] === 82 && u8[1] === 73 && u8[2] === 70 && u8[3] === 70;
-  const wavUrl = a => {
-    const u8 = b64bytes(a.data);
-    if (isWav(u8)) return URL.createObjectURL(new Blob([u8], { type: "audio/wav" }));
-    const rate = rateOf(a.mime), v = new DataView(new ArrayBuffer(44));
-    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-    w(0, "RIFF"); v.setUint32(4, 36 + u8.length, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, u8.length, true);
-    return URL.createObjectURL(new Blob([v.buffer, u8], { type: "audio/wav" }));
-  };
+  // ---------- Capture audio ----------
+  let ctx = null, stream = null, srcNode = null, hp = null, lp = null, proc = null, sink = null, wake = null;
+  let listening = false, phoneMicId = "";
+  const SR_OUT = 16000;
+  const dB = x => 20 * Math.log10(Math.max(x, 1e-6));
+  const DB_MIN = -70, DB_MAX = 0, pct = d => Math.max(0, Math.min(100, (d - DB_MIN) / (DB_MAX - DB_MIN) * 100));
 
-  // ---------- Traduction (même consigne que l'app) ----------
-  const ARABIZI = "arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ), orthographe la plus courante sur les réseaux sociaux tunisiens";
-  const prompt = fr => `Tu es un traducteur expert du dialecte tunisien (Derja), tel qu'on le parle à Tunis aujourd'hui. Traduis la phrase française en tunisien parlé, pour une conversation en face à face.
-- Registre : naturel : garde les mots français couramment employés en Tunisie (bureau, normalement, voiture…), comme on parle vraiment.
-- Celui qui parle (« je ») est un homme : accorde au masculin. « Tu » au masculin par défaut (enti) ; féminin (enty) ou pluriel (entouma) seulement si la phrase l'indique. Le vouvoiement devient le pluriel ou une formule de politesse tunisienne selon le contexte.
-- "arabizi" : la phrase en ${ARABIZI}.
-- "arabe" : exactement la même phrase, ENTIÈREMENT en lettres arabes, y compris les mots d'origine française (bureau → بيرو). Aucune lettre latine ni chiffre : ce champ est lu par une voix de synthèse arabe.
-- "francais" : la phrase française, en corrigeant silencieusement les erreurs évidentes de dictée.
-Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..."}
-
-Phrase française : ${fr}`;
-  const parseJson = s => { s = String(s || ""); try { return JSON.parse(s); } catch {} const a = s.indexOf("{"), b = s.lastIndexOf("}"); if (a >= 0 && b > a) return JSON.parse(s.slice(a, b + 1)); throw new Error("Réponse mal formée"); };
-  const post = (url, body, signal) => fetch(url, { method: "POST", signal, headers: { "content-type": "application/json", "x-goog-api-key": cfg.key }, body: JSON.stringify(body) });
-  const fail = async r => { const j = await r.json().catch(() => ({})); return new Error((r.status === 503 ? "Saturé" : "Erreur " + r.status) + (j.error && j.error.message ? " · " + String(j.error.message).slice(0, 120) : "")); };
-
-  // ---------- Chaîne chronométrée ----------
-  let run = null;
-  const stopAll = () => {
-    if (run) { run.stopped = true; try { run.ab.abort(); } catch {} }
-    try { player.pause(); } catch {}
-    try { if (ctx) ctx.close(); } catch {} ctx = null;
-  };
-  $("stop").onclick = () => { const r = run; stopAll(); if (r && !r.done) { r.note = "arrêté"; finish(r); } };
-
-  const sec = ms => ms == null ? "–" : (ms / 1000).toFixed(1) + " s";
-  function show(r) {
-    $("out").innerHTML =
-      (r.err ? '<div class="err">' + esc(r.err) + '</div>' : "") +
-      '<div class="muted">« ' + esc(r.fr) + ' »</div>' +
-      (r.tn ? '<div class="tn">' + esc(r.tn) + '</div><div class="ar">' + esc(r.ar) + '</div>' : (r.err ? "" : '<div class="muted">Traduction…</div>')) +
-      '<div class="steps">' +
-        '<span>Mode · voix</span><span>' + (r.mode === "stream" ? "En continu" : "Classique") + ' · ' + esc(r.voice) + '</span>' +
-        (r.rec != null ? '<span>Reconnaissance d\'Apple, après le relâchement</span><span>' + sec(r.rec) + '</span>' : "") +
-        '<span>Traduction affichée</span><span>' + sec(r.trad) + '</span>' +
-        '<span><b>Premier son de la voix</b></span><span>' + sec(r.first) + '</span>' +
-        '<span>Voix entièrement générée</span><span>' + sec(r.gen) + '</span>' +
-      '</div>';
-  }
-  function finish(r) {
-    if (r.done) return; r.done = true;
-    cfg.log.unshift({ at: Date.now(), mode: r.mode, voice: r.voice, fr: r.fr, rec: r.rec, trad: r.trad, first: r.first, gen: r.gen, note: r.err || r.note || "" });
-    cfg.log = cfg.log.slice(0, 60); save(); renderLog(); show(r);
-  }
-
-  async function chain(fr, t0, recMs) {
-    if (!cfg.key) { $("out").innerHTML = '<div class="err">Ajoute ta clé Gemini en haut de la page.</div>'; return; }
-    const r = run = { fr, mode: cfg.mode, voice: cfg.voice, rec: recMs, ab: new AbortController() };
-    show(r);
+  async function findPhoneMic() {
     try {
-      // 1. Traduction
-      const tr = await post(API + TXT_MODEL + ":generateContent", { contents: [{ role: "user", parts: [{ text: prompt(fr) }] }],
-        generationConfig: { temperature: 0.2, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "low" } } }, r.ab.signal);
-      if (!tr.ok) throw await fail(tr);
-      const tj = await tr.json();
-      const c = (tj.candidates || [])[0], o = parseJson(((c && c.content && c.content.parts) || []).map(p => p.text || "").join(""));
-      if (r.stopped) return;
-      r.trad = performance.now() - t0; r.tn = o.arabizi; r.ar = o.arabe; show(r);
-      // 2. Voix
-      const body = { contents: [{ role: "user", parts: [{ text: o.arabe }] }], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { voice: r.voice } } } };
-      if (r.mode === "classic") {
-        const vr = await post(API + TTS_MODEL + ":generateContent", body, r.ab.signal);
-        if (!vr.ok) throw await fail(vr);
-        const a = findAudio(await vr.json()); if (!a) throw new Error("Aucun son reçu");
-        if (r.stopped) return;
-        r.gen = performance.now() - t0; show(r);
-        player.onplaying = () => { if (run === r && r.first == null) { r.first = performance.now() - t0; finish(r); } };
-        player.src = wavUrl(a);
-        await player.play();
-        setTimeout(() => { if (!r.done) { if (r.first == null) r.note = "son non confirmé"; finish(r); } }, 4000);
-      } else {
-        const vr = await post(API + TTS_MODEL + ":streamGenerateContent?alt=sse", body, r.ab.signal);
-        if (!vr.ok) throw await fail(vr);
-        const reader = vr.body.getReader(), dec = new TextDecoder();
-        let buf = "", next = 0, carry = null;
-        const play = a => {
-          let u8 = b64bytes(a.data);
-          if (isWav(u8)) u8 = u8.subarray(44);
-          if (carry) { const m = new Uint8Array(carry.length + u8.length); m.set(carry); m.set(u8, carry.length); u8 = m; carry = null; }
-          if (u8.length % 2) { carry = u8.slice(-1); u8 = u8.subarray(0, u8.length - 1); }
-          const n = u8.length / 2; if (!n || !ctx) return;
-          const dv = new DataView(u8.buffer, u8.byteOffset, u8.length), ab = ctx.createBuffer(1, n, rateOf(a.mime)), ch = ab.getChannelData(0);
-          for (let i = 0; i < n; i++) ch[i] = dv.getInt16(i * 2, true) / 32768;
-          const s = ctx.createBufferSource(); s.buffer = ab; s.connect(ctx.destination);
-          const at = Math.max(next, ctx.currentTime + 0.05); s.start(at); next = at + ab.duration;
-          if (r.first == null) { r.first = performance.now() - t0 + (at - ctx.currentTime) * 1000; show(r); }
-        };
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          let i;
-          while ((i = buf.indexOf("\n")) >= 0) {
-            const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-            if (!line.startsWith("data:")) continue;
-            let j; try { j = JSON.parse(line.slice(5)); } catch { continue; }
-            const a = findAudio(j); if (a) play(a);
-          }
-        }
-        if (r.stopped) return;
-        r.gen = performance.now() - t0;
-        if (r.first == null) throw new Error("Aucun son reçu");
-        finish(r);
+      const ins = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput" && d.deviceId && d.label);
+      const ext = /airpods|bluetooth|beats|headset|casque|écouteur/i;
+      const m = ins.find(d => /iphone|built-in|intégré|interne|internal/i.test(d.label) && !ext.test(d.label)) || ins.find(d => d.deviceId !== "default" && !ext.test(d.label));
+      return m ? m.deviceId : "";
+    } catch { return ""; }
+  }
+  // Le filtre de la bande vocale s'applique en direct, pendant l'enregistrement (aucun délai à l'envoi)
+  function applyFilter() {
+    if (!srcNode || !proc) return;
+    try { srcNode.disconnect(); hp.disconnect(); lp.disconnect(); } catch {}
+    if (cfg.clean) { srcNode.connect(hp); hp.connect(lp); lp.connect(proc); } else srcNode.connect(proc);
+  }
+
+  async function start() {
+    if (!cfg.key) { setState("Ajoute ta clé Gemini en haut de la page.", "warn"); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC(); try { ctx.resume(); } catch {} // créé pendant le geste (exigence d'iOS)
+    const base = { echoCancellation: true, noiseSuppression: !!cfg.ns, autoGainControl: true };
+    try {
+      const gum = c => navigator.mediaDevices.getUserMedia({ audio: c });
+      if (phoneMicId) { try { stream = await gum({ ...base, deviceId: { exact: phoneMicId } }); } catch { phoneMicId = ""; } }
+      if (!stream) stream = await gum(base);
+      if (!phoneMicId) {
+        phoneMicId = await findPhoneMic();
+        const cur = stream.getAudioTracks()[0], curId = cur && cur.getSettings ? cur.getSettings().deviceId : "";
+        if (phoneMicId && phoneMicId !== curId) { try { const s2 = await gum({ ...base, deviceId: { exact: phoneMicId } }); stream.getTracks().forEach(t => t.stop()); stream = s2; } catch {} }
       }
-    } catch (e) {
-      if (r.stopped || (e && e.name === "AbortError")) return;
-      r.err = e.message || String(e); finish(r);
+    } catch { setState("Micro refusé : autorise-le dans les réglages de Safari.", "warn"); try { ctx.close(); } catch {} ctx = null; return; }
+    micLabel = (stream.getAudioTracks()[0] || {}).label || "";
+    srcNode = ctx.createMediaStreamSource(stream);
+    hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 100;
+    lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 7000;
+    proc = ctx.createScriptProcessor(2048, 1, 1);
+    sink = ctx.createGain(); sink.gain.value = 0; // nécessaire pour que le traitement tourne, sans rien jouer
+    proc.onaudioprocess = e => onFrame(e.inputBuffer.getChannelData(0));
+    proc.connect(sink); sink.connect(ctx.destination);
+    applyFilter();
+    resetVad(); listening = true; t0Listen = performance.now(); levels.length = 0;
+    try { wake = await navigator.wakeLock.request("screen"); } catch {}
+    $("toggle").textContent = "Arrêter l'écoute"; $("toggle").classList.add("on");
+    setState("Écoute en cours", "");
+    requestAnimationFrame(draw);
+  }
+  function stop() {
+    if (listening && seg && speechDur() >= 0.6) emit(); // envoie le dernier passage en cours
+    listening = false;
+    listenedMs += performance.now() - t0Listen;
+    try { proc && (proc.onaudioprocess = null); } catch {}
+    try { stream && stream.getTracks().forEach(t => t.stop()); } catch {}
+    try { ctx && ctx.close(); } catch {}
+    ctx = stream = srcNode = proc = null;
+    try { wake && wake.release(); } catch {} wake = null;
+    $("toggle").textContent = "Démarrer l'écoute"; $("toggle").classList.remove("on");
+    $("fill").style.width = "0"; setState("Arrêté", ""); renderStats();
+  }
+  $("toggle").onclick = () => listening ? stop() : start();
+  document.addEventListener("visibilitychange", async () => { if (listening && document.visibilityState === "visible") { try { wake = await navigator.wakeLock.request("screen"); } catch {} } });
+
+  // ---------- Détection de la parole et découpe sur les pauses ----------
+  // Seuil automatique : bruit de fond (niveau bas habituel des 5 dernières secondes) + 8 dB
+  const levels = []; let level = DB_MIN, noise = -60, thr = -52, micLabel = "";
+  let seg = null, pre = [], preLen = 0, silence = 0, t0Listen = 0, listenedMs = 0, lastVoiceAt = 0;
+  const frameSec = () => 2048 / (ctx ? ctx.sampleRate : 48000);
+  function resetVad() { seg = null; pre = []; preLen = 0; silence = 0; }
+  const speechDur = () => seg ? seg.len / seg.rate - silence : 0;
+
+  function onFrame(input) {
+    if (!listening) return;
+    const f = new Float32Array(input); // copie : le tampon est réutilisé par le navigateur
+    let s = 0, peak = 0;
+    for (let i = 0; i < f.length; i++) { s += f[i] * f[i]; const a = Math.abs(f[i]); if (a > peak) peak = a; }
+    level = dB(Math.sqrt(s / f.length)); clipped = peak > 0.98;
+    levels.push(level); if (levels.length > 120) levels.shift();
+    const sorted = levels.slice().sort((a, b) => a - b);
+    noise = sorted[Math.floor(sorted.length * 0.2)] ?? -60;
+    thr = cfg.th ? -60 + cfg.th : Math.max(noise + 8, -60);
+    const voice = level >= thr, fs = frameSec(), rate = ctx.sampleRate;
+    if (!seg) {
+      pre.push(f); preLen += f.length;
+      while (preLen - pre[0].length > rate * 0.2) preLen -= pre.shift().length; // 0,2 s gardées avant le début de la parole
+      if (voice) { seg = { chunks: pre.slice(), len: preLen, rate, startAt: performance.now() }; pre = []; preLen = 0; silence = 0; lastVoiceAt = performance.now(); }
+      return;
+    }
+    seg.chunks.push(f); seg.len += f.length;
+    if (voice) { silence = 0; lastVoiceAt = performance.now(); } else silence += fs;
+    const total = seg.len / rate;
+    if (total >= 20) { emit(); return; } // passage trop long : coupé à 20 s
+    if (silence >= cfg.pause) {
+      const sp = speechDur();
+      if (sp >= 2) emit();                       // pause après au moins 2 s de parole : on envoie
+      else if (silence >= 2.5) { if (sp >= 0.6) emit(); else resetVad(); } // court passage isolé, ou simple bruit
     }
   }
+  let clipped = false;
 
-  // Prépare l'audio pendant le geste, selon le mode (iOS l'exige)
-  const prepareAudio = () => { stopAll(); setSession("playback"); if (cfg.mode === "stream") newCtx(); else unlock(); };
+  // ---------- Envoi d'un passage ----------
+  let segId = 0;
+  const items = []; // sous-titres de la session
+  function emit() {
+    const s = seg, trailingSec = silence; resetVad();
+    const rate = s.rate, keepTail = Math.round(rate * 0.2);
+    const trailing = Math.round(trailingSec * rate);
+    const total = s.len, end = Math.max(1, total - Math.max(0, trailing - keepTail)); // blancs de fin coupés (0,2 s gardées)
+    const pcm = new Float32Array(end); let o = 0;
+    for (const c of s.chunks) { if (o >= end) break; const n = Math.min(c.length, end - o); pcm.set(c.subarray(0, n), o); o += n; }
+    const it = { id: ++segId, at: Date.now(), speechEnd: lastVoiceAt, dur: end / rate, clean: cfg.clean, ns: cfg.ns, spk: cfg.spk, pause: cfg.pause, status: "run" };
+    items.push(it); renderFeed();
+    process(it, pcm, rate);
+  }
 
-  // ---------- Entrées : texte, ou reconnaissance d'Apple ----------
-  const goText = () => { const v = $("txt").value.trim(); if (!v) return; prepareAudio(); chain(v, performance.now(), null); };
-  $("go").onclick = goText;
-  $("txt").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); goText(); } };
+  async function process(it, pcm, rate) {
+    const tp = performance.now();
+    let wav;
+    try {
+      // Rééchantillonnage à 16 kHz
+      const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(pcm.length * SR_OUT / rate)), SR_OUT);
+      const b = off.createBuffer(1, pcm.length, rate); b.getChannelData(0).set(pcm);
+      const sn = off.createBufferSource(); sn.buffer = b; sn.connect(off.destination); sn.start();
+      let out = (await off.startRendering()).getChannelData(0);
+      // Mise à niveau du volume : les voix lointaines deviennent aussi audibles que les proches (gain limité à x8)
+      if (it.clean) {
+        let s = 0, peak = 0; for (let i = 0; i < out.length; i++) { s += out[i] * out[i]; const a = Math.abs(out[i]); if (a > peak) peak = a; }
+        const rms = Math.sqrt(s / out.length) || 1e-6;
+        const g = Math.min(8, 0.1 / rms, 0.95 / (peak || 1e-6));
+        if (g > 1.05 || g < 0.95) { const c = new Float32Array(out.length); for (let i = 0; i < out.length; i++) c[i] = out[i] * g; out = c; }
+      }
+      wav = toWav(out, SR_OUT);
+    } catch (e) { it.status = "err"; it.err = "Préparation du son impossible"; renderFeed(); return; }
+    it.prepMs = Math.round(performance.now() - tp);
+    it.url = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
+    try {
+      const res = await gemini(wav, it);
+      Object.assign(it, res, { status: "ok", shownAt: performance.now() });
+      it.delay = it.shownAt - it.speechEnd;
+      if (it.spk && res.personne) { if (!speakers.some(p => p.id === res.personne)) speakers.push({ id: res.personne, voix: res.voix || "" }); }
+    } catch (e) { it.status = "err"; it.err = e.message || String(e); }
+    cfg.log.push(logOf(it)); cfg.log = cfg.log.slice(-400); save();
+    renderFeed(); renderStats();
+  }
+  const logOf = it => ({ id: it.id, at: it.at, dur: it.dur, prepMs: it.prepMs, delay: it.delay, tin: it.tin || 0, tout: it.tout || 0, clean: it.clean, ns: it.ns, spk: it.spk, pause: it.pause, ok: it.status === "ok", rating: "", who: "" });
 
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let sr = null, held = false, acc = "", fin = "", mid = "", failed = "", tRelease = 0;
-  const mic = $("mic");
-  if (!SR) { mic.disabled = true; mic.textContent = "Reconnaissance d'Apple indisponible ici : utilise le champ texte"; }
-  mic.addEventListener("pointerdown", e => {
-    e.preventDefault(); if (!SR || sr) return;
-    try { mic.setPointerCapture(e.pointerId); } catch {}
-    held = true; acc = fin = mid = ""; failed = ""; tRelease = 0;
-    stopAll(); setSession("play-and-record"); // le micro doit rester disponible pendant la parole
-    sr = new SR(); sr.lang = "fr-FR"; sr.interimResults = true; sr.continuous = true;
-    sr.onresult = ev => { fin = ""; mid = ""; for (let i = 0; i < ev.results.length; i++) (ev.results[i].isFinal ? (fin += ev.results[i][0].transcript + " ") : (mid += ev.results[i][0].transcript)); $("txt").value = (acc + " " + fin + mid).trim(); };
-    sr.onerror = ev => { if (["not-allowed", "service-not-allowed", "audio-capture", "language-not-supported"].includes(ev.error)) failed = ev.error; };
-    sr.onend = () => {
-      if (!failed && held) { acc = (acc + " " + fin + mid).trim(); fin = mid = ""; try { sr.start(); return; } catch {} }
-      const said = (acc + " " + fin + mid).trim(); sr = null;
-      mic.classList.remove("rec"); mic.textContent = "Maintiens et parle en français";
-      if (failed) { $("out").innerHTML = '<div class="err">Reconnaissance d\'Apple indisponible (' + esc(failed) + ') : utilise le champ texte.</div>'; return; }
-      if (!said) { $("out").innerHTML = '<div class="err">Rien entendu.</div>'; return; }
-      const now = performance.now(), t0 = tRelease || now;
-      $("txt").value = said;
-      chain(said, t0, now - t0);
-    };
-    try { sr.start(); mic.classList.add("rec"); mic.textContent = "Relâche pour traduire"; } catch { sr = null; }
-  });
-  ["pointerup", "pointercancel"].forEach(ev => mic.addEventListener(ev, () => {
-    if (!sr || !held) return;
-    held = false; tRelease = performance.now();
-    try { sr.stop(); } catch {}
-    prepareAudio(); // relâchement = geste : on prépare la lecture (et le mode « lecture »)
-  }));
-  mic.addEventListener("contextmenu", e => e.preventDefault());
+  function toWav(f, rate) {
+    const v = new DataView(new ArrayBuffer(44 + f.length * 2));
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + f.length * 2, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, f.length * 2, true);
+    for (let i = 0; i < f.length; i++) { const x = Math.max(-1, Math.min(1, f[i])); v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7fff, true); }
+    return new Uint8Array(v.buffer);
+  }
+  const b64 = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
 
-  // ---------- Comparaison ----------
-  const avg = (m, k) => { const v = cfg.log.filter(x => x.mode === m && !x.note && x[k] != null).map(x => x[k]); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-  const count = m => cfg.log.filter(x => x.mode === m && !x.note).length;
-  function renderLog() {
-    const L = cfg.log;
-    $("log").innerHTML =
-      '<tr><th>Moyennes</th><th>Classique (' + count("classic") + ')</th><th>En continu (' + count("stream") + ')</th></tr>' +
-      '<tr><td>Traduction affichée</td><td>' + sec(avg("classic", "trad")) + '</td><td>' + sec(avg("stream", "trad")) + '</td></tr>' +
-      '<tr><td><b>Premier son</b></td><td><b>' + sec(avg("classic", "first")) + '</b></td><td><b>' + sec(avg("stream", "first")) + '</b></td></tr>' +
-      '<tr><td>Voix entièrement générée</td><td>' + sec(avg("classic", "gen")) + '</td><td>' + sec(avg("stream", "gen")) + '</td></tr>' +
-      '<tr><th>Essai</th><th>Mode · voix</th><th>Traduction · 1er son</th></tr>' +
-      (L.length ? L.slice(0, 30).map(x => '<tr><td class="muted">' + esc(x.fr.slice(0, 40)) + (x.fr.length > 40 ? "…" : "") + '</td><td>' + (x.mode === "stream" ? "Continu" : "Classique") + ' · ' + esc(x.voice) + '</td><td>' + sec(x.trad) + ' · ' + sec(x.first) + (x.note ? ' <span class="err">' + esc(x.note) + '</span>' : "") + '</td></tr>').join("")
-        : '<tr><td colspan="3" class="muted">Aucun essai pour l\'instant. Alterne les deux modes sur des phrases de longueurs variées.</td></tr>');
+  // ---------- Gemini : contexte écrit (3 derniers sous-titres), personnes optionnelles ----------
+  const speakers = [];
+  const ARABIZI = "arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ)";
+  function prompt(it) {
+    const prev = items.filter(x => x.status === "ok" && x.id < it.id).slice(-3)
+      .map(x => "- " + (x.personne ? x.personne + " : " : "") + x.entendu + " (= " + x.francais + ")").join("\n");
+    const spk = it.spk ? `
+"personne" : identifiant de la personne qui parle le plus dans l'extrait. ${speakers.length ? "Personnes déjà entendues : " + speakers.map(p => p.id + " = " + p.voix).join(" ; ") + ". Réutilise l'identifiant si la voix correspond, sinon crée le suivant." : "Commence par P1."}
+"voix" : description courte de cette voix (genre, âge approximatif, timbre), 6 mots maximum.` : "";
+    return `Tu es un interprète expert du dialecte tunisien (Derja). Écoute l'extrait audio joint : un passage d'une conversation familiale en tunisien, souvent avec des mots français mêlés. L'extrait peut commencer ou finir au milieu d'une phrase.
+"entendu" : transcription fidèle et phonétique, mot pour mot, en ${ARABIZI}, sans corriger ni passer à l'arabe standard ; mots français en français ; [inaudible] si besoin.
+"francais" : traduction en français naturel et courant, fidèle au sens et au ton.${spk}
+${prev ? "\nContexte, passages précédents :\n" + prev + "\n" : ""}
+Réponds uniquement avec ce JSON : {${it.spk ? '"personne":"P1","voix":"...",' : ""}"entendu":"...","francais":"..."}`;
+  }
+  async function gemini(wav, it) {
+    const body = JSON.stringify({ contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64(wav) } }, { text: prompt(it) }] }],
+      generationConfig: { temperature: 0.2, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "low" } } });
+    for (let i = 0; i < 3; i++) {
+      if (i) await new Promise(r => setTimeout(r, 1200 * i));
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent", { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cfg.key }, body });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 503 || r.status === 500) continue;
+      if (!r.ok) throw new Error("Erreur " + r.status + (j.error && j.error.message ? " · " + String(j.error.message).slice(0, 100) : ""));
+      const c = (j.candidates || [])[0], txt = ((c && c.content && c.content.parts) || []).map(p => p.text || "").join("");
+      let o; try { o = JSON.parse(txt); } catch { const a = txt.indexOf("{"), b = txt.lastIndexOf("}"); o = JSON.parse(txt.slice(a, b + 1)); }
+      const u = j.usageMetadata || {};
+      return { entendu: o.entendu || "", francais: o.francais || "", personne: o.personne || "", voix: o.voix || "",
+        tin: u.promptTokenCount || 0, tout: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) };
+    }
+    throw new Error("Gemini saturé");
+  }
+
+  // ---------- Affichage ----------
+  function setState(t, cls) { $("state").textContent = t; $("state").className = cls || ""; }
+  function draw() {
+    if (!listening) return;
+    const p = pct(level), voice = level >= thr;
+    $("fill").style.width = p + "%";
+    $("fill").className = "fill" + (clipped ? " clip" : voice ? " voice" : "");
+    $("th").style.left = "calc(" + pct(thr) + "% - 1px)";
+    $("nf").style.left = "calc(" + pct(noise) + "% - 1px)";
+    const pending = items.filter(x => x.status === "run").length;
+    if (clipped) setState("Saturation : trop près du téléphone", "clip");
+    else if (seg) setState("Parole détectée · " + (seg.len / seg.rate).toFixed(1) + " s", "voice");
+    else if (level > noise + 3 && !voice) setState("Voix trop faible ? Rapproche le téléphone", "warn");
+    else setState("Silence", "");
+    $("stateR").textContent = (pending ? pending + " en traduction · " : "") + "seuil " + Math.round(thr) + " dB" + (micLabel ? " · " + micLabel : "");
+    requestAnimationFrame(draw);
+  }
+
+  const sec = ms => ms == null ? "–" : (ms / 1000).toFixed(1) + " s";
+  const hm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  function renderFeed() {
+    const feed = $("feed"), atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
+    feed.innerHTML = items.length ? items.map(it => {
+      const lg = cfg.log.find(l => l.id === it.id && l.at === it.at) || {};
+      return '<div class="sub-line" data-id="' + it.id + '"><div class="meta"><span>' + hm(it.at) + '</span>' + (it.personne ? '<span class="who">' + esc(it.personne) + '</span>' : "") +
+        '<span>' + it.dur.toFixed(1) + ' s audio</span>' + (it.prepMs != null ? '<span>préparation ' + it.prepMs + ' ms</span>' : "") + (it.delay != null ? '<span>délai ' + sec(it.delay) + '</span>' : "") +
+        '<span>' + (it.clean ? "nettoyé" : "brut") + (it.ns ? " · réduc. iPhone" : "") + '</span></div>' +
+        (it.status === "run" ? '<div class="muted">Traduction en cours…</div>' : it.status === "err" ? '<div class="err">' + esc(it.err) + '</div>'
+          : '<div class="fr">' + esc(it.francais) + '</div><div class="tn">' + esc(it.entendu) + (it.voix ? ' · <i>' + esc(it.voix) + '</i>' : "") + '</div>' +
+            '<div class="rate">' + (it.url ? '<button type="button" data-a="play">▶︎</button>' : "") +
+            [["ok", "Juste"], ["mid", "Approx."], ["ko", "Faux"]].map(([k, l]) => '<button type="button" class="' + k + '" data-r="' + k + '" aria-pressed="' + (lg.rating === k) + '">' + l + '</button>').join("") +
+            (it.spk ? '<button type="button" class="ok" data-w="ok" aria-pressed="' + (lg.who === "ok") + '">Locuteur ✓</button><button type="button" class="ko" data-w="ko" aria-pressed="' + (lg.who === "ko") + '">Locuteur ✗</button>' : "") + '</div>') +
+        '</div>';
+    }).join("") : '<span class="muted">Les traductions s\'afficheront ici, les plus récentes en bas.</span>';
+    if (atBottom) feed.scrollTop = feed.scrollHeight;
+  }
+  $("feed").onclick = e => {
+    const line = e.target.closest("[data-id]"); if (!line) return;
+    const it = items.find(x => x.id === Number(line.dataset.id)); if (!it) return;
+    const lg = cfg.log.find(l => l.id === it.id && l.at === it.at); if (!lg && !e.target.closest("[data-a]")) return;
+    if (e.target.closest("[data-a=play]") && it.url) { try { new Audio(it.url).play(); } catch {} return; }
+    const r = e.target.closest("[data-r]"), w = e.target.closest("[data-w]");
+    if (r) lg.rating = lg.rating === r.dataset.r ? "" : r.dataset.r;
+    if (w) lg.who = lg.who === w.dataset.w ? "" : w.dataset.w;
+    save(); renderFeed(); renderStats();
+  };
+
+  // ---------- Mesures ----------
+  const cfgName = l => (l.clean ? "Nettoyé" : "Brut") + (l.ns ? " + réduc. iPhone" : "") + (l.spk ? " + personnes" : "");
+  function renderStats() {
+    const L = cfg.log.filter(l => l.ok);
+    const groups = {}; L.forEach(l => (groups[cfgName(l)] = groups[cfgName(l)] || []).push(l));
+    const avg = (a, k) => { const v = a.map(x => x[k]).filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+    const cost = a => a.reduce((s, l) => s + l.tin * PRICE_IN / 1e6 + l.tout * PRICE_OUT / 1e6, 0);
+    const hours = (listenedMs + (listening ? performance.now() - t0Listen : 0)) / 3600000;
+    const all = cost(L), audio = L.reduce((s, l) => s + l.dur, 0);
+    const rows = Object.entries(groups).map(([n, a]) => {
+      const c = k => a.filter(x => x.rating === k).length, w = k => a.filter(x => x.who === k).length;
+      return '<tr><td>' + esc(n) + '</td><td>' + a.length + '</td><td>' + sec(avg(a, "delay")) + '</td><td>' + Math.round(avg(a, "prepMs") || 0) + ' ms</td><td>' + c("ok") + ' / ' + c("mid") + ' / ' + c("ko") + '</td><td>' + (a[0].spk ? w("ok") + ' / ' + w("ko") : "–") + '</td></tr>';
+    }).join("");
+    $("stats").innerHTML = '<tr><th>Réglage</th><th>Passages</th><th>Délai moyen</th><th>Prépa.</th><th>Juste / Approx. / Faux</th><th>Locuteur ✓ / ✗</th></tr>' +
+      (rows || '<tr><td colspan="6" class="muted">Aucun passage traduit pour l\'instant.</td></tr>') +
+      '<tr><td colspan="6"></td></tr>' +
+      '<tr><td>Écoute (session)</td><td colspan="5">' + (hours * 60).toFixed(1) + ' min · ' + audio.toFixed(0) + ' s d\'audio envoyé · coût ' + (all * 100).toFixed(2) + ' centimes $' +
+      (hours > 0.01 ? ' · soit ≈ ' + (all / hours).toFixed(2) + ' $ par heure' : "") + '</td></tr>';
+    $("stats").dataset.text = Object.entries(groups).map(([n, a]) => { const c = k => a.filter(x => x.rating === k).length, w = k => a.filter(x => x.who === k).length;
+      return n + " : " + a.length + " passages, délai moyen " + sec(avg(a, "delay")) + ", préparation " + Math.round(avg(a, "prepMs") || 0) + " ms, " + c("ok") + " juste / " + c("mid") + " approx. / " + c("ko") + " faux" + (a[0].spk ? ", locuteur " + w("ok") + " ✓ / " + w("ko") + " ✗" : ""); }).join("\n") +
+      "\nCoût : " + (all * 100).toFixed(2) + " centimes $ pour " + audio.toFixed(0) + " s d'audio" + (hours > 0.01 ? ", ≈ " + (all / hours).toFixed(2) + " $ par heure d'écoute" : "");
   }
   $("copy").onclick = async () => {
-    const line = m => (m === "stream" ? "En continu" : "Classique") + " (" + count(m) + " essais) : traduction " + sec(avg(m, "trad")) + ", premier son " + sec(avg(m, "first")) + ", voix complète " + sec(avg(m, "gen"));
-    const txt = "Bilan chaîne FR → TN\n" + line("classic") + "\n" + line("stream");
+    const txt = "Bilan écoute continue TN → FR\n" + $("stats").dataset.text;
     try { await navigator.clipboard.writeText(txt); $("copyMsg").textContent = "Copié : colle-le dans la conversation."; } catch { $("copyMsg").textContent = txt; }
   };
   let armed = false;
-  $("clear").onclick = () => { if (!armed) { armed = true; $("clear").textContent = "Confirmer"; return; } armed = false; $("clear").textContent = "Effacer"; cfg.log = []; save(); renderLog(); };
-  renderLog();
+  $("clear").onclick = () => { if (!armed) { armed = true; $("clear").textContent = "Confirmer"; return; } armed = false; $("clear").textContent = "Effacer"; cfg.log = []; items.length = 0; listenedMs = 0; if (listening) t0Listen = performance.now(); save(); renderFeed(); renderStats(); };
+  renderStats();
 
   // ---------- Mise à jour ----------
   $("ver").textContent = VERSION;
