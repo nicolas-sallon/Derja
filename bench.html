@@ -76,7 +76,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v10 · 22/10 23:05";
+  const VERSION = "banc v11 · 22/10 23:16";
   const API = "https://generativelanguage.googleapis.com/v1beta/models/";
   const TXT_MODEL = "gemini-3.8-flash", TTS_MODEL = "gemini-3.8-flash-lite-tts";
   const CFG = "derja-bench-chain";
@@ -105,8 +105,9 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 
   // ---------- Audio ----------
   // Déclare la page comme lecteur audio : sur les iOS récents, le son sort même en mode silencieux
-  let silentOk = false;
-  try { if (navigator.audioSession) { navigator.audioSession.type = "playback"; silentOk = true; } } catch {}
+  // « playback » ignore l'interrupteur silencieux mais coupe le micro : on ne l'active qu'une fois la parole terminée
+  const silentOk = !!navigator.audioSession;
+  const setSession = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
   $("silentInfo").textContent = silentOk
     ? "Mode silencieux : la lecture en continu devrait sortir même avec l'interrupteur silencieux activé."
     : "Mode silencieux non contournable ici : désactive l'interrupteur silencieux pour la lecture en continu.";
@@ -250,7 +251,7 @@ Phrase française : ${fr}`;
   }
 
   // Prépare l'audio pendant le geste, selon le mode (iOS l'exige)
-  const prepareAudio = () => { stopAll(); if (cfg.mode === "stream") newCtx(); else unlock(); };
+  const prepareAudio = () => { stopAll(); setSession("playback"); if (cfg.mode === "stream") newCtx(); else unlock(); };
 
   // ---------- Entrées : texte, ou reconnaissance d'Apple ----------
   const goText = () => { const v = $("txt").value.trim(); if (!v) return; prepareAudio(); chain(v, performance.now(), null); };
@@ -265,7 +266,7 @@ Phrase française : ${fr}`;
     e.preventDefault(); if (!SR || sr) return;
     try { mic.setPointerCapture(e.pointerId); } catch {}
     held = true; acc = fin = mid = ""; failed = ""; tRelease = 0;
-    prepareAudio();
+    stopAll(); setSession("play-and-record"); // le micro doit rester disponible pendant la parole
     sr = new SR(); sr.lang = "fr-FR"; sr.interimResults = true; sr.continuous = true;
     sr.onresult = ev => { fin = ""; mid = ""; for (let i = 0; i < ev.results.length; i++) (ev.results[i].isFinal ? (fin += ev.results[i][0].transcript + " ") : (mid += ev.results[i][0].transcript)); $("txt").value = (acc + " " + fin + mid).trim(); };
     sr.onerror = ev => { if (["not-allowed", "service-not-allowed", "audio-capture", "language-not-supported"].includes(ev.error)) failed = ev.error; };
@@ -281,7 +282,12 @@ Phrase française : ${fr}`;
     };
     try { sr.start(); mic.classList.add("rec"); mic.textContent = "Relâche pour traduire"; } catch { sr = null; }
   });
-  ["pointerup", "pointercancel"].forEach(ev => mic.addEventListener(ev, () => { if (!sr || !held) return; held = false; tRelease = performance.now(); try { sr.stop(); } catch {} }));
+  ["pointerup", "pointercancel"].forEach(ev => mic.addEventListener(ev, () => {
+    if (!sr || !held) return;
+    held = false; tRelease = performance.now();
+    try { sr.stop(); } catch {}
+    prepareAudio(); // relâchement = geste : on prépare la lecture (et le mode « lecture »)
+  }));
   mic.addEventListener("contextmenu", e => e.preventDefault());
 
   // ---------- Comparaison ----------
