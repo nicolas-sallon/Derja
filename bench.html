@@ -23,7 +23,7 @@ h1{font-size:24px;margin:4px 0 2px}
 h2{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
 .card{background:var(--surface);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-input[type=text],input[type=password]{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:10px 12px;font:16px var(--sans)}
+input[type=text],input[type=password],select{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:10px 12px;font:16px var(--sans)}
 .btn{appearance:none;border:0;border-radius:10px;padding:9px 12px;font:600 14px var(--sans);background:var(--surface-2);color:var(--fg);cursor:pointer}
 .btn.primary{background:var(--accent);color:#fff}
 .btn:disabled{opacity:.45}
@@ -86,7 +86,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v8 · 22/10 21:54";
+  const VERSION = "banc v9 · 22/10 22:06";
   // Un « modèle » peut porter des options : « · low » = réflexion réduite, « · essentiel » = réponse courte
   const VARIANTS = ["gemini-3.8-flash", "gemini-3.8-flash · low", "gemini-3.8-flash · low · essentiel"];
   const WHISPER = "whisper-large-v3 + gpt-oss-120b"; // chaîne Groq : Whisper transcrit, puis gpt-oss traduit (comme dans l'app)
@@ -370,6 +370,14 @@ Phrase entendue : `;
   <button class="btn primary" id="vGo" type="button">Écouter avec les voix cochées</button>
 </div>
 
+<h2>Lecture en continu (une voix à la fois)</h2>
+<div class="card">
+  <p class="muted">Le son démarre dès les premiers morceaux reçus, sans attendre la fin de la génération. Si tu n'entends rien, vérifie que l'iPhone n'est pas en mode silencieux.</p>
+  <div class="row"><select id="vStreamVoice"></select><button class="btn primary" id="vStream" type="button">▶︎ Lecture en continu</button></div>
+  <div id="vStreamInfo" class="muted"></div>
+  <table id="vStreamLog"></table>
+</div>
+
 <h2>6 · Résultats des voix</h2>
 <div class="card scroll"><table id="vSummary"></table><div class="row"><button class="btn" id="vCopy" type="button">Copier le bilan des voix</button><span class="muted" id="vCopyMsg"></span></div></div>
 <div id="vRows" style="display:flex;flex-direction:column;gap:12px;margin-top:12px"></div>
@@ -485,9 +493,99 @@ Phrase entendue : `;
   }
   $("vGo").onclick = go;
 
+  // ---------- Lecture en continu : le son est joué au fil de la génération ----------
+  let sc = null; // { ctx, ab }
+  let slog = [];
+  try { slog = JSON.parse(localStorage.getItem("derja-bench-stream") || "[]"); } catch {}
+  const fillStreamVoices = () => {
+    const keep = $("vStreamVoice").value;
+    $("vStreamVoice").innerHTML = allVoices().filter(v => v.id !== "iphone").map(v => '<option value="' + esc(v.id) + '">' + esc(v.label) + '</option>').join("");
+    if (keep) $("vStreamVoice").value = keep;
+  };
+  const renderLog = () => {
+    $("vStreamLog").innerHTML = slog.length ? '<tr><th>Voix</th><th>Premier son</th><th>Génération totale</th><th>Texte</th></tr>' +
+      slog.slice(0, 20).map(l => '<tr><td>' + esc(labelOf(l.v)) + '</td><td>' + (l.first == null ? "–" : (l.first / 1000).toFixed(1) + " s") + '</td><td>' + (l.total == null ? "arrêté" : (l.total / 1000).toFixed(1) + " s") + '</td><td dir="rtl">' + esc(l.text.slice(0, 24)) + (l.text.length > 24 ? "…" : "") + '</td></tr>').join("") : "";
+  };
+  const stopStream = () => {
+    if (!sc) return;
+    try { sc.ab.abort(); } catch {}
+    try { sc.ctx.close(); } catch {}
+    sc = null; $("vStream").textContent = "▶︎ Lecture en continu";
+  };
+  $("vStream").onclick = () => { if (sc) { stopStream(); $("vStreamInfo").textContent += " · lecture arrêtée"; } else startStream(); };
+
+  async function startStream() {
+    const text = $("vText").value.trim(), voiceId = $("vStreamVoice").value;
+    if (!text || !voiceId) return;
+    if (!key()) { $("vStreamInfo").textContent = "Ajoute ta clé Gemini en haut de la page."; return; }
+    stopPlay(); render();
+    // Le contexte audio doit naître pendant le geste (exigence d'iOS)
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC(); try { ctx.resume(); } catch {}
+    const ab = new AbortController(), me = { ctx, ab }; sc = me;
+    $("vStream").textContent = "■ Arrêter";
+    const lite = / · lite$/.test(voiceId), voice = voiceId.replace(/ · lite$/, "");
+    const part = { text }, style = $("vStyle").value.trim();
+    if (style) part.speech_metadata = { style };
+    const entry = { v: voiceId, text, first: null, total: null };
+    slog.unshift(entry); slog = slog.slice(0, 50);
+    const t0 = performance.now();
+    let next = 0, carry = null;
+    $("vStreamInfo").textContent = "Génération…"; renderLog();
+    const playChunk = a => {
+      const bin = atob(a.data); let u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      if (u8[0] === 82 && u8[1] === 73 && u8[2] === 70 && u8[3] === 70) u8 = u8.subarray(44); // en-tête WAV éventuel
+      if (carry) { const m = new Uint8Array(carry.length + u8.length); m.set(carry); m.set(u8, carry.length); u8 = m; carry = null; }
+      if (u8.length % 2) { carry = u8.slice(-1); u8 = u8.subarray(0, u8.length - 1); }
+      const n = u8.length / 2; if (!n) return;
+      const mr = String(a.mime).match(/rate=(\d+)/), rate = mr ? Number(mr[1]) : 24000;
+      const dv = new DataView(u8.buffer, u8.byteOffset, u8.length);
+      const buf = ctx.createBuffer(1, n, rate), ch = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) ch[i] = dv.getInt16(i * 2, true) / 32768;
+      const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+      const at = Math.max(next, ctx.currentTime + 0.05); src.start(at); next = at + buf.duration;
+      if (entry.first == null) { entry.first = performance.now() - t0; $("vStreamInfo").textContent = "Premier son après " + (entry.first / 1000).toFixed(1) + " s…"; renderLog(); }
+    };
+    try {
+      const r = await fetch(API + "models/" + (lite ? TTS_LITE : TTS) + ":streamGenerateContent?alt=sse", {
+        method: "POST", signal: ab.signal, headers: { "content-type": "application/json", "x-goog-api-key": key() },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [part] }], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { voice } } } }) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error((r.status === 503 ? "Saturé" : "Erreur " + r.status) + (j.error && j.error.message ? " · " + String(j.error.message).slice(0, 140) : "")); }
+      const reader = r.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+          if (!line.startsWith("data:")) continue;
+          let j; try { j = JSON.parse(line.slice(5)); } catch { continue; }
+          const a = findAudio(j); if (a) playChunk(a);
+        }
+      }
+      entry.total = performance.now() - t0;
+      try { localStorage.setItem("derja-bench-stream", JSON.stringify(slog)); } catch {}
+      $("vStreamInfo").textContent = entry.first == null ? "Aucun son reçu." : "Premier son après " + (entry.first / 1000).toFixed(1) + " s · génération terminée en " + (entry.total / 1000).toFixed(1) + " s";
+      renderLog();
+      // Remet le bouton à zéro quand la lecture se termine
+      setTimeout(() => { if (sc === me) stopStream(); }, Math.max(0, (next - ctx.currentTime) * 1000) + 300);
+    } catch (e) {
+      if (sc === me) stopStream();
+      if (e && e.name === "AbortError") return;
+      $("vStreamInfo").textContent = "Échec : " + (e.message || e);
+      try { localStorage.setItem("derja-bench-stream", JSON.stringify(slog)); } catch {}
+      renderLog();
+    }
+  }
+  fillStreamVoices(); renderLog();
+
   const LBL = { ok: "Bien", mid: "Moyen", ko: "Mauvais" };
   function render() {
     renderList();
+    if (typeof fillStreamVoices === "function") fillStreamVoices();
     const ids = [...new Set(vs.ratings.map(x => x.voice))];
     $("vSummary").innerHTML = '<tr><th>Voix</th><th>Bien</th><th>Moyen</th><th>Mauvais</th></tr>' + (ids.length ? ids.map(id => {
       const n = k => vs.ratings.filter(x => x.voice === id && x.r === k).length;
