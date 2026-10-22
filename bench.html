@@ -64,6 +64,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 
 <div class="card">
   <div class="row"><input type="password" id="key" placeholder="Clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="saveKey" type="button">Enregistrer</button></div>
+  <div class="row"><input type="password" id="groqKey" placeholder="Clé Groq (pour Whisper)" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="saveGroq" type="button">Enregistrer</button></div>
   <div class="models" id="models"></div>
   <div class="row"><input type="text" id="extraModel" placeholder="Autre modèle (ex. gemini-3.7-flash)" autocapitalize="off" spellcheck="false"><button class="btn" id="addModel" type="button">Ajouter</button></div>
 </div>
@@ -85,10 +86,11 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v3 · 22/10 18:51";
+  const VERSION = "banc v4 · 22/10 19:03";
   // Un « modèle » peut porter des options : « · low » = réflexion réduite, « · essentiel » = réponse courte
   const VARIANTS = ["gemini-3.8-flash", "gemini-3.8-flash · low", "gemini-3.8-flash · low · essentiel"];
-  const DEFAULT_MODELS = [...VARIANTS, "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+  const WHISPER = "whisper-large-v3 + gpt-oss-120b"; // chaîne Groq : Whisper transcrit, puis gpt-oss traduit (comme dans l'app)
+  const DEFAULT_MODELS = [...VARIANTS, WHISPER, "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   const CFG = "derja-bench-cfg";
 
   // ---------- Réglages (clé reprise de l'app si présente) ----------
@@ -99,10 +101,19 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     cfg.models = [...new Set([...DEFAULT_MODELS, ...cfg.models])].filter(m => m !== "gemini-2.5-pro");
     cfg.on = VARIANTS.slice(); cfg.v = 3;
   }
-  if (!cfg.key) { try { cfg.key = (JSON.parse(localStorage.getItem("derja-express-v1") || "{}").geminiKey) || ""; } catch {} }
+  // Banc v4 : ajout de la chaîne Whisper, comparée à la meilleure variante Gemini
+  if ((cfg.v || 0) < 4) {
+    cfg.models = [...new Set([...DEFAULT_MODELS, ...cfg.models])];
+    cfg.on = ["gemini-3.8-flash · low · essentiel", WHISPER]; cfg.v = 4;
+  }
+  let app = {}; try { app = JSON.parse(localStorage.getItem("derja-express-v1") || "{}"); } catch {}
+  if (!cfg.key) cfg.key = app.geminiKey || "";
+  if (!cfg.groqKey) cfg.groqKey = app.groqKey || "";
   const saveCfg = () => { try { localStorage.setItem(CFG, JSON.stringify(cfg)); } catch {} };
   $("key").value = cfg.key;
   $("saveKey").onclick = () => { cfg.key = $("key").value.trim(); saveCfg(); $("saveKey").textContent = "Enregistrée"; };
+  $("groqKey").value = cfg.groqKey || "";
+  $("saveGroq").onclick = () => { cfg.groqKey = $("groqKey").value.trim(); saveCfg(); $("saveGroq").textContent = "Enregistrée"; };
   function renderModels() {
     $("models").innerHTML = cfg.models.map(m => '<label><input type="checkbox" value="' + esc(m) + '"' + (cfg.on.includes(m) ? " checked" : "") + '>' + esc(m) + '</label>').join("");
     $("models").querySelectorAll("input").forEach(i => i.onchange = () => {
@@ -164,7 +175,39 @@ Réponds uniquement avec un objet JSON de cette forme :
 "francais" : traduction en français naturel et courant, fidèle au sens et au ton.
 Réponds uniquement avec ce JSON : {"entendu":"...","francais":"..."}`;
 
+  // ---------- Chaîne Whisper (Groq) : même consigne et mêmes réglages que l'app ----------
+  const TN_HINT = "شنوة، برشا، توا، باهي، نحب، ماكش، علاش، وقتاش، فما، ياسر، يعيشك، بالله، زادة، كيفاش، نجم، مش، حاجة، خويا، أختي، ماو، يزي.";
+  const PROMPT_TXT = `Tu es un interprète expert du dialecte tunisien (Derja). Un Tunisien vient de dire la phrase ci-dessous à un francophone.
+La phrase vient d'une reconnaissance vocale (Whisper) qui connaît mal le tunisien : mots déformés, tournures d'arabe standard, mots français écrits en lettres arabes. Reconstitue ce qui a le plus probablement été dit, puis traduis-le en français naturel et courant, fidèle au sens et au ton.
+Réponds uniquement avec ce JSON : {"francais":"..."}
+
+Phrase entendue : `;
+  async function groq(path, opts) {
+    const r = await fetch("https://api.groq.com/openai/v1/" + path, { method: "POST", ...opts, headers: { Authorization: "Bearer " + cfg.groqKey, ...(opts.headers || {}) } });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((r.status === 401 ? "Clé Groq refusée" : r.status === 429 ? "Quota Groq atteint" : "Erreur Groq " + r.status) + (j.error && j.error.message ? " · " + String(j.error.message).slice(0, 90) : ""));
+    return j;
+  }
+  async function askWhisper(b64) {
+    if (!cfg.groqKey) throw new Error("Ajoute ta clé Groq en haut de la page.");
+    const bin = atob(b64), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const t0 = performance.now();
+    const fd = new FormData();
+    fd.append("file", new Blob([u8], { type: "audio/wav" }), "audio.wav");
+    fd.append("model", "whisper-large-v3"); fd.append("language", "ar"); fd.append("response_format", "json"); fd.append("temperature", "0");
+    fd.append("prompt", "حكاية بالدارجة التونسية. " + TN_HINT);
+    const heard = String((await groq("audio/transcriptions", { body: fd })).text || "").trim();
+    if (!heard) throw new Error("Whisper n'a rien entendu");
+    const j = await groq("chat/completions", { headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model: "openai/gpt-oss-120b", temperature: 0.2, reasoning_effort: "low", messages: [{ role: "user", content: PROMPT_TXT + heard }] }) });
+    const out = parseJson(j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content);
+    const u = j.usage || {};
+    return { francais: out.francais || "", entendu: heard, ms: Math.round(performance.now() - t0), tokIn: u.prompt_tokens || 0, tokOut: u.completion_tokens || 0 };
+  }
+
   async function ask(variant, b64) {
+    if (variant === WHISPER) return askWhisper(b64);
     const [model, ...opts] = variant.split(" · ").map(s => s.trim());
     const gen = { temperature: 0.2, responseMimeType: "application/json" };
     if (opts.includes("low")) gen.thinkingConfig = { thinkingLevel: "low" };
@@ -185,7 +228,7 @@ Réponds uniquement avec ce JSON : {"entendu":"...","francais":"..."}`;
 
   const busy = new Set();
   async function runOne(clip, model) {
-    if (!cfg.key) { alertKey(); return; }
+    if (!cfg.key && model !== WHISPER) { alertKey(); return; }
     const k = clip.id + "|" + model; if (busy.has(k)) return;
     busy.add(k); render();
     clip.results = clip.results || {};
