@@ -118,16 +118,13 @@ details[open] summary{margin-bottom:12px}
       <button class="btn primary" type="button" id="updBtn">Mettre à jour</button>
     </section>
     <section class="card setup" id="setup" hidden>
-      <h2>Active le micro en 2 minutes</h2>
-      <ol>
-        <li>Crée un compte gratuit sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a> (sans carte bancaire).</li>
-        <li>Dans « API Keys », touche « Create API Key » et copie la clé.</li>
-        <li>Colle-la ici. Elle reste sur ton iPhone.</li>
-      </ol>
+      <h2>Ajoute ta clé Gemini</h2>
+      <p>Elle sert à écouter et à traduire dans les deux sens. Elle reste sur ton iPhone.</p>
       <div class="row">
-        <input type="password" id="setupKey" placeholder="gsk_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <input type="password" id="setupKey" placeholder="Clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false">
         <button class="btn primary" type="button" id="setupSave">Enregistrer</button>
       </div>
+      <p>Ta clé se trouve sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.</p>
     </section>
     <section class="card" id="result" aria-live="polite"></section>
     <section class="hist">
@@ -161,53 +158,29 @@ details[open] summary{margin-bottom:12px}
 
     <h3>Services</h3>
     <div class="field">
-      <label for="groqKey">Clé Groq (voix et traduction gratuite)</label>
-      <input type="password" id="groqKey" placeholder="gsk_…" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <p>À créer sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>. Gratuit, environ 2 000 phrases par jour.</p>
+      <label for="geminiKey">Clé Gemini</label>
+      <input type="password" id="geminiKey" placeholder="Colle ta clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <p>Écoute du tunisien et traduction. À gérer sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.</p>
     </div>
     <div class="field">
-      <span class="lbl">Moteur de traduction</span>
+      <span class="lbl">Traduction vers le tunisien</span>
       <div class="seg" role="group" id="segEngine">
-        <button type="button" data-e="groq">Groq · gratuit</button>
-        <button type="button" data-e="claude">Claude · payant</button>
+        <button type="button" data-e="gemini">Gemini</button>
+        <button type="button" data-e="claude">Claude</button>
       </div>
-      <p>Claude comprend mieux le tunisien, pour quelques centimes par conversation.</p>
     </div>
     <div class="field" id="claudeField">
       <label for="claudeKey">Clé Claude</label>
       <input type="password" id="claudeKey" placeholder="sk-ant-…" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <p>À créer sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>, après avoir ajouté quelques dollars de crédit.</p>
-    </div>
-    <div class="field">
-      <span class="lbl">Écoute du tunisien</span>
-      <div class="seg" role="group" id="segListen">
-        <button type="button" data-l="whisper">Whisper + traduction</button>
-        <button type="button" data-l="gemini">Gemini · écoute directe</button>
-      </div>
-      <p>Gemini écoute l'audio lui-même, sans passer par une transcription en arabe standard : souvent bien meilleur sur le dialecte.</p>
-      <span class="lbl">Si Gemini est saturé</span>
-      <div class="seg" role="group" id="segFallback">
-        <button type="button" data-f="0">Réessayer le même modèle</button>
-        <button type="button" data-f="1">Basculer sur un modèle plus léger</button>
-      </div>
-      <p>« Même modèle » garde une qualité constante. L'offre payante de Google évite presque toujours la saturation.</p>
-    </div>
-    <div class="field" id="geminiField">
-      <label for="geminiKey">Clé Gemini</label>
-      <input type="password" id="geminiKey" placeholder="Colle ta clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <p>Gratuite, à créer avec ton compte Google sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.</p>
+      <p>À créer sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>, après avoir ajouté des crédits.</p>
     </div>
     <details>
       <summary>Modèles (avancé)</summary>
       <div class="field">
-        <label for="whisperModel">Reconnaissance vocale (Groq)</label>
-        <input type="text" id="whisperModel" autocapitalize="off" spellcheck="false">
-        <label for="groqModel">Traduction Groq</label>
-        <input type="text" id="groqModel" autocapitalize="off" spellcheck="false">
-        <label for="claudeModel">Traduction Claude</label>
-        <input type="text" id="claudeModel" autocapitalize="off" spellcheck="false">
-        <label for="geminiModel">Écoute Gemini</label>
+        <label for="geminiModel">Modèle Gemini</label>
         <input type="text" id="geminiModel" autocapitalize="off" spellcheck="false">
+        <label for="claudeModel">Modèle Claude</label>
+        <input type="text" id="claudeModel" autocapitalize="off" spellcheck="false">
         <button class="btn" type="button" id="resetModels" style="align-self:flex-start">Modèles par défaut</button>
       </div>
     </details>
@@ -233,10 +206,9 @@ details[open] summary{margin-bottom:12px}
     <div class="field">
       <label for="micListen">Micro pour écouter (TN → FR)</label>
       <select id="micListen"></select>
-      <label for="micSpeak">Micro pour parler (FR → TN)</label>
-      <select id="micSpeak"></select>
       <button class="btn" type="button" id="detectMics" style="align-self:flex-start">Détecter les micros</button>
-      <p id="micInfo">Conseil : micro de l'iPhone pour écouter (tourne le bas du téléphone vers ton interlocuteur), AirPods pour parler.</p>
+      <p id="micInfo">Conseil : micro de l'iPhone, bas du téléphone tourné vers ton interlocuteur.</p>
+      <p>Pour parler en français, l'app utilise la reconnaissance vocale d'Apple, avec le micro choisi par iOS.</p>
     </div>
 
     <h3>Voix</h3>
@@ -265,28 +237,31 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v1.8 · 21/10 18:50";
+  const VERSION = "v2.0 · 22/10 19:59";
   const KEY = "derja-express-v1";
-  const GEMINI_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
-  const MODELS = { whisperModel: "whisper-large-v3", groqModel: "openai/gpt-oss-120b", claudeModel: "claude-haiku-5-5", geminiModel: "gemini-3.8-flash" };
+  const MODELS = { geminiModel: "gemini-3.8-flash", claudeModel: "claude-haiku-5-5" };
   const EXAMPLE = {
     dir: "fr2tn", example: true,
     francais: "Je voudrais l'addition, s'il vous plaît",
     arabizi: "n7eb el 7seb ya3aychek",
     arabe: "نحب الحساب يعيشك",
-    mot_a_mot: [{tn:"n7eb",fr:"je voudrais"},{tn:"el 7seb",fr:"l'addition"},{tn:"ya3aychek",fr:"s'il te plaît (litt. « qu'il te fasse vivre »)"}],
-    variante: null,
-    note: "Formule polie et chaleureuse, très courante au café ou au restaurant."
+    detail: { mot_a_mot: [{tn:"n7eb",fr:"je voudrais"},{tn:"el 7seb",fr:"l'addition"},{tn:"ya3aychek",fr:"s'il te plaît (litt. « qu'il te fasse vivre »)"}],
+      variante: null, note: "Formule polie et chaleureuse, très courante au café ou au restaurant." }
   };
 
-  const state = { geminiFallback:false, micListen:"", micSpeak:"", dir:"fr2tn", engine:"groq", listen:"whisper", groqKey:"", claudeKey:"", geminiKey:"", ...MODELS,
+  const state = { dir:"fr2tn", engine:"gemini", geminiKey:"", claudeKey:"", ...MODELS, micListen:"",
     validation:"immediate", registre:"naturel", rate:0.9, voiceURI:"", history:[] };
   try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch {}
-  if (!state.groqModel || state.groqModel === "llama-3.3-70b-versatile") state.groqModel = MODELS.groqModel;
+  // Nettoyage des anciens réglages (Whisper, Groq, choix d'écoute, bascule)
+  ["groqKey", "groqModel", "whisperModel", "listen", "geminiFallback", "micSpeak"].forEach(k => delete state[k]);
+  if (state.engine !== "claude") state.engine = "gemini";
+  // Anciennes phrases : le mot à mot était rangé à plat
+  (state.history || []).forEach(h => { if (!h.detail && Array.isArray(h.mot_a_mot) && h.mot_a_mot.length) h.detail = { mot_a_mot: h.mot_a_mot, variante: h.variante || null, note: h.note || "", arabe: h.arabe || "" }; });
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+  save();
 
   let current = state.history[0] || EXAMPLE;
-  let showMam = false, busy = false, phase = "", errorMsg = "";
+  let showMam = false, mamBusy = false, mamErr = "", busy = false, phase = "", errorMsg = "", live = "";
 
   // ---------- Voix de synthèse ----------
   const synth = window.speechSynthesis;
@@ -318,31 +293,46 @@ details[open] summary{margin-bottom:12px}
 
   // ---------- Rendu ----------
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const mamHtml = t => showMam && Array.isArray(t.mot_a_mot) && t.mot_a_mot.length
-    ? '<dl class="mam">' + t.mot_a_mot.map(g => '<dt>' + esc(g.tn) + '</dt><dd>' + esc(g.fr) + '</dd>').join("") + '</dl>' : "";
+
+  function detailHtml(t) {
+    if (!showMam) return "";
+    if (mamBusy) return '<div class="extra"><span class="dot" style="display:inline-block"></span> Préparation du mot à mot…</div>';
+    if (mamErr) return '<div class="err">' + esc(mamErr) + '</div>';
+    const d = t.detail;
+    if (!d) return "";
+    let h = "";
+    if (t.dir === "tn2fr" && d.arabe) h += '<div class="arabe small" lang="aeb-Arab" dir="rtl">' + esc(d.arabe) + '</div>';
+    if (Array.isArray(d.mot_a_mot) && d.mot_a_mot.length) h += '<dl class="mam">' + d.mot_a_mot.map(g => '<dt>' + esc(g.tn) + '</dt><dd>' + esc(g.fr) + '</dd>').join("") + '</dl>';
+    if (d.variante) {
+      const v = typeof d.variante === "string" ? d.variante : (t.dir === "tn2fr" ? d.variante.francais : [d.variante.arabizi, d.variante.arabe].filter(Boolean).join(" · "));
+      if (v) h += '<div class="extra"><b>' + (t.dir === "tn2fr" ? "Autre sens possible :" : "Variante :") + '</b> ' + esc(v) + '</div>';
+    }
+    if (d.note) h += '<div class="extra">' + esc(d.note) + '</div>';
+    return h;
+  }
+  const byline = t => t.via ? '<div class="heard">' + esc(t.via) + '</div>' : "";
 
   function renderResult() {
     const r = $("result");
-    if (busy) { r.innerHTML = '<div class="status"><span class="dot"></span>' + esc(phase) + '</div>'; return; }
+    if (busy || (capturing && sr)) {
+      r.innerHTML = '<div class="status"><span class="dot"></span>' + esc(phase) + '</div>' + (live ? '<div class="fr-src">« ' + esc(live) + ' »</div>' : "");
+      return;
+    }
     const t = current;
     const err = errorMsg ? '<div class="err">' + esc(errorMsg) + '</div>' + (lastAudio ? '<div class="actions"><button class="btn primary" data-act="retry" type="button">Réessayer avec le même enregistrement</button></div>' : "") : "";
     const primary = state.validation === "valider" && !t.example ? " primary" : "";
+    const mamBtn = '<button class="btn" data-act="mam" type="button" aria-expanded="' + showMam + '">Mot à mot</button>';
     if (t.dir === "tn2fr") {
       r.innerHTML = err +
         '<div class="eyebrow">Français</div>' +
         '<div class="big">' + esc(t.francais) + '</div>' +
         '<div class="eyebrow">Ce qui a été dit</div>' +
         '<div class="fr-src" lang="aeb-Latn">' + esc(t.arabizi) + '</div>' +
-        '<div class="arabe small" lang="aeb-Arab" dir="rtl">' + esc(t.arabe) + '</div>' +
-        (t.source && t.source !== t.arabe ? '<div class="heard">Entendu par le micro (' + esc(t.via || "") + ') : <span dir="auto">' + esc(t.source) + '</span></div>' : "") +
-        (recFor === t ? '<div class="actions"><button class="btn" data-act="play" type="button">▶︎ Réécouter l\'enregistrement</button></div>' : "") +
         '<div class="actions">' +
-          '<button class="btn' + primary + '" data-act="voixfr" type="button">Écouter</button>' +
-          '<button class="btn" data-act="mam" type="button" aria-expanded="' + showMam + '">Mot à mot</button>' +
+          '<button class="btn' + primary + '" data-act="voixfr" type="button">Écouter</button>' + mamBtn +
+          (recFor === t ? '<button class="btn" data-act="play" type="button">▶︎ Réécouter</button>' : "") +
           '<button class="btn" data-act="edit" type="button">Corriger</button>' +
-        '</div>' + mamHtml(t) +
-        (t.variante ? '<div class="extra"><b>Autre sens possible :</b> ' + esc(typeof t.variante === "string" ? t.variante : (t.variante.francais || "")) + '</div>' : "") +
-        (t.note ? '<div class="extra">' + esc(t.note) + '</div>' : "") + byline(t);
+        '</div>' + detailHtml(t) + byline(t);
       return;
     }
     r.innerHTML = err +
@@ -352,15 +342,9 @@ details[open] summary{margin-bottom:12px}
       '<div class="arabe" lang="aeb-Arab" dir="rtl">' + esc(t.arabe) + '</div>' +
       '<div class="actions">' +
         '<button class="btn' + primary + '" data-act="voix" type="button">Écouter</button>' +
-        '<button class="btn" data-act="ecran" type="button">Plein écran</button>' +
-        '<button class="btn" data-act="mam" type="button" aria-expanded="' + showMam + '">Mot à mot</button>' +
+        '<button class="btn" data-act="ecran" type="button">Plein écran</button>' + mamBtn +
         '<button class="btn" data-act="edit" type="button">Corriger</button>' +
-      '</div>' + mamHtml(t) +
-      (t.variante && t.variante.arabizi ? '<div class="extra"><b>Variante :</b> ' + esc(t.variante.arabizi) + (t.variante.arabe ? ' · <span dir="rtl" lang="aeb-Arab">' + esc(t.variante.arabe) + '</span>' : "") + '</div>' : "") +
-      (t.note ? '<div class="extra">' + esc(t.note) + '</div>' : "") + byline(t);
-  }
-  function byline(t) {
-    return t.modele ? '<div class="heard">Traduit par ' + esc(t.modele) + (t.modele !== (state.geminiModel || MODELS.geminiModel) && /gemini/.test(t.modele) ? " (modèle de secours)" : "") + '</div>' : "";
+      '</div>' + detailHtml(t) + byline(t);
   }
 
   function renderHistory() {
@@ -371,9 +355,9 @@ details[open] summary{margin-bottom:12px}
       : '<span class="h-a">→ ' + esc(h.arabizi) + '</span><span class="h-b">' + esc(h.francais) + '</span>') + '</button></li>').join("");
   }
 
-  // Clé nécessaire au micro selon le sens et le mode d'écoute
-  const micKeyOk = () => state.dir === "tn2fr" && state.listen === "gemini" ? !!state.geminiKey : !!state.groqKey;
-  const micMissing = () => state.dir === "tn2fr" && state.listen === "gemini" ? "Ajoute ta clé Gemini pour le micro" : "Ajoute ta clé Groq pour le micro";
+  // Clé nécessaire selon le sens : Gemini pour écouter ; Gemini ou Claude pour traduire vers le tunisien
+  const keyOk = () => state.dir === "tn2fr" || state.engine === "gemini" ? !!state.geminiKey : !!state.claudeKey;
+  const keyMissing = () => state.dir === "fr2tn" && state.engine === "claude" ? "Ajoute ta clé Claude dans les réglages" : "Ajoute ta clé Gemini dans les réglages";
 
   function renderControls() {
     const tn = state.dir === "tn2fr";
@@ -382,20 +366,17 @@ details[open] summary{margin-bottom:12px}
     document.querySelectorAll("#segValid [data-v]").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === state.validation));
     document.querySelectorAll("#segReg [data-r]").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === state.registre));
     $("claudeField").hidden = state.engine !== "claude";
-    document.querySelectorAll("#segFallback [data-f]").forEach(b => b.setAttribute("aria-pressed", (b.dataset.f === "1") === !!state.geminiFallback));
-    document.querySelectorAll("#segListen [data-l]").forEach(b => b.setAttribute("aria-pressed", b.dataset.l === state.listen));
-    $("geminiField").hidden = state.listen !== "gemini";
     $("txt").placeholder = tn ? "Ou écris / colle du tunisien" : "Ou écris ta phrase en français";
     $("txt").lang = tn ? "ar" : "fr";
-    $("setup").hidden = !!state.groqKey || !!state.geminiKey;
+    $("setup").hidden = !!state.geminiKey;
     $("rate").value = state.rate;
     $("rateVal").textContent = Math.round(state.rate * 100) + " %";
-    $("go").disabled = busy || recording;
-    $("mic").disabled = busy || !micKeyOk();
-    $("mic").classList.toggle("rec", recording);
-    $("micLabel").innerHTML = recording
+    $("go").disabled = busy || capturing;
+    $("mic").disabled = busy || !keyOk();
+    $("mic").classList.toggle("rec", capturing);
+    $("micLabel").innerHTML = capturing
       ? 'Relâche pour traduire · <span class="t" id="micTime">0:00</span>'
-      : !micKeyOk() ? micMissing()
+      : !keyOk() ? keyMissing()
       : tn ? "Maintiens pendant qu'on te parle" : "Maintiens et parle en français";
   }
   const renderAll = () => { renderResult(); renderHistory(); renderControls(); };
@@ -409,28 +390,12 @@ details[open] summary{margin-bottom:12px}
       let detail = "";
       try { const j = await r.json(); detail = (j.error && (j.error.message || j.error)) || ""; } catch {}
       if (r.status === 401 || r.status === 403 || /API key not valid|API_KEY_INVALID/i.test(String(detail))) throw { msg: "Clé " + svc + " refusée : vérifie-la dans les réglages." };
+      if (r.status === 402 || /prepayment|credit|billing/i.test(String(detail))) throw { msg: "Crédit " + svc + " épuisé : recharge ton compte." };
       if (r.status === 429) throw { status: 429, msg: "Quota " + svc + " atteint pour le moment. Réessaie dans une minute." };
-      if (r.status === 402 || /credit|billing/i.test(String(detail))) throw { msg: "Crédit " + svc + " épuisé : recharge ton compte ou passe sur Groq." };
-      if (r.status === 503 || r.status === 500 || r.status === 502 || r.status === 504) throw { status: r.status, msg: svc + " est saturé en ce moment. Touche Réessayer dans quelques secondes." };
+      if ([500, 502, 503, 504].includes(r.status)) throw { status: r.status, msg: svc + " est saturé en ce moment. Réessaie dans quelques secondes." };
       throw { status: r.status, msg: svc + " a renvoyé une erreur (" + r.status + ") " + String(detail).slice(0, 160) };
     }
     return r.json();
-  }
-
-  const TN_HINT = "شنوة، برشا، توا، باهي، نحب، ماكش، علاش، وقتاش، فما، ياسر، يعيشك، بالله، زادة، كيفاش، نجم، مش، حاجة، خويا، أختي، ماو، يزي.";
-
-  async function transcribe(blob, dir) {
-    const ext = /mp4|m4a|aac/.test(blob.type) ? "m4a" : /ogg/.test(blob.type) ? "ogg" : "webm";
-    const fd = new FormData();
-    fd.append("file", blob, "audio." + ext);
-    fd.append("model", state.whisperModel || MODELS.whisperModel);
-    fd.append("language", dir === "tn2fr" ? "ar" : "fr");
-    fd.append("response_format", "json");
-    fd.append("temperature", "0");
-    if (dir === "tn2fr") fd.append("prompt", "حكاية بالدارجة التونسية. " + TN_HINT);
-    const j = await call("https://api.groq.com/openai/v1/audio/transcriptions",
-      { method: "POST", headers: { Authorization: "Bearer " + state.groqKey }, body: fd }, "Groq");
-    return String(j.text || "").trim();
   }
 
   const parseJson = s => {
@@ -441,27 +406,42 @@ details[open] summary{margin-bottom:12px}
     throw { msg: "La réponse du traducteur était mal formée. Réessaie." };
   };
 
-  async function llm(prompt) {
-    if (state.engine === "claude") {
-      if (!state.claudeKey) throw { msg: "Ajoute ta clé Claude dans les réglages, ou choisis Groq." };
-      const j = await call("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-api-key": state.claudeKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({ model: state.claudeModel || MODELS.claudeModel, max_tokens: 1200, temperature: 0.2, messages: [{ role: "user", content: prompt }] })
-      }, "Claude");
-      return parseJson((j.content || []).map(c => c.text || "").join(""));
+  // Gemini, réflexion « low » ; si saturé, on réessaie le même modèle (jamais de modèle plus léger)
+  async function gemini(parts) {
+    if (!state.geminiKey) throw { msg: "Ajoute ta clé Gemini dans les réglages." };
+    const model = state.geminiModel || MODELS.geminiModel;
+    const body = JSON.stringify({ contents: [{ role: "user", parts }],
+      generationConfig: { temperature: 0.2, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "low" } } });
+    const waits = [0, 1500, 3000];
+    let lastErr;
+    for (let i = 0; i < waits.length; i++) {
+      if (i > 0) { phase = "Gemini est saturé, nouvel essai (" + (i + 1) + "/3)…"; if (busy) renderResult(); await new Promise(r => setTimeout(r, waits[i])); }
+      try {
+        const j = await call("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent",
+          { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": state.geminiKey }, body }, "Gemini");
+        const p = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
+        return { out: parseJson(p.map(x => x.text || "").join("")), model };
+      } catch (e) {
+        lastErr = e;
+        if (!e || ![429, 500, 502, 503, 504].includes(e.status)) throw e;
+      }
     }
-    if (!state.groqKey) throw { msg: "Ajoute ta clé Groq dans les réglages pour traduire du texte, ou choisis Claude." };
-    const j = await call("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "content-type": "application/json", Authorization: "Bearer " + state.groqKey },
-      body: JSON.stringify(Object.assign({ model: state.groqModel || MODELS.groqModel, temperature: 0.2, messages: [{ role: "user", content: prompt }] },
-        /gpt-oss/.test(state.groqModel || MODELS.groqModel) ? { reasoning_effort: "low" } : {}))
-    }, "Groq");
-    return parseJson(j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content);
+    throw lastErr;
   }
 
-  // Audio du micro -> WAV 16 kHz mono (format accepté partout)
+  async function claude(prompt) {
+    if (!state.claudeKey) throw { msg: "Ajoute ta clé Claude dans les réglages, ou choisis Gemini." };
+    const model = state.claudeModel || MODELS.claudeModel;
+    const j = await call("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": state.claudeKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({ model, max_tokens: 800, temperature: 0.2, messages: [{ role: "user", content: prompt }] })
+    }, "Claude");
+    return { out: parseJson((j.content || []).map(c => c.text || "").join("")), model };
+  }
+  const textEngine = prompt => state.engine === "claude" && state.claudeKey ? claude(prompt) : gemini([{ text: prompt }]);
+
+  // Audio du micro -> WAV 16 kHz mono, en base64
   async function toWav(blob) {
     const AC = window.AudioContext || window.webkitAudioContext;
     const ac = new AC();
@@ -482,153 +462,191 @@ details[open] summary{margin-bottom:12px}
     let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
     return btoa(bin);
   }
+  const audioPart = async blob => {
+    try { return { inline_data: { mime_type: "audio/wav", data: await toWav(blob) } }; }
+    catch { throw { msg: "Impossible de lire l'enregistrement. Réessaie." }; }
+  };
 
-  async function geminiListen(blob) {
-    if (!state.geminiKey) throw { msg: "Ajoute ta clé Gemini dans les réglages, ou repasse l'écoute sur Whisper." };
-    let b64;
-    try { b64 = await toWav(blob); } catch { throw { msg: "Impossible de lire l'enregistrement. Réessaie." }; }
-    const body = JSON.stringify({
-      contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64 } }, { text: promptListen() }] }],
-      generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
-    });
-    // Saturé (503) : on réessaie le même modèle 3 fois ; on ne bascule sur un modèle plus léger que si le réglage l'autorise
-    const main = state.geminiModel || MODELS.geminiModel;
-    const plan = [main, main, main, ...(state.geminiFallback ? GEMINI_FALLBACKS.filter(m => m !== main) : [])];
-    const waits = [0, 1500, 3000, 600, 600, 600];
-    let j, used, lastErr;
-    for (let i = 0; i < plan.length && !j; i++) {
-      if (i > 0) {
-        phase = plan[i] === main ? "Gemini est saturé, nouvel essai (" + (i + 1) + "/3)…" : "Gemini est saturé, essai avec " + plan[i] + "…";
-        renderResult(); await new Promise(r => setTimeout(r, waits[i] || 600));
-      }
-      try {
-        j = await call("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(plan[i]) + ":generateContent",
-          { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": state.geminiKey }, body }, "Gemini");
-        used = plan[i];
-      } catch (e) {
-        lastErr = e;
-        if (!e || ![429, 500, 502, 503, 504].includes(e.status)) throw e;
-      }
-    }
-    if (!j) throw lastErr;
-    const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
-    const out = parseJson(parts.map(p => p.text || "").join(""));
-    if (out && typeof out === "object") out.modele = used;
-    return out;
-  }
-
-  // ---------- Consignes de traduction ----------
-  const context = () => state.history.filter(h => h.at && Date.now() - h.at < 15 * 60000).slice(0, 4).reverse()
-    .map(h => (h.dir === "tn2fr" ? "- Interlocuteur : " : "- Moi : ") + h.arabizi + " (= " + h.francais + ")").join("\n");
-
-  const promptFr = fr => `Tu es un traducteur expert du dialecte tunisien (Derja), tel qu'on le parle à Tunis aujourd'hui.
-Traduis la phrase française ci-dessous en tunisien parlé, pour une conversation en face à face.
-
-Règles :
-- Registre : ${state.registre === "pur"
+  // ---------- Consignes (réponses « essentielles ») ----------
+  const ARABIZI = "arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ), orthographe la plus courante sur les réseaux sociaux tunisiens";
+  const context = () => {
+    const c = state.history.filter(h => h.at && Date.now() - h.at < 15 * 60000).slice(0, 4).reverse()
+      .map(h => (h.dir === "tn2fr" ? "- Interlocuteur : " : "- Moi : ") + h.arabizi + " (= " + h.francais + ")").join("\n");
+    return c ? "\nContexte, derniers échanges (du plus ancien au plus récent) :\n" + c + "\n" : "";
+  };
+  const frRules = () => `- Registre : ${state.registre === "pur"
     ? "tunisien « pur » : remplace les mots français par leur équivalent tunisien quand il existe."
     : "naturel : garde les mots français couramment employés en Tunisie (bureau, normalement, voiture…), comme on parle vraiment."}
-- Celui qui parle (« je ») est un homme : accorde au masculin.
-- « Tu » : masculin par défaut (enti). Féminin (enty) ou pluriel (entouma) seulement si la phrase l'indique clairement. Le vouvoiement français devient le pluriel ou une formule de politesse tunisienne selon le contexte.
-- Arabizi : chiffres usuels (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ), orthographe la plus courante sur les réseaux sociaux tunisiens.
-- La phrase française vient d'une dictée vocale : corrige silencieusement les erreurs évidentes de reconnaissance.
-- "arabe" est exactement la même phrase que "arabizi", telle qu'un Tunisien l'écrirait, ENTIÈREMENT en lettres arabes, y compris les mots d'origine française (bureau → بيرو, normalement → نورمالمان). Aucune lettre latine ni chiffre dans ce champ : il sera lu par une voix de synthèse arabe.
-- "mot_a_mot" découpe la phrase tunisienne en groupes de mots, dans l'ordre, chacun avec son sens en français.
-- "variante" seulement si la phrase est vraiment ambiguë (objet {"arabizi","arabe"}), sinon null. "note" : une remarque d'usage ou culturelle courte, sinon chaîne vide.
-${context() ? "\nContexte, derniers échanges (du plus ancien au plus récent) :\n" + context() + "\n" : ""}
-Réponds uniquement avec un objet JSON de cette forme :
-{"francais":"phrase française corrigée","arabizi":"...","arabe":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}
+- Celui qui parle (« je ») est un homme : accorde au masculin. « Tu » au masculin par défaut (enti) ; féminin (enty) ou pluriel (entouma) seulement si la phrase l'indique. Le vouvoiement devient le pluriel ou une formule de politesse tunisienne selon le contexte.
+- "arabizi" : la phrase en ${ARABIZI}.
+- "arabe" : exactement la même phrase, ENTIÈREMENT en lettres arabes, y compris les mots d'origine française (bureau → بيرو). Aucune lettre latine ni chiffre : ce champ est lu par une voix de synthèse arabe.`;
 
-Phrase française : ${fr}`;
+  const P = {
+    listen: () => `Tu es un interprète expert du dialecte tunisien (Derja). Écoute l'extrait audio joint : un Tunisien parle à un francophone, souvent avec des mots français mêlés.
+"entendu" : transcription fidèle et phonétique, mot pour mot, en ${ARABIZI}, sans corriger ni passer à l'arabe standard ; mots français en français ; [inaudible] si besoin.
+"francais" : traduction en français naturel et courant, fidèle au sens et au ton.
+${context()}Réponds uniquement avec ce JSON : {"entendu":"...","francais":"..."}`,
+    tnText: src => `Tu es un interprète expert du dialecte tunisien (Derja). Voici une phrase tunisienne écrite (arabizi ou lettres arabes), adressée à un francophone.
+"entendu" : la phrase en ${ARABIZI}.
+"francais" : traduction en français naturel et courant, fidèle au sens et au ton.
+${context()}Réponds uniquement avec ce JSON : {"entendu":"...","francais":"..."}
 
-  const promptTn = src => `Tu es un interprète expert du dialecte tunisien (Derja), tel qu'on le parle en Tunisie aujourd'hui.
-Un Tunisien vient de dire la phrase ci-dessous à un francophone. Traduis-la en français naturel et courant.
+Phrase : ${src}`,
+    frText: fr => `Tu es un traducteur expert du dialecte tunisien (Derja), tel qu'on le parle à Tunis aujourd'hui. Traduis la phrase française en tunisien parlé, pour une conversation en face à face.
+${frRules()}
+- "francais" : la phrase française, en corrigeant silencieusement les erreurs évidentes de dictée.
+${context()}Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..."}
 
-Règles :
-- La phrase vient d'une reconnaissance vocale (Whisper) qui connaît mal le tunisien : mots déformés, tournures d'arabe standard, mots français écrits en lettres arabes. Elle peut aussi être en arabizi. Reconstitue ce qui a le plus probablement été dit en tunisien, en t'aidant du contexte de la conversation.
-- Le mélange tunisien / français est normal : garde le sens des mots français.
-- Traduis le sens, pas mot à mot : les expressions idiomatiques deviennent leur équivalent français. Garde le ton (familier, poli, taquin…).
-- "arabizi" et "arabe" : la phrase tunisienne reconstituée et corrigée, en arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ) et en lettres arabes.
-- "mot_a_mot" découpe la phrase tunisienne en groupes de mots, dans l'ordre, chacun avec son sens en français.
-- "variante" : une autre compréhension possible en français si la phrase est vraiment ambiguë ou mal reconnue, sinon null.
-- "note" : courte remarque utile (expression idiomatique, sous-entendu, mot incertain), sinon chaîne vide.
-${context() ? "\nContexte, derniers échanges (du plus ancien au plus récent) :\n" + context() + "\n" : ""}
-Réponds uniquement avec un objet JSON de cette forme :
-{"francais":"traduction française","arabizi":"...","arabe":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}
-
-Phrase en tunisien : ${src}`;
-
-  const promptListen = () => `Tu es un interprète expert du dialecte tunisien (Derja). Écoute l'extrait audio joint : un Tunisien parle à un francophone, en face à face, souvent avec des mots français mêlés.
-
-Étapes :
-1. "entendu" : transcris fidèlement et phonétiquement ce qui est prononcé, mot pour mot, en arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ). Ne corrige pas, ne traduis pas, ne remplace pas par de l'arabe standard. Les mots français restent écrits en français. Un passage inaudible devient [inaudible].
-2. "arabizi" et "arabe" : la phrase tunisienne telle que tu la comprends, en arabizi et en lettres arabes (identique à "entendu" si rien n'est à corriger).
-3. "francais" : la traduction en français naturel et courant. Traduis le sens, pas mot à mot, et garde le ton (familier, poli, taquin…).
-4. "mot_a_mot" : la phrase tunisienne découpée en groupes de mots, dans l'ordre, chacun avec son sens en français.
-5. "variante" : une autre compréhension possible en français si un passage est incertain, sinon null. "note" : courte remarque utile (expression idiomatique, mot incertain), sinon chaîne vide.
-${context() ? "\nContexte, derniers échanges (du plus ancien au plus récent) :\n" + context() + "\n" : ""}
-Réponds uniquement avec un objet JSON de cette forme :
-{"entendu":"...","arabizi":"...","arabe":"...","francais":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}`;
+Phrase française : ${fr}`,
+    frAudio: () => `Tu es un traducteur expert du dialecte tunisien (Derja), tel qu'on le parle à Tunis aujourd'hui. Écoute l'extrait audio joint : un francophone parle en français. Transcris ce qu'il dit, puis traduis-le en tunisien parlé, pour une conversation en face à face.
+${frRules()}
+- "francais" : ce qu'il a dit, en français correct.
+${context()}Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..."}`,
+    detailTn: t => `Tu es un expert du dialecte tunisien (Derja). Un Tunisien a dit : « ${t.arabizi} », traduit en français par : « ${t.francais} ».
+"arabe" : la phrase tunisienne en lettres arabes.
+"mot_a_mot" : la phrase tunisienne découpée en groupes de mots, dans l'ordre, chacun avec son sens en français.
+"variante" : une autre compréhension possible en français si un passage est ambigu, sinon null.
+"note" : courte remarque utile (expression idiomatique, sous-entendu, mot incertain), sinon chaîne vide.
+Réponds uniquement avec ce JSON : {"arabe":"...","mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}`,
+    detailFr: t => `Tu es un expert du dialecte tunisien (Derja). La phrase française « ${t.francais} » a été traduite en tunisien : « ${t.arabizi} » (${t.arabe}).
+"mot_a_mot" : la phrase tunisienne découpée en groupes de mots, dans l'ordre, chacun avec son sens en français.
+"variante" : une autre façon courante de le dire, objet {"arabizi","arabe"}, ou null.
+"note" : courte remarque d'usage ou culturelle, sinon chaîne vide.
+Réponds uniquement avec ce JSON : {"mot_a_mot":[{"tn":"...","fr":"..."}],"variante":null,"note":""}`
+  };
 
   // ---------- Chaîne complète ----------
   let lastAudio = null, recUrl = null, recFor = null, micUsed = "";
-  async function run({ audio, text, dir = state.dir }) {
+  const shortName = m => String(m).replace(/^gemini-/, "Gemini ").replace(/^claude-/, "Claude ").replace(/-flash/, " Flash");
+
+  async function run({ audio, text, dir = state.dir, recognizer = "" }) {
     if (busy) return;
     lastAudio = null;
-    busy = true; errorMsg = ""; showMam = false;
-    phase = audio ? "Écoute de l'enregistrement…" : "Traduction en cours…";
+    busy = true; errorMsg = ""; showMam = false; mamErr = "";
+    phase = audio ? (dir === "tn2fr" ? "Gemini écoute et traduit…" : "Gemini écoute ton français et traduit…") : "Traduction en cours…";
     $("txt").blur();
     renderAll();
-    let src = text;
     try {
+      let res;
+      if (dir === "tn2fr") res = audio ? await gemini([await audioPart(audio), { text: P.listen() }]) : await gemini([{ text: P.tnText(text) }]);
+      else res = audio ? await gemini([await audioPart(audio), { text: P.frAudio() }]) : await textEngine(P.frText(text));
+      const o = res.out || {};
       let t;
-      if (audio && dir === "tn2fr" && state.listen === "gemini") {
-        phase = "Gemini écoute et traduit…"; renderResult();
-        t = await geminiListen(audio);
-        src = (t && (t.entendu || t.arabizi)) || "";
-      } else if (audio) {
-        src = await transcribe(audio, dir);
-        if (!src) throw { msg: "Je n'ai rien entendu. Rapproche le téléphone et maintiens le bouton pendant toute la phrase." };
-        phase = "Traduction en cours…"; renderResult();
+      if (dir === "tn2fr") {
+        if (!o.francais) throw { msg: "La réponse était incomplète. Réessaie." };
+        t = { dir, francais: o.francais, arabizi: o.entendu || text || "" };
+      } else {
+        if (typeof o.arabizi !== "string" || typeof o.arabe !== "string") throw { msg: "La réponse était incomplète. Réessaie." };
+        t = { dir, francais: o.francais || text || "", arabizi: o.arabizi, arabe: o.arabe };
       }
-      if (!t) {
-        t = await llm(dir === "tn2fr" ? promptTn(src) : promptFr(src));
-        if (t && typeof t === "object") t.modele = state.engine === "claude" ? (state.claudeModel || MODELS.claudeModel) : (state.groqModel || MODELS.groqModel);
-      }
-      if (!t || typeof t.arabizi !== "string" || typeof t.arabe !== "string" || (dir === "tn2fr" && !t.francais)) throw { msg: "La réponse du traducteur était incomplète. Réessaie." };
-      t.francais = t.francais || src;
-      t.mot_a_mot = Array.isArray(t.mot_a_mot) ? t.mot_a_mot.filter(g => g && g.tn) : [];
-      Object.assign(t, { dir, source: src, at: Date.now(),
-        via: (!audio ? "texte" : dir === "tn2fr" && state.listen === "gemini" ? "Gemini" : "Whisper") + (audio && micUsed ? " · " + micUsed : "") });
+      const how = audio ? "Écouté et traduit par " + shortName(res.model) + (micUsed ? " · " + micUsed : "")
+        : (recognizer ? recognizer + " · " : "") + "traduit par " + shortName(res.model);
+      Object.assign(t, { at: Date.now(), via: how.charAt(0).toUpperCase() + how.slice(1) });
       if (audio) { if (recUrl) URL.revokeObjectURL(recUrl); recUrl = URL.createObjectURL(audio); recFor = t; }
       current = t;
       state.history.unshift(t);
       state.history = state.history.slice(0, 100);
       save();
       if (!audio) $("txt").value = "";
-      busy = false;
+      busy = false; live = "";
       renderAll();
       if (state.validation === "immediate") restitute(t);
     } catch (e) {
-      busy = false;
+      busy = false; live = "";
       errorMsg = (e && e.msg) || "Erreur inattendue. Réessaie.";
       if (audio) lastAudio = { audio, dir };
-      if (src && !text && !(dir === "tn2fr" && state.listen === "gemini")) $("txt").value = src;
+      else if (text) $("txt").value = text;
       renderAll();
     }
   }
   const restitute = t => t.dir === "tn2fr" ? speak(t.francais, true) : speak(t.arabe);
 
-  // ---------- Micro : maintenir pour parler ----------
-  let recording = false, rec = null, stream = null, chunks = [], recStart = 0, held = false, timer = null;
+  async function loadDetail(t) {
+    if (t.detail || mamBusy) return;
+    mamBusy = true; mamErr = ""; renderResult();
+    try {
+      const res = t.dir === "tn2fr" ? await gemini([{ text: P.detailTn(t) }]) : await textEngine(P.detailFr(t));
+      const d = res.out || {};
+      d.mot_a_mot = Array.isArray(d.mot_a_mot) ? d.mot_a_mot.filter(g => g && g.tn) : [];
+      t.detail = d; save();
+    } catch (e) { mamErr = (e && e.msg) || "Le mot à mot n'a pas pu être préparé."; }
+    mamBusy = false;
+    if (current === t) renderResult();
+  }
 
-  async function startRec() {
-    if (busy || recording || !micKeyOk()) return;
+  // ---------- Capture : reconnaissance d'Apple (français) ou enregistrement (tunisien, ou secours) ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let srBroken = false;
+  let capturing = false, held = false, timer = null, capStart = 0;
+  let rec = null, stream = null, chunks = [];
+  let sr = null, srAcc = "", srFinal = "", srInterim = "", srFailed = false;
+
+  const startTimer = () => {
+    capStart = Date.now();
+    timer = setInterval(() => {
+      const s = Math.floor((Date.now() - capStart) / 1000), el = $("micTime");
+      if (el) el.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+      if (s >= 60) stopCapture();
+    }, 250);
+  };
+
+  function startCapture() {
+    if (busy || capturing || !keyOk()) return;
     held = true;
     if (synth) synth.cancel();
+    if (state.dir === "fr2tn" && SR && !srBroken) startApple(); else startRec();
+  }
+  function stopCapture() {
+    held = false;
+    if (sr) { try { sr.stop(); } catch {} }
+    else if (rec && rec.state !== "inactive") rec.stop();
+  }
+
+  // Reconnaissance d'Apple : le texte s'affiche pendant que tu parles
+  function startApple() {
+    srAcc = ""; srFinal = ""; srInterim = ""; srFailed = false;
+    try {
+      sr = new SR();
+      sr.lang = "fr-FR"; sr.interimResults = true; sr.continuous = true;
+      sr.onresult = e => {
+        let fin = "", mid = "";
+        for (let i = 0; i < e.results.length; i++) (e.results[i].isFinal ? (fin += e.results[i][0].transcript + " ") : (mid += e.results[i][0].transcript));
+        srFinal = fin; srInterim = mid;
+        live = (srAcc + " " + srFinal + srInterim).trim(); phase = "Je t'écoute…"; renderResult();
+      };
+      sr.onerror = e => {
+        if (["not-allowed", "service-not-allowed", "audio-capture", "network", "language-not-supported"].includes(e.error)) { srFailed = true; srBroken = e.error !== "network"; }
+      };
+      sr.onend = () => {
+        // iOS coupe parfois la reconnaissance en pleine phrase : on la relance tant que le bouton est maintenu
+        if (!srFailed && held) {
+          srAcc = (srAcc + " " + srFinal + srInterim).trim(); srFinal = ""; srInterim = "";
+          try { sr.start(); return; } catch {}
+        }
+        const said = (srAcc + " " + srFinal + srInterim).trim();
+        const ok = !srFailed;
+        sr = null; capturing = false; clearInterval(timer);
+        if (!ok) { // la reconnaissance d'Apple ne marche pas ici : enregistrement envoyé à Gemini
+          live = ""; errorMsg = "";
+          if (held) { startRec(); return; }
+          errorMsg = "Reconnaissance d'Apple indisponible : maintiens à nouveau, Gemini écoutera ton français.";
+          renderAll(); return;
+        }
+        live = "";
+        if (!said) { errorMsg = Date.now() - capStart < 900 ? "Trop court : maintiens le bouton pendant toute la phrase." : "Je n'ai rien entendu. Réessaie en parlant plus près du téléphone."; renderAll(); return; }
+        run({ text: said, dir: "fr2tn", recognizer: "Reconnu par Apple" });
+      };
+      sr.start();
+    } catch { sr = null; srBroken = true; startRec(); return; }
+    capturing = true; errorMsg = ""; phase = "Je t'écoute…"; live = "";
+    renderAll(); startTimer();
+  }
+
+  // Enregistrement audio, envoyé à Gemini
+  async function startRec() {
     try {
       const listening = state.dir === "tn2fr";
-      const id = listening ? state.micListen : state.micSpeak;
+      const id = listening ? state.micListen : "";
       // En écoute, pas de réduction de bruit : elle efface les voix éloignées
       const base = { echoCancellation: true, noiseSuppression: !listening, autoGainControl: true };
       try { stream = await navigator.mediaDevices.getUserMedia({ audio: id ? { ...base, deviceId: { exact: id } } : base }); }
@@ -639,11 +657,7 @@ Réponds uniquement avec un objet JSON de cette forme :
       errorMsg = "Micro refusé : autorise-le dans Réglages iOS > Safari > Microphone, puis réessaie.";
       renderAll(); return;
     }
-    if (!held) { // relâché pendant la demande d'autorisation
-      stream.getTracks().forEach(t => t.stop());
-      errorMsg = "Micro activé. Maintiens à nouveau le bouton pendant que tu parles.";
-      renderAll(); return;
-    }
+    if (!held) { stream.getTracks().forEach(t => t.stop()); errorMsg = "Micro activé. Maintiens à nouveau le bouton pendant que tu parles."; renderAll(); return; }
     const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || "";
     try { rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined); }
     catch { stream.getTracks().forEach(t => t.stop()); errorMsg = "L'enregistrement audio n'est pas pris en charge par ce navigateur."; renderAll(); return; }
@@ -651,39 +665,28 @@ Réponds uniquement avec un objet JSON de cette forme :
     rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
     rec.onstop = onRecStop;
     rec.start();
-    recStart = Date.now(); recording = true; errorMsg = "";
-    renderAll();
-    timer = setInterval(() => {
-      const s = Math.floor((Date.now() - recStart) / 1000), el = $("micTime");
-      if (el) el.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
-      if (s >= 60) stopRec();
-    }, 250);
-  }
-  function stopRec() {
-    held = false;
-    if (rec && rec.state !== "inactive") rec.stop();
+    capturing = true; errorMsg = "";
+    renderAll(); startTimer();
   }
   function onRecStop() {
     clearInterval(timer);
-    const dur = Date.now() - recStart, type = (rec && rec.mimeType) || "audio/mp4";
+    const dur = Date.now() - capStart, type = (rec && rec.mimeType) || "audio/mp4";
     if (stream) stream.getTracks().forEach(t => t.stop());
-    rec = null; stream = null; recording = false;
+    rec = null; stream = null; capturing = false;
     const blob = new Blob(chunks, { type });
-    if (dur < 700 || blob.size < 1500) {
-      errorMsg = "Trop court : maintiens le bouton pendant toute la phrase.";
-      renderAll(); return;
-    }
+    if (dur < 700 || blob.size < 1500) { errorMsg = "Trop court : maintiens le bouton pendant toute la phrase."; renderAll(); return; }
     run({ audio: blob });
   }
+
   const mic = $("mic");
-  mic.addEventListener("pointerdown", e => { e.preventDefault(); try { mic.setPointerCapture(e.pointerId); } catch {} startRec(); });
-  ["pointerup", "pointercancel"].forEach(ev => mic.addEventListener(ev, () => stopRec()));
+  mic.addEventListener("pointerdown", e => { e.preventDefault(); try { mic.setPointerCapture(e.pointerId); } catch {} startCapture(); });
+  ["pointerup", "pointercancel"].forEach(ev => mic.addEventListener(ev, () => stopCapture()));
   mic.addEventListener("contextmenu", e => e.preventDefault());
-  mic.addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); startRec(); } });
-  mic.addEventListener("keyup", e => { if (e.key === " " || e.key === "Enter") stopRec(); });
+  mic.addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); startCapture(); } });
+  mic.addEventListener("keyup", e => { if (e.key === " " || e.key === "Enter") stopCapture(); });
 
   // ---------- Événements ----------
-  const sendText = () => { const v = $("txt").value.trim(); if (v) run({ text: v }); };
+  const sendText = () => { const v = $("txt").value.trim(); if (v && keyOk()) run({ text: v }); else if (v) { errorMsg = keyMissing() + "."; renderResult(); } };
   $("composer").addEventListener("submit", e => { e.preventDefault(); sendText(); });
   $("txt").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } });
   $("txt").addEventListener("input", e => { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 140) + "px"; });
@@ -694,42 +697,34 @@ Réponds uniquement avec un objet JSON de cette forme :
   document.querySelectorAll("#segReg [data-r]").forEach(b => b.addEventListener("click", () => { state.registre = b.dataset.r; save(); renderControls(); }));
   $("rate").addEventListener("input", e => { state.rate = Number(e.target.value); save(); renderControls(); });
   $("voice").addEventListener("change", e => { state.voiceURI = e.target.value; save(); pickVoice(); });
+  $("testVoice").addEventListener("click", () => speak("مرحبا، شنوة أحوالك؟ نمشي للبيرو توا."));
 
-  // ---------- Choix des micros ----------
+  // ---------- Choix du micro d'écoute ----------
   async function listMics(ask) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
     try {
       if (ask) { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach(t => t.stop()); }
-      const mics = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput" && d.deviceId && d.deviceId !== "default");
-      const named = mics.filter(d => d.label);
-      ["micListen", "micSpeak"].forEach(k => {
-        $(k).replaceChildren(new Option("Automatique (choix d'iOS)", ""), ...named.map(d => new Option(d.label, d.deviceId)));
-        $(k).value = named.some(d => d.deviceId === state[k]) ? state[k] : "";
-      });
-      $("micInfo").textContent = named.length
-        ? named.length + " micro(s) détecté(s). Conseil : micro de l'iPhone pour écouter, AirPods pour parler."
-        : "Touche « Détecter les micros » et autorise l'accès pour voir la liste.";
+      const named = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput" && d.deviceId && d.deviceId !== "default" && d.label);
+      $("micListen").replaceChildren(new Option("Automatique (choix d'iOS)", ""), ...named.map(d => new Option(d.label, d.deviceId)));
+      $("micListen").value = named.some(d => d.deviceId === state.micListen) ? state.micListen : "";
+      $("micInfo").textContent = named.length ? named.length + " micro(s) détecté(s). Conseil : micro de l'iPhone pour écouter." : "Touche « Détecter les micros » et autorise l'accès pour voir la liste.";
     } catch { $("micInfo").textContent = "Accès au micro refusé : autorise-le dans Réglages iOS > Safari > Microphone."; }
   }
-  ["micListen", "micSpeak"].forEach(k => $(k).addEventListener("change", e => { state[k] = e.target.value; save(); }));
+  $("micListen").addEventListener("change", e => { state.micListen = e.target.value; save(); });
   $("detectMics").addEventListener("click", () => listMics(true));
-  document.querySelectorAll("#segFallback [data-f]").forEach(b => b.addEventListener("click", () => { state.geminiFallback = b.dataset.f === "1"; save(); renderControls(); }));
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener("devicechange", () => listMics(false));
-  $("testVoice").addEventListener("click", () => speak("مرحبا، شنوة أحوالك؟ نمشي للبيرو توا."));
 
   const bindText = (id, key) => {
     $(id).value = state[key] || "";
     $(id).addEventListener("change", e => { state[key] = e.target.value.trim(); save(); renderControls(); });
   };
-  bindText("groqKey", "groqKey"); bindText("claudeKey", "claudeKey");
-  bindText("whisperModel", "whisperModel"); bindText("groqModel", "groqModel"); bindText("claudeModel", "claudeModel");
-  bindText("geminiKey", "geminiKey"); bindText("geminiModel", "geminiModel");
-  document.querySelectorAll("#segListen [data-l]").forEach(b => b.addEventListener("click", () => { state.listen = b.dataset.l; save(); renderControls(); }));
-  $("resetModels").addEventListener("click", () => { Object.assign(state, MODELS); save(); ["whisperModel", "groqModel", "claudeModel", "geminiModel"].forEach(k => $(k).value = state[k]); });
+  bindText("geminiKey", "geminiKey"); bindText("claudeKey", "claudeKey");
+  bindText("geminiModel", "geminiModel"); bindText("claudeModel", "claudeModel");
+  $("resetModels").addEventListener("click", () => { Object.assign(state, MODELS); save(); $("geminiModel").value = state.geminiModel; $("claudeModel").value = state.claudeModel; });
   $("setupSave").addEventListener("click", () => {
     const v = $("setupKey").value.trim();
     if (!v) return;
-    state.groqKey = v; $("groqKey").value = v; save(); renderAll();
+    state.geminiKey = v; $("geminiKey").value = v; save(); renderAll();
   });
 
   $("result").addEventListener("click", e => {
@@ -740,10 +735,10 @@ Réponds uniquement avec un objet JSON de cette forme :
     if (act === "ecran") { $("fullArabe").textContent = current.arabe || ""; $("fullSub").textContent = current.arabizi || ""; $("full").hidden = false; }
     if (act === "play" && recUrl) { try { new Audio(recUrl).play(); } catch {} return; }
     if (act === "retry" && lastAudio) { const a = lastAudio; run({ audio: a.audio, dir: a.dir }); return; }
-    if (act === "mam") { showMam = !showMam; renderResult(); }
+    if (act === "mam") { showMam = !showMam; mamErr = ""; renderResult(); if (showMam && !current.detail) loadDetail(current); }
     if (act === "edit") {
       state.dir = current.dir === "tn2fr" ? "tn2fr" : "fr2tn"; save(); renderControls();
-      $("txt").value = current.dir === "tn2fr" ? (current.source || current.arabizi || "") : (current.francais || "");
+      $("txt").value = current.dir === "tn2fr" ? (current.arabizi || "") : (current.francais || "");
       $("txt").focus();
     }
   });
@@ -751,7 +746,7 @@ Réponds uniquement avec un objet JSON de cette forme :
     const b = e.target.closest("[data-i]");
     if (!b) return;
     current = state.history[Number(b.dataset.i)];
-    errorMsg = ""; showMam = false;
+    errorMsg = ""; showMam = false; mamErr = "";
     renderResult();
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
@@ -769,9 +764,8 @@ Réponds uniquement avec un objet JSON de cette forme :
   $("full").addEventListener("click", () => { $("full").hidden = true; });
   document.addEventListener("keydown", e => { if (e.key === "Escape") { $("full").hidden = true; $("sheet").hidden = true; } });
 
-  $("ver").textContent = "· " + VERSION;
-
   // ---------- Mise à jour ----------
+  $("ver").textContent = "· " + VERSION;
   // Recharge en contournant le cache (une adresse jamais vue force GitHub et iOS à reprendre la page)
   const freshReload = () => location.replace(location.pathname + "?v=" + Date.now());
   async function checkUpdate() {
