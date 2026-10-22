@@ -86,7 +86,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v5 · 22/10 20:33";
+  const VERSION = "banc v6 · 22/10 21:14";
   // Un « modèle » peut porter des options : « · low » = réflexion réduite, « · essentiel » = réponse courte
   const VARIANTS = ["gemini-3.8-flash", "gemini-3.8-flash · low", "gemini-3.8-flash · low · essentiel"];
   const WHISPER = "whisper-large-v3 + gpt-oss-120b"; // chaîne Groq : Whisper transcrit, puis gpt-oss traduit (comme dans l'app)
@@ -366,6 +366,7 @@ Phrase entendue : `;
     <button class="btn" id="vDesign" type="button">Créer une voix « homme tunisien »</button>
     <button class="btn" id="vLib" type="button">Chercher les voix arabes de Google</button>
   </div>
+  <div class="row"><input type="text" id="vId" placeholder="Identifiant d'une voix (voice_…)" autocapitalize="off" spellcheck="false"><input type="text" id="vName" placeholder="Nom (ex. Tunisien AI Studio)"><button class="btn" id="vAdd" type="button">Ajouter</button></div>
   <p class="muted" id="vInfo">Gemini 3.8 Flash TTS, débité sur tes crédits Gemini (quelques fractions de centime par phrase).</p>
   <button class="btn primary" id="vGo" type="button">Écouter avec les voix cochées</button>
 </div>
@@ -496,6 +497,15 @@ Phrase entendue : `;
     try { await navigator.clipboard.writeText(txt); $("vCopyMsg").textContent = "Copié : colle-le dans la conversation."; } catch { $("vCopyMsg").textContent = txt; }
   };
 
+  // Voix créée dans AI Studio et ajoutée par son identifiant
+  $("vAdd").onclick = () => {
+    const id = $("vId").value.trim(); if (!id) return;
+    const label = "Perso · " + ($("vName").value.trim() || id);
+    vs.extra = vs.extra.filter(v => v.id !== id).concat([{ id, label }]);
+    if (!vs.on.includes(id)) vs.on.push(id);
+    $("vId").value = ""; $("vName").value = ""; saveV(); render(); $("vInfo").textContent = "Voix ajoutée et cochée.";
+  };
+
   // Voix conçue par description : « homme tunisien »
   $("vDesign").onclick = async () => {
     $("vInfo").textContent = "Création de la voix…";
@@ -508,7 +518,7 @@ Phrase entendue : `;
       vs.extra = vs.extra.filter(v => v.label !== "Gemini · voix conçue « homme tunisien »").concat([{ id, label: "Gemini · voix conçue « homme tunisien »" }]);
       if (!vs.on.includes(id)) vs.on.push(id);
       saveV(); render(); $("vInfo").textContent = "Voix créée et cochée.";
-    } catch (e) { $("vInfo").textContent = "Création impossible : " + e.message; }
+    } catch (e) { $("vInfo").textContent = "Création impossible : " + e.message + (/load failed|failed to fetch|networkerror/i.test(e.message) ? ". Google bloque cet appel depuis une page web : crée la voix dans AI Studio et colle son identifiant ci-dessus." : ""); }
   };
 
   // Bibliothèque de voix Google : voix arabes
