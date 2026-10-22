@@ -204,11 +204,13 @@ details[open] summary{margin-bottom:12px}
 
     <h3>Voix</h3>
     <div class="field">
-      <label for="rate">Vitesse de la voix arabe : <span id="rateVal"></span></label>
-      <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
-      <label for="voice">Voix arabe</label>
-      <div class="row"><select id="voice"></select><button class="btn" type="button" id="testVoice">Tester</button></div>
-      <p id="voiceInfo"></p>
+      <span class="lbl">Voix tunisienne (Gemini Lite)</span>
+      <div class="seg" role="group" id="segVoice">
+        <button type="button" data-tv="Orus">Orus</button>
+        <button type="button" data-tv="Charon">Charon</button>
+      </div>
+      <button class="btn" type="button" id="testVoice" style="align-self:flex-start">Tester la voix</button>
+      <p>Si la voix Gemini ne répond pas, l'app lit avec la voix de l'iPhone.</p>
     </div>
 
     <h3>Données</h3>
@@ -228,7 +230,7 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v2.1 · 22/10 20:12";
+  const VERSION = "v2.2 · 22/10 22:48";
   const KEY = "derja-express-v1";
   const MODELS = { geminiModel: "gemini-3.8-flash", claudeModel: "claude-haiku-5-5" };
   const EXAMPLE = {
@@ -241,11 +243,12 @@ details[open] summary{margin-bottom:12px}
   };
 
   const state = { dir:"fr2tn", engine:"gemini", geminiKey:"", claudeKey:"", ...MODELS,
-    validation:"immediate", registre:"naturel", rate:0.9, voiceURI:"", history:[] };
+    validation:"immediate", registre:"naturel", ttsVoice:"Orus", history:[] };
   try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch {}
   // Nettoyage des anciens réglages (Whisper, Groq, choix d'écoute, bascule)
-  ["groqKey", "groqModel", "whisperModel", "listen", "geminiFallback", "micSpeak", "micListen"].forEach(k => delete state[k]);
+  ["groqKey", "groqModel", "whisperModel", "listen", "geminiFallback", "micSpeak", "micListen", "rate", "voiceURI"].forEach(k => delete state[k]);
   if (state.engine !== "claude") state.engine = "gemini";
+  if (!["Orus", "Charon"].includes(state.ttsVoice)) state.ttsVoice = "Orus";
   // Anciennes phrases : le mot à mot était rangé à plat
   (state.history || []).forEach(h => { if (!h.detail && Array.isArray(h.mot_a_mot) && h.mot_a_mot.length) h.detail = { mot_a_mot: h.mot_a_mot, variante: h.variante || null, note: h.note || "", arabe: h.arabe || "" }; });
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
@@ -262,14 +265,11 @@ details[open] summary{margin-bottom:12px}
     const all = synth.getVoices();
     frVoice = all.find(v => /^fr[-_]FR/i.test(v.lang)) || all.find(v => /^fr/i.test(v.lang)) || null;
     const ar = all.filter(v => /^ar/i.test(v.lang));
-    $("voice").replaceChildren(new Option("Automatique", ""), ...ar.map(v => new Option(v.name + " (" + v.lang + ")", v.voiceURI)));
-    const chosen = ar.find(v => v.voiceURI === state.voiceURI);
-    $("voice").value = chosen ? chosen.voiceURI : "";
-    arVoice = chosen || ar.find(v => /TN/i.test(v.lang)) || ar[0] || null;
-    $("voiceInfo").textContent = ar.length ? ar.length + " voix arabe(s) disponible(s)." : "Aucune voix arabe trouvée : installes-en une dans Réglages iOS > Accessibilité > Contenu énoncé > Voix > Arabe.";
+    arVoice = ar.find(v => /TN/i.test(v.lang)) || ar[0] || null;
   };
   if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
-  const speak = (text, fr = false) => {
+  // Voix de l'iPhone : français, et secours pour le tunisien
+  const speakIos = (text, fr) => {
     if (!synth || !text) return;
     try {
       synth.cancel();
@@ -277,10 +277,66 @@ details[open] summary{margin-bottom:12px}
       const v = fr ? frVoice : arVoice;
       u.lang = v ? v.lang : (fr ? "fr-FR" : "ar-SA");
       if (v) u.voice = v;
-      u.rate = fr ? 1 : state.rate;
+      u.rate = fr ? 1 : 0.9;
       synth.speak(u);
     } catch {}
   };
+
+  // Voix tunisienne : Gemini Flash-Lite TTS (Orus ou Charon)
+  const TTS_MODEL = "gemini-3.8-flash-lite-tts";
+  const player = new Audio();
+  const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+  let unlocked = false;
+  // iOS n'autorise la lecture automatique que sur un lecteur « déverrouillé » pendant un geste
+  const unlock = () => { if (unlocked) return; unlocked = true; try { player.src = SILENT; const pr = player.play(); if (pr) pr.catch(() => {}); } catch {} };
+  document.addEventListener("pointerdown", unlock, true);
+  document.addEventListener("keydown", unlock, true);
+  let ttsSeq = 0, ttsUrl = null, ttsLoading = false;
+  const stopAudio = () => { ttsSeq++; ttsLoading = false; try { synth && synth.cancel(); } catch {} try { player.pause(); } catch {} };
+  const findAudio = o => {
+    if (!o || typeof o !== "object") return null;
+    const d = o.inlineData || o.inline_data;
+    if (d && d.data) return { data: d.data, mime: d.mimeType || d.mime_type || "audio/wav" };
+    for (const k in o) { const f = findAudio(o[k]); if (f) return f; }
+    return null;
+  };
+  const audioUrl = a => {
+    const bin = atob(a.data), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    if (u8[0] === 82 && u8[1] === 73 && u8[2] === 70 && u8[3] === 70) return URL.createObjectURL(new Blob([u8], { type: "audio/wav" }));
+    const mr = String(a.mime).match(/rate=(\d+)/), rate = mr ? Number(mr[1]) : 24000; // PCM brut : on ajoute un en-tête WAV
+    const v = new DataView(new ArrayBuffer(44));
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + u8.length, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, u8.length, true);
+    return URL.createObjectURL(new Blob([v.buffer, u8], { type: "audio/wav" }));
+  };
+  async function speakTn(text) {
+    if (!text) return;
+    stopAudio();
+    const my = ttsSeq;
+    if (!state.geminiKey) { speakIos(text, false); return; }
+    ttsLoading = true; renderResult();
+    try {
+      const j = await call("https://generativelanguage.googleapis.com/v1beta/models/" + TTS_MODEL + ":generateContent", {
+        method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": state.geminiKey },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text }] }],
+          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { voice: state.ttsVoice } } } }) }, "Gemini");
+      if (my !== ttsSeq) return; // lecture annulée entre-temps
+      const a = findAudio(j);
+      if (!a) throw new Error("pas de son");
+      if (ttsUrl) URL.revokeObjectURL(ttsUrl);
+      ttsUrl = audioUrl(a);
+      ttsLoading = false; renderResult();
+      player.src = ttsUrl;
+      await player.play();
+    } catch {
+      if (my !== ttsSeq) return;
+      ttsLoading = false; renderResult();
+      speakIos(text, false); // secours : voix de l'iPhone
+    }
+  }
+  const speak = (text, fr = false) => { if (fr) { stopAudio(); speakIos(text, true); } else speakTn(text); };
 
   // ---------- Rendu ----------
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -332,7 +388,7 @@ details[open] summary{margin-bottom:12px}
       '<div class="big" lang="aeb-Latn">' + esc(t.arabizi) + '</div>' +
       '<div class="arabe" lang="aeb-Arab" dir="rtl">' + esc(t.arabe) + '</div>' +
       '<div class="actions">' +
-        '<button class="btn' + primary + '" data-act="voix" type="button">Écouter</button>' +
+        '<button class="btn' + primary + '" data-act="voix" type="button">' + (ttsLoading ? "Voix en préparation…" : "Écouter") + '</button>' +
         '<button class="btn" data-act="ecran" type="button">Plein écran</button>' + mamBtn +
         '<button class="btn" data-act="edit" type="button">Corriger</button>' +
       '</div>' + detailHtml(t) + byline(t);
@@ -360,8 +416,7 @@ details[open] summary{margin-bottom:12px}
     $("txt").placeholder = tn ? "Ou écris / colle du tunisien" : "Ou écris ta phrase en français";
     $("txt").lang = tn ? "ar" : "fr";
     $("setup").hidden = !!state.geminiKey;
-    $("rate").value = state.rate;
-    $("rateVal").textContent = Math.round(state.rate * 100) + " %";
+    document.querySelectorAll("#segVoice [data-tv]").forEach(b => b.setAttribute("aria-pressed", b.dataset.tv === state.ttsVoice));
     $("go").disabled = busy || capturing;
     $("mic").disabled = busy || !keyOk();
     $("mic").classList.toggle("rec", capturing);
@@ -441,7 +496,22 @@ details[open] summary{margin-bottom:12px}
     const rate = 16000, len = Math.max(1, Math.ceil(buf.duration * rate));
     const off = new OfflineAudioContext(1, len, rate);
     const s = off.createBufferSource(); s.buffer = buf; s.connect(off.destination); s.start();
-    const pcm = (await off.startRendering()).getChannelData(0);
+    let pcm = (await off.startRendering()).getChannelData(0);
+    // Retire uniquement le silence au début et à la fin ; les pauses entre les mots restent intactes
+    const frame = 320, rms = []; let peak = 0; // trames de 20 ms
+    for (let i = 0; i < pcm.length; i += frame) {
+      const e = Math.min(pcm.length, i + frame); let s = 0;
+      for (let k = i; k < e; k++) s += pcm[k] * pcm[k];
+      const r = Math.sqrt(s / (e - i)); rms.push(r); if (r > peak) peak = r;
+    }
+    const th = Math.max(0.01, peak * 0.08);
+    let fa = 0, fb = rms.length - 1;
+    while (fa < rms.length && rms[fa] < th) fa++;
+    while (fb > fa && rms[fb] < th) fb--;
+    if (fa < rms.length) {
+      const pad = 15, s0 = Math.max(0, (fa - pad) * frame), s1 = Math.min(pcm.length, (fb + 1 + pad) * frame); // 300 ms de marge
+      if (s1 - s0 > rate * 0.3) pcm = pcm.subarray(s0, s1);
+    }
     const out = new DataView(new ArrayBuffer(44 + pcm.length * 2));
     const w = (o, str) => { for (let i = 0; i < str.length; i++) out.setUint8(o + i, str.charCodeAt(i)); };
     w(0, "RIFF"); out.setUint32(4, 36 + pcm.length * 2, true); w(8, "WAVE"); w(12, "fmt ");
@@ -584,7 +654,7 @@ Réponds uniquement avec ce JSON : {"mot_a_mot":[{"tn":"...","fr":"..."}],"varia
   function startCapture() {
     if (busy || capturing || !keyOk()) return;
     held = true;
-    if (synth) synth.cancel();
+    stopAudio();
     if (state.dir === "fr2tn" && SR && !srBroken) startApple(); else startRec();
   }
   function stopCapture() {
@@ -707,9 +777,8 @@ Réponds uniquement avec ce JSON : {"mot_a_mot":[{"tn":"...","fr":"..."}],"varia
   document.querySelectorAll("#segEngine [data-e]").forEach(b => b.addEventListener("click", () => { state.engine = b.dataset.e; save(); renderControls(); }));
   document.querySelectorAll("#segValid [data-v]").forEach(b => b.addEventListener("click", () => { state.validation = b.dataset.v; save(); renderAll(); }));
   document.querySelectorAll("#segReg [data-r]").forEach(b => b.addEventListener("click", () => { state.registre = b.dataset.r; save(); renderControls(); }));
-  $("rate").addEventListener("input", e => { state.rate = Number(e.target.value); save(); renderControls(); });
-  $("voice").addEventListener("change", e => { state.voiceURI = e.target.value; save(); pickVoice(); });
-  $("testVoice").addEventListener("click", () => speak("مرحبا، شنوة أحوالك؟ نمشي للبيرو توا."));
+  document.querySelectorAll("#segVoice [data-tv]").forEach(b => b.addEventListener("click", () => { state.ttsVoice = b.dataset.tv; save(); renderControls(); }));
+  $("testVoice").addEventListener("click", () => speakTn("مرحبا، شنوة أحوالك؟ نمشي للبيرو توا."));
 
 
   const bindText = (id, key) => {
