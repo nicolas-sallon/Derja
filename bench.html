@@ -4,103 +4,171 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Banc d'essai Derja</title>
 <style>
-/* Page de test technique, séparée de l'app : écoute continue tunisien -> français */
+/* Banc d'essai à l'image de l'app : sous-titres en haut, mode et bouton en bas, réglages et mesures dans la feuille de réglages */
 :root{
   --bg:#0b0c0f; --surface:#17181d; --surface-2:#22242b; --line:#2e3038;
-  --fg:#f4f5f7; --muted:#9a9ca6; --accent:#3d8bff; --rec:#ff453a;
+  --fg:#f4f5f7; --muted:#9a9ca6; --accent:#3d8bff; --accent-ink:#fff; --rec:#ff453a;
   --good:#30d158; --mid:#ffb340; --bad:#ff6961; --quiet:#4a4d57;
   --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font:15px/1.45 var(--sans);padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));max-width:760px;margin:0 auto}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--sans);-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 [hidden]{display:none!important}
-h1{font-size:24px;margin:4px 0 2px}
-.sub{color:var(--muted);font-size:13px;margin:0 0 16px}
-h2{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
-.card{background:var(--surface);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-input[type=text],input[type=password]{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:10px 12px;font:16px var(--sans)}
-input[type=range]{flex:1;accent-color:var(--accent)}
-.btn{appearance:none;border:0;border-radius:10px;padding:9px 12px;font:600 14px var(--sans);background:var(--surface-2);color:var(--fg);cursor:pointer}
-.btn.primary{background:var(--accent);color:#fff}
-.btn.big{width:100%;min-height:56px;font-size:17px;border-radius:14px}
-.btn.big.on{background:var(--rec)}
-.tog{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px}
-.tog small{display:block;color:var(--muted);font-size:12px}
-.tog input{width:22px;height:22px;accent-color:var(--accent);flex:none}
-/* Jauge de niveau : gris = silence / bruit, vert = voix captée, rouge = saturation */
-.meter{position:relative;height:28px;border-radius:8px;background:linear-gradient(90deg,var(--surface-2) 0%,var(--surface-2) 85%,color-mix(in srgb,var(--bad) 25%,var(--surface-2)) 85%);overflow:hidden}
-.meter .fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:8px;background:var(--quiet);transition:width 60ms linear}
-.meter .fill.voice{background:var(--good)}
-.meter .fill.clip{background:var(--bad)}
-.meter .th{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--fg);border-radius:2px;left:0}
-.meter .nf{position:absolute;top:0;bottom:0;width:2px;background:var(--muted);opacity:.6;left:0}
-.state{display:flex;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums}
-.state b.voice{color:var(--good)} .state b.warn{color:var(--mid)} .state b.clip{color:var(--bad)}
-.feed{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto}
-.sub-line{background:var(--surface-2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.app{display:flex;flex-direction:column;min-height:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:640px;margin:0 auto}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding-block:12px 8px}
+h1{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
+h1 small{display:block;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0}
+.ver{font-size:11px;opacity:.7;font-variant-numeric:tabular-nums;margin-left:4px;cursor:pointer}
+.icon-btn{appearance:none;border:0;background:var(--surface-2);color:var(--fg);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
+.card{background:var(--surface);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.update{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid color-mix(in srgb,var(--accent) 60%,transparent);font-size:15px}
+.btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;font:600 15px var(--sans);background:var(--surface-2);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+/* Fil de sous-titres */
+.feed{display:flex;flex-direction:column;gap:10px}
+.empty{color:var(--muted);font-size:15px;text-align:center;padding:40px 12px}
+.sub-line{background:var(--surface);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
 .sub-line .meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;gap:8px;flex-wrap:wrap}
 .sub-line .who{font-weight:700;color:var(--accent)}
-.sub-line .fr{font-size:17px;font-weight:600}
+.sub-line .fr{font-size:19px;font-weight:600;line-height:1.3}
 .sub-line .tn{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 .sub-line .err{color:var(--bad);font-size:14px}
-.rate{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.sub-line .pend{color:var(--muted);font-size:15px;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1s ease-in-out infinite;display:inline-block}
+@keyframes pulse{50%{opacity:.25}}
+.rate{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .rate button{appearance:none;border:1px solid var(--line);background:none;color:var(--muted);border-radius:8px;padding:4px 8px;font:600 12px var(--sans);cursor:pointer}
 .rate button[aria-pressed="true"].ok{background:var(--good);border-color:var(--good);color:#000}
 .rate button[aria-pressed="true"].mid{background:var(--mid);border-color:var(--mid);color:#000}
 .rate button[aria-pressed="true"].ko{background:var(--bad);border-color:var(--bad);color:#000}
+/* Barre du bas : mode, bouton, jauge */
+.composer{position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);border-radius:10px;padding:2px}
+.seg button{appearance:none;border:0;background:none;color:var(--muted);font:600 13px var(--sans);padding:8px 2px;border-radius:8px;cursor:pointer;line-height:1.2}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.seg button:disabled{opacity:.4;cursor:default}
+.mic{appearance:none;border:0;width:100%;min-height:72px;border-radius:20px;background:var(--accent);color:var(--accent-ink);font:650 17px var(--sans);display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:background .15s}
+.mic.on{background:var(--rec)}
+/* Jauge : gris = silence / bruit, vert = voix captée, rouge = saturation */
+.meter{position:relative;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--surface-2) 0%,var(--surface-2) 85%,color-mix(in srgb,var(--bad) 25%,var(--surface-2)) 85%);overflow:hidden}
+.meter .fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:7px;background:var(--quiet);transition:width 60ms linear}
+.meter .fill.voice{background:var(--good)}
+.meter .fill.clip{background:var(--bad)}
+.meter .th{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--fg);border-radius:2px;left:0}
+.meter .nf{position:absolute;top:0;bottom:0;width:2px;background:var(--muted);opacity:.6;left:0}
+.state{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.state b{color:var(--fg);font-weight:600}
+.state b.voice{color:var(--good)} .state b.warn{color:var(--mid)} .state b.clip{color:var(--bad)}
+/* Feuille de réglages */
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet-in{background:var(--surface);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px;max-height:90%;overflow:auto}
+.sheet h2{margin:0;font-size:20px}
+.sheet h3{margin:6px 0 0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:8px}
+.field p{margin:0;font-size:13px;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sheet input[type=password]{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:12px;padding:10px 12px;font:16px var(--sans)}
+input[type=range]{flex:1;accent-color:var(--accent)}
+.tog{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:15px}
+.tog small{display:block;color:var(--muted);font-size:12px}
+.tog input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.legend{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:13px;color:var(--muted);align-items:center}
+.sw{width:22px;height:10px;border-radius:5px;display:inline-block}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
 th,td{text-align:left;padding:7px 5px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--muted);font-weight:600;font-size:12px}
 .scroll{overflow-x:auto}
 .muted{color:var(--muted);font-size:13px}
-.upd{flex-direction:row;justify-content:space-between;align-items:center;flex-wrap:wrap;margin:8px 0 12px;border:1px solid var(--accent)}
-.verl{cursor:pointer;font-variant-numeric:tabular-nums}
-@media (prefers-reduced-motion:reduce){.meter .fill{transition:none}}
+@media (prefers-reduced-motion:reduce){.meter .fill,.mic{transition:none}.dot{animation:none}}
 </style>
 </head>
 <body>
-<div class="card upd" id="update" hidden><span>Nouvelle version disponible <b id="updVer"></b></span><button class="btn primary" id="updBtn" type="button">Mettre à jour</button></div>
-<h1>Banc d'essai Derja</h1>
-<p class="sub"><span id="ver" class="verl"></span> · Écoute continue tunisien → français. L'app découpe la conversation sur les pauses et Gemini 3.8 Flash (low) traduit chaque passage en sous-titres.</p>
+<div class="app">
+  <header>
+    <h1>Derja Express<small>Banc d'essai <span id="ver" class="ver"></span></small></h1>
+    <button class="icon-btn" id="openSettings" aria-label="Réglages">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
 
-<div class="card">
-  <div class="row"><input type="password" id="key" placeholder="Clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="saveKey" type="button">Enregistrer</button></div>
+  <main>
+    <section class="card update" id="update" hidden>
+      <div>Nouvelle version disponible <b id="updVer"></b></div>
+      <button class="btn primary" type="button" id="updBtn">Mettre à jour</button>
+    </section>
+    <div class="feed" id="feed" aria-live="polite"></div>
+  </main>
+
+  <div class="composer">
+    <div class="seg" role="group" aria-label="Mode">
+      <button type="button" disabled>Je parle<br>FR → TN</button>
+      <button type="button" disabled>J'écoute<br>TN → FR</button>
+      <button type="button" aria-pressed="true">Écoute<br>continue</button>
+    </div>
+    <button type="button" class="mic" id="toggle">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      <span id="toggleLabel">Démarrer l'écoute continue</span>
+    </button>
+    <div class="meter" aria-hidden="true"><div class="fill" id="fill"></div><div class="nf" id="nf"></div><div class="th" id="th"></div></div>
+    <div class="state"><b id="state">Arrêté</b><span id="stateR"></span></div>
+  </div>
 </div>
 
-<h2>1 · Écoute</h2>
-<div class="card">
-  <button class="btn primary big" id="toggle" type="button">Démarrer l'écoute</button>
-  <div class="meter" aria-hidden="true"><div class="fill" id="fill"></div><div class="nf" id="nf"></div><div class="th" id="th"></div></div>
-  <div class="state"><b id="state">Arrêté</b><span id="stateR" class="muted"></span></div>
-  <p class="muted">Jauge : gris = silence ou bruit de fond, vert = voix bien captée, rouge = saturation. Le trait blanc est le seuil de parole, le trait gris le bruit de fond mesuré.</p>
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 id="sheetTitle">Réglages</h2>
+      <button class="btn" id="closeSettings" type="button">OK</button>
+    </div>
+
+    <h3>Clé Gemini</h3>
+    <div class="row"><input type="password" id="key" placeholder="Clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="saveKey" type="button">Enregistrer</button></div>
+
+    <h3>La jauge sonore</h3>
+    <div class="field">
+      <div class="meter" aria-hidden="true"><div class="fill voice" style="width:62%"></div><div class="nf" style="left:28%"></div><div class="th" style="left:40%"></div></div>
+      <div class="legend">
+        <span class="sw" style="background:var(--quiet)"></span><span>Gris : silence ou bruit de fond, rien n'est envoyé</span>
+        <span class="sw" style="background:var(--good)"></span><span>Vert : une voix est bien captée</span>
+        <span class="sw" style="background:var(--bad)"></span><span>Rouge : saturation, quelqu'un parle trop près du téléphone</span>
+        <span class="sw" style="background:var(--fg);width:4px;justify-self:center"></span><span>Trait blanc : seuil de parole, placé automatiquement au-dessus du bruit de fond</span>
+        <span class="sw" style="background:var(--muted);width:3px;justify-self:center"></span><span>Trait gris : bruit de fond mesuré dans la pièce</span>
+      </div>
+      <p>Pose le téléphone au milieu des personnes, bas du téléphone vers elles. La jauge doit passer au vert quand quelqu'un parle.</p>
+    </div>
+
+    <h3>Réglages à comparer</h3>
+    <div class="field">
+      <label class="tog"><span>Nettoyage du son<small>Filtre de la bande vocale et mise à niveau du volume</small></span><input type="checkbox" id="optClean"></label>
+      <label class="tog"><span>Réduction de bruit de l'iPhone<small>S'applique au prochain démarrage</small></span><input type="checkbox" id="optNs"></label>
+      <label class="tog"><span>Distinguer les personnes<small>P1, P2… d'après la description des voix</small></span><input type="checkbox" id="optSpk"></label>
+      <div class="row"><span class="muted" style="min-width:140px">Pause de découpe : <b id="pauseVal"></b></span><input type="range" id="optPause" min="0.3" max="1.5" step="0.1"></div>
+      <div class="row"><span class="muted" style="min-width:140px">Seuil : <b id="thVal"></b></span><input type="range" id="optTh" min="0" max="30" step="1"></div>
+      <p>Seuil à 0 = automatique (bruit de fond + 8 dB). Un passage de moins de 2 s attend la suite ; après 2,5 s de silence, il part quand même s'il dure au moins 0,6 s. Maximum 20 s par passage.</p>
+    </div>
+
+    <h3>Mesures</h3>
+    <div class="scroll"><table id="stats"></table></div>
+    <div class="row"><button class="btn" id="copy" type="button">Copier le bilan</button><button class="btn" id="clear" type="button">Effacer</button></div>
+    <p class="muted" id="copyMsg"></p>
+  </div>
 </div>
-
-<h2>2 · Réglages à comparer</h2>
-<div class="card">
-  <label class="tog"><span>Nettoyage du son<small>Filtre de la bande vocale et mise à niveau du volume</small></span><input type="checkbox" id="optClean"></label>
-  <label class="tog"><span>Réduction de bruit de l'iPhone<small>S'applique au prochain démarrage</small></span><input type="checkbox" id="optNs"></label>
-  <label class="tog"><span>Distinguer les personnes<small>P1, P2… d'après la description des voix</small></span><input type="checkbox" id="optSpk"></label>
-  <div class="row"><span class="muted" style="min-width:130px">Pause de découpe : <b id="pauseVal"></b></span><input type="range" id="optPause" min="0.3" max="1.5" step="0.1"></div>
-  <div class="row"><span class="muted" style="min-width:130px">Seuil : <b id="thVal"></b></span><input type="range" id="optTh" min="0" max="30" step="1"></div>
-  <p class="muted">Seuil à 0 = automatique (bruit de fond + 8 dB). Au-delà, le seuil est forcé à cette marge en dB au-dessus de -60 dB. Un passage de moins de 2 s attend la suite ; après 2,5 s de silence, il part quand même s'il dure au moins 0,6 s. Maximum 20 s par passage.</p>
-</div>
-
-<h2>3 · Sous-titres</h2>
-<div class="card"><div class="feed" id="feed"><span class="muted">Les traductions s'afficheront ici, les plus récentes en bas.</span></div></div>
-
-<h2>4 · Mesures</h2>
-<div class="card scroll"><table id="stats"></table><div class="row"><button class="btn" id="copy" type="button">Copier le bilan</button><button class="btn" id="clear" type="button">Effacer</button><span class="muted" id="copyMsg"></span></div></div>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v12 · 23/10 00:36";
+  const VERSION = "banc v13 · 23/10 00:55";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -116,7 +184,10 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   const save = () => { try { localStorage.setItem(CFG, JSON.stringify(cfg)); } catch {} };
   save();
   $("key").value = cfg.key;
-  $("saveKey").onclick = () => { cfg.key = $("key").value.trim(); save(); $("saveKey").textContent = "Enregistrée"; };
+  $("saveKey").onclick = () => { cfg.key = $("key").value.trim(); save(); $("saveKey").textContent = "Enregistrée"; renderFeed(); };
+  $("openSettings").onclick = () => { $("copyMsg").textContent = ""; renderStats(); $("sheet").hidden = false; };
+  $("closeSettings").onclick = () => { $("sheet").hidden = true; };
+  $("sheet").onclick = e => { if (e.target.id === "sheet") $("sheet").hidden = true; };
   const bindBox = (id, k) => { $(id).checked = !!cfg[k]; $(id).onchange = e => { cfg[k] = e.target.checked; save(); if (k === "clean") applyFilter(); }; };
   bindBox("optClean", "clean"); bindBox("optNs", "ns"); bindBox("optSpk", "spk");
   const showRanges = () => { $("pauseVal").textContent = cfg.pause.toFixed(1) + " s"; $("thVal").textContent = cfg.th ? "forcé +" + cfg.th + " dB" : "automatique"; };
@@ -148,7 +219,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   }
 
   async function start() {
-    if (!cfg.key) { setState("Ajoute ta clé Gemini en haut de la page.", "warn"); return; }
+    if (!cfg.key) { setState("Ajoute ta clé Gemini dans les réglages", "warn"); $("sheet").hidden = false; return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     ctx = new AC(); try { ctx.resume(); } catch {} // créé pendant le geste (exigence d'iOS)
     const base = { echoCancellation: true, noiseSuppression: !!cfg.ns, autoGainControl: true };
@@ -173,7 +244,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     applyFilter();
     resetVad(); listening = true; t0Listen = performance.now(); levels.length = 0;
     try { wake = await navigator.wakeLock.request("screen"); } catch {}
-    $("toggle").textContent = "Arrêter l'écoute"; $("toggle").classList.add("on");
+    $("toggleLabel").textContent = "Arrêter l'écoute continue"; $("toggle").classList.add("on");
     setState("Écoute en cours", "");
     requestAnimationFrame(draw);
   }
@@ -186,7 +257,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     try { ctx && ctx.close(); } catch {}
     ctx = stream = srcNode = proc = null;
     try { wake && wake.release(); } catch {} wake = null;
-    $("toggle").textContent = "Démarrer l'écoute"; $("toggle").classList.remove("on");
+    $("toggleLabel").textContent = "Démarrer l'écoute continue"; $("toggle").classList.remove("on");
     $("fill").style.width = "0"; setState("Arrêté", ""); renderStats();
   }
   $("toggle").onclick = () => listening ? stop() : start();
@@ -339,20 +410,20 @@ Réponds uniquement avec ce JSON : {${it.spk ? '"personne":"P1","voix":"...",' :
   const sec = ms => ms == null ? "–" : (ms / 1000).toFixed(1) + " s";
   const hm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   function renderFeed() {
-    const feed = $("feed"), atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
+    const feed = $("feed"), se = document.scrollingElement, atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
     feed.innerHTML = items.length ? items.map(it => {
       const lg = cfg.log.find(l => l.id === it.id && l.at === it.at) || {};
       return '<div class="sub-line" data-id="' + it.id + '"><div class="meta"><span>' + hm(it.at) + '</span>' + (it.personne ? '<span class="who">' + esc(it.personne) + '</span>' : "") +
         '<span>' + it.dur.toFixed(1) + ' s audio</span>' + (it.prepMs != null ? '<span>préparation ' + it.prepMs + ' ms</span>' : "") + (it.delay != null ? '<span>délai ' + sec(it.delay) + '</span>' : "") +
         '<span>' + (it.clean ? "nettoyé" : "brut") + (it.ns ? " · réduc. iPhone" : "") + '</span></div>' +
-        (it.status === "run" ? '<div class="muted">Traduction en cours…</div>' : it.status === "err" ? '<div class="err">' + esc(it.err) + '</div>'
+        (it.status === "run" ? '<div class="pend"><span class="dot"></span>Traduction en cours…</div>' : it.status === "err" ? '<div class="err">' + esc(it.err) + '</div>'
           : '<div class="fr">' + esc(it.francais) + '</div><div class="tn">' + esc(it.entendu) + (it.voix ? ' · <i>' + esc(it.voix) + '</i>' : "") + '</div>' +
             '<div class="rate">' + (it.url ? '<button type="button" data-a="play">▶︎</button>' : "") +
             [["ok", "Juste"], ["mid", "Approx."], ["ko", "Faux"]].map(([k, l]) => '<button type="button" class="' + k + '" data-r="' + k + '" aria-pressed="' + (lg.rating === k) + '">' + l + '</button>').join("") +
             (it.spk ? '<button type="button" class="ok" data-w="ok" aria-pressed="' + (lg.who === "ok") + '">Locuteur ✓</button><button type="button" class="ko" data-w="ko" aria-pressed="' + (lg.who === "ko") + '">Locuteur ✗</button>' : "") + '</div>') +
         '</div>';
-    }).join("") : '<span class="muted">Les traductions s\'afficheront ici, les plus récentes en bas.</span>';
-    if (atBottom) feed.scrollTop = feed.scrollHeight;
+    }).join("") : '<div class="empty">' + (cfg.key ? "Démarre l'écoute continue : les traductions s'afficheront ici au fil de la conversation, les plus récentes en bas." : "Ajoute ta clé Gemini dans les réglages (roue crantée) pour commencer.") + '</div>';
+    if (atBottom) se.scrollTop = se.scrollHeight;
   }
   $("feed").onclick = e => {
     const line = e.target.closest("[data-id]"); if (!line) return;
@@ -393,7 +464,7 @@ Réponds uniquement avec ce JSON : {${it.spk ? '"personne":"P1","voix":"...",' :
   };
   let armed = false;
   $("clear").onclick = () => { if (!armed) { armed = true; $("clear").textContent = "Confirmer"; return; } armed = false; $("clear").textContent = "Effacer"; cfg.log = []; items.length = 0; listenedMs = 0; if (listening) t0Listen = performance.now(); save(); renderFeed(); renderStats(); };
-  renderStats();
+  renderStats(); renderFeed();
 
   // ---------- Mise à jour ----------
   $("ver").textContent = VERSION;
