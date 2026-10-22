@@ -69,7 +69,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 <div class="card">
   <input type="text" id="refText" placeholder="Ce qui a été dit (en français ou arabizi), pour comparer">
   <button class="mic" id="mic" type="button">Maintiens pendant qu'on parle</button>
-  <div class="row"><label class="btn" for="file">Importer un fichier audio</label><input type="file" id="file" accept="audio/*" multiple hidden><span class="muted" id="recInfo">Les enregistrements restent sur cet appareil.</span></div>
+  <div class="row"><label class="btn" for="file">Importer un fichier audio</label><input type="file" id="file" accept="audio/*,video/mp4,video/quicktime,.mp4,.m4a,.mp3,.wav,.aac,.caf,.mov,.ogg,.webm" multiple hidden><span class="muted" id="recInfo">Les enregistrements restent sur cet appareil.</span></div>
 </div>
 
 <h2>2 · Résultats par modèle</h2>
@@ -169,7 +169,8 @@ Réponds uniquement avec un objet JSON de cette forme :
     busy.add(k); render();
     clip.results = clip.results || {};
     try {
-      const { b64 } = await toWav(clip.blob);
+      let b64;
+      try { ({ b64 } = await toWav(clip.blob)); } catch { throw new Error("Format audio illisible : exporte le mémo en .m4a ou .mp4 puis réessaie."); }
       clip.results[model] = { ...(await ask(model, b64)), rating: (clip.results[model] || {}).rating || "" };
     } catch (e) {
       clip.results[model] = { error: e.message || "Échec", rating: "" };
