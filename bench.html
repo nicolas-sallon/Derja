@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Banc d'écoute Derja</title>
+<title>Banc d'essai Derja</title>
 <style>
 /* Page de test technique, séparée de l'app : enregistrements -> plusieurs modèles -> notes */
 :root{
@@ -86,7 +86,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v4 · 22/10 19:03";
+  const VERSION = "banc v5 · 22/10 20:33";
   // Un « modèle » peut porter des options : « · low » = réflexion réduite, « · essentiel » = réponse courte
   const VARIANTS = ["gemini-3.8-flash", "gemini-3.8-flash · low", "gemini-3.8-flash · low · essentiel"];
   const WHISPER = "whisper-large-v3 + gpt-oss-120b"; // chaîne Groq : Whisper transcrit, puis gpt-oss traduit (comme dans l'app)
@@ -348,5 +348,189 @@ Phrase entendue : `;
   load();
 })();
 </script>
+
+<h1 style="margin-top:36px">Banc des voix</h1>
+<p class="sub">Compare la voix de l'iPhone et les voix Gemini sur une phrase tunisienne écrite en lettres arabes.</p>
+
+<h2>4 · Phrase à prononcer</h2>
+<div class="card">
+  <textarea id="vText" rows="2" dir="rtl" lang="aeb-Arab" style="width:100%;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:10px 12px;font:20px 'Geeza Pro','Noto Naskh Arabic',Arial,sans-serif;resize:vertical">نحب الحساب يعيشك</textarea>
+  <div class="row" id="vSamples"></div>
+  <input type="text" id="vStyle" placeholder="Consigne de ton (facultatif), ex. naturel et chaleureux">
+</div>
+
+<h2>5 · Voix à comparer</h2>
+<div class="card">
+  <div class="models" id="vList"></div>
+  <div class="row">
+    <button class="btn" id="vDesign" type="button">Créer une voix « homme tunisien »</button>
+    <button class="btn" id="vLib" type="button">Chercher les voix arabes de Google</button>
+  </div>
+  <p class="muted" id="vInfo">Gemini 3.8 Flash TTS, débité sur tes crédits Gemini (quelques fractions de centime par phrase).</p>
+  <button class="btn primary" id="vGo" type="button">Écouter avec les voix cochées</button>
+</div>
+
+<h2>6 · Résultats des voix</h2>
+<div class="card scroll"><table id="vSummary"></table><div class="row"><button class="btn" id="vCopy" type="button">Copier le bilan des voix</button><span class="muted" id="vCopyMsg"></span></div></div>
+<div id="vRows" style="display:flex;flex-direction:column;gap:12px;margin-top:12px"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const VKEY = "derja-bench-voices";
+  const TTS = "gemini-3.8-flash-tts";
+  const API = "https://generativelanguage.googleapis.com/v1beta/";
+  const key = () => { try { return JSON.parse(localStorage.getItem("derja-bench-cfg") || "{}").key || ""; } catch { return ""; } };
+  const SAMPLES = ["نحب الحساب يعيشك", "شنوة أحوالك؟ لاباس عليك؟", "نتلاقاو توا قدام القهوة، ماو بعيد", "يعيشك، نجم نشري زوز خبزات؟"];
+
+  // Voix : « iphone », voix Gemini prédéfinies, voix conçue, voix de la bibliothèque Google
+  let vs = { on: ["iphone", "Charon", "Orus"], extra: [], ratings: [] };
+  try { Object.assign(vs, JSON.parse(localStorage.getItem(VKEY) || "{}")); } catch {}
+  const saveV = () => { try { localStorage.setItem(VKEY, JSON.stringify(vs)); } catch {} };
+  const PREBUILT = ["Charon", "Orus", "Puck", "Algenib", "Achird", "Sadaltager", "Kore", "Aoede", "Sulafat"];
+  const allVoices = () => [{ id: "iphone", label: "iPhone (voix de base)" }, ...PREBUILT.map(v => ({ id: v, label: "Gemini · " + v })), ...vs.extra];
+  const labelOf = id => (allVoices().find(v => v.id === id) || { label: id }).label;
+
+  function renderList() {
+    $("vList").innerHTML = allVoices().map(v => '<label><input type="checkbox" value="' + esc(v.id) + '"' + (vs.on.includes(v.id) ? " checked" : "") + '>' + esc(v.label) + '</label>').join("");
+    $("vList").querySelectorAll("input").forEach(i => i.onchange = () => { vs.on = [...$("vList").querySelectorAll("input:checked")].map(x => x.value); saveV(); });
+  }
+  $("vSamples").innerHTML = SAMPLES.map((s, i) => '<button class="btn" type="button" data-s="' + i + '" dir="rtl">' + esc(s) + '</button>').join("");
+  $("vSamples").onclick = e => { const b = e.target.closest("[data-s]"); if (b) $("vText").value = SAMPLES[Number(b.dataset.s)]; };
+
+  async function api(path, opts = {}) {
+    if (!key()) throw new Error("Ajoute ta clé Gemini en haut de la page.");
+    const r = await fetch(API + path, { ...opts, headers: { "content-type": "application/json", "x-goog-api-key": key(), ...(opts.headers || {}) } });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((r.status === 503 ? "Saturé" : "Erreur " + r.status) + (j.error && j.error.message ? " · " + String(j.error.message).slice(0, 140) : ""));
+    return j;
+  }
+  // Cherche la première donnée audio en base64 dans la réponse, quel que soit le nom du champ
+  const findAudio = o => {
+    if (!o || typeof o !== "object") return null;
+    const d = o.inlineData || o.inline_data;
+    if (d && d.data) return { data: d.data, mime: d.mimeType || d.mime_type || "audio/wav" };
+    if (o.sample_audio && o.sample_audio.data) return { data: o.sample_audio.data, mime: o.sample_audio.mime_type || "audio/wav" };
+    for (const k in o) { const f = findAudio(o[k]); if (f) return f; }
+    return null;
+  };
+  const toUrl = a => {
+    const bin = atob(a.data), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    let bytes = u8, mime = a.mime;
+    if (!/wav/i.test(mime) || !(u8[0] === 82 && u8[1] === 73)) { // PCM brut 24 kHz -> on ajoute un en-tête WAV
+      const mr = String(mime).match(/rate=(\d+)/), rate = mr ? Number(mr[1]) : 24000;
+      const v = new DataView(new ArrayBuffer(44 + u8.length));
+      const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      w(0, "RIFF"); v.setUint32(4, 36 + u8.length, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, u8.length, true);
+      bytes = new Uint8Array(v.buffer); bytes.set(u8, 44); mime = "audio/wav";
+    }
+    return URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+  };
+
+  // iPhone : voix arabe du navigateur
+  const speakIphone = text => {
+    const s = window.speechSynthesis; if (!s) throw new Error("Synthèse vocale indisponible");
+    const ar = s.getVoices().filter(v => /^ar/i.test(v.lang));
+    s.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = ar[0] ? ar[0].lang : "ar-SA"; if (ar[0]) u.voice = ar[0]; u.rate = 0.9; s.speak(u);
+  };
+
+  async function gemTts(voice, text) {
+    const part = { text };
+    const style = $("vStyle").value.trim();
+    if (style) part.speech_metadata = { style };
+    const t0 = performance.now();
+    const j = await api("models/" + TTS + ":generateContent", { method: "POST", body: JSON.stringify({
+      contents: [{ role: "user", parts: [part] }],
+      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { voice } } } }) });
+    const a = findAudio(j); if (!a) throw new Error("Aucun son dans la réponse");
+    return { url: toUrl(a), ms: Math.round(performance.now() - t0) };
+  }
+
+  // ---------- Essais ----------
+  let rows = [];
+  async function go() {
+    const text = $("vText").value.trim(); if (!text) return;
+    const batch = vs.on.map(id => ({ id, text, status: "run" }));
+    rows = [...batch, ...rows]; render();
+    for (const r of batch) {
+      if (r.id === "iphone") { r.status = "ok"; r.ms = 0; continue; }
+      gemTts(r.id, text).then(o => { Object.assign(r, o, { status: "ok" }); render(); }).catch(e => { r.status = "err"; r.err = e.message; render(); });
+    }
+    render();
+  }
+  $("vGo").onclick = go;
+
+  const LBL = { ok: "Bien", mid: "Moyen", ko: "Mauvais" };
+  function render() {
+    renderList();
+    const ids = [...new Set(vs.ratings.map(x => x.voice))];
+    $("vSummary").innerHTML = '<tr><th>Voix</th><th>Bien</th><th>Moyen</th><th>Mauvais</th></tr>' + (ids.length ? ids.map(id => {
+      const n = k => vs.ratings.filter(x => x.voice === id && x.r === k).length;
+      return '<tr><td>' + esc(labelOf(id)) + '</td><td>' + n("ok") + '</td><td>' + n("mid") + '</td><td>' + n("ko") + '</td></tr>';
+    }).join("") : '<tr><td colspan="4" class="muted">Écoute une phrase puis note chaque voix.</td></tr>');
+    $("vSummary").dataset.text = ids.map(id => { const n = k => vs.ratings.filter(x => x.voice === id && x.r === k).length; return labelOf(id) + " : " + n("ok") + " bien, " + n("mid") + " moyen, " + n("ko") + " mauvais"; }).join("\n");
+    $("vRows").innerHTML = rows.map((r, i) => '<div class="card" data-i="' + i + '"><div class="res" style="border:0;padding:0"><div class="m">' + esc(labelOf(r.id)) + (r.ms ? ' · ' + (r.ms / 1000).toFixed(1) + ' s' : "") + '</div>' +
+      '<div class="ent" dir="rtl">' + esc(r.text) + '</div>' +
+      (r.status === "run" ? '<div class="muted"><span class="dot"></span> Génération…</div>'
+        : r.status === "err" ? '<div class="err">' + esc(r.err) + '</div>'
+        : '<div class="row"><button class="btn" data-a="play" type="button">▶︎ Écouter</button></div><div class="rate">' + ["ok", "mid", "ko"].map(k => '<button type="button" data-r="' + k + '" aria-pressed="' + (r.rating === k) + '">' + LBL[k] + '</button>').join("") + '</div>') +
+      '</div></div>').join("");
+  }
+  $("vRows").onclick = e => {
+    const card = e.target.closest("[data-i]"); if (!card) return;
+    const r = rows[Number(card.dataset.i)];
+    if (e.target.closest("[data-a=play]")) { if (r.id === "iphone") speakIphone(r.text); else if (r.url) new Audio(r.url).play(); }
+    const rb = e.target.closest("[data-r]");
+    if (rb) {
+      vs.ratings = vs.ratings.filter(x => x !== r.rec);
+      if (r.rating === rb.dataset.r) { r.rating = ""; r.rec = null; }
+      else { r.rating = rb.dataset.r; r.rec = { voice: r.id, r: r.rating, text: r.text }; vs.ratings.push(r.rec); }
+      saveV(); render();
+    }
+  };
+  $("vCopy").onclick = async () => {
+    const txt = "Bilan des voix Derja\n" + $("vSummary").dataset.text;
+    try { await navigator.clipboard.writeText(txt); $("vCopyMsg").textContent = "Copié : colle-le dans la conversation."; } catch { $("vCopyMsg").textContent = txt; }
+  };
+
+  // Voix conçue par description : « homme tunisien »
+  $("vDesign").onclick = async () => {
+    $("vInfo").textContent = "Création de la voix…";
+    const body = lc => JSON.stringify({ store: true, voice: { type: "prompted", model: TTS, display_name: "Homme tunisien", gender: "male", language_code: lc,
+      prompted: { input: "Un homme tunisien de Tunis d'une quarantaine d'années, voix chaleureuse et naturelle, qui parle le dialecte tunisien (derja) avec l'accent et l'intonation de Tunis, comme dans une conversation de tous les jours." } } });
+    try {
+      let j; try { j = await api("voices", { method: "POST", body: body("ar-TN") }); } catch { j = await api("voices", { method: "POST", body: body("ar") }); }
+      const id = j.id || (j.voice && (j.voice.id || j.voice.name)) || j.name;
+      if (!id) throw new Error("Identifiant de voix absent de la réponse");
+      vs.extra = vs.extra.filter(v => v.label !== "Gemini · voix conçue « homme tunisien »").concat([{ id, label: "Gemini · voix conçue « homme tunisien »" }]);
+      if (!vs.on.includes(id)) vs.on.push(id);
+      saveV(); render(); $("vInfo").textContent = "Voix créée et cochée.";
+    } catch (e) { $("vInfo").textContent = "Création impossible : " + e.message; }
+  };
+
+  // Bibliothèque de voix Google : voix arabes
+  $("vLib").onclick = async () => {
+    $("vInfo").textContent = "Recherche des voix arabes…";
+    try {
+      let j = await api("voices?language_code=ar&page_size=200", { method: "GET" });
+      let list = j.voices || j.items || [];
+      if (!list.length) { j = await api("voices?search=arabic&page_size=200", { method: "GET" }); list = j.voices || j.items || []; }
+      const found = list.map(v => ({ id: v.id || v.name || v.voice_id,
+        label: "Google · " + [v.display_name || v.displayName || v.id, v.gender, v.accent, v.region_code || v.regionCode, v.language_code || v.languageCode].filter(Boolean).join(" · ") })).filter(v => v.id);
+      const before = vs.extra.length;
+      found.forEach(f => { if (!vs.extra.some(x => x.id === f.id)) vs.extra.push(f); });
+      saveV(); render();
+      const tn = found.filter(f => /tn|tunis/i.test(f.label));
+      $("vInfo").textContent = found.length ? found.length + " voix arabes trouvées (" + (vs.extra.length - before) + " nouvelles)" + (tn.length ? ", dont " + tn.length + " tunisienne(s) !" : ", aucune marquée tunisienne.") + " Coche celles à tester." : "Aucune voix arabe dans la bibliothèque.";
+    } catch (e) { $("vInfo").textContent = "Recherche impossible : " + e.message; }
+  };
+
+  render();
+})();
+</script>
+
 </body>
 </html>
