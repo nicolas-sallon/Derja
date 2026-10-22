@@ -202,15 +202,6 @@ details[open] summary{margin-bottom:12px}
       <p>Naturel garde les mots français courants, comme on parle vraiment.</p>
     </div>
 
-    <h3>Micros</h3>
-    <div class="field">
-      <label for="micListen">Micro pour écouter (TN → FR)</label>
-      <select id="micListen"></select>
-      <button class="btn" type="button" id="detectMics" style="align-self:flex-start">Détecter les micros</button>
-      <p id="micInfo">Conseil : micro de l'iPhone, bas du téléphone tourné vers ton interlocuteur.</p>
-      <p>Pour parler en français, l'app utilise la reconnaissance vocale d'Apple, avec le micro choisi par iOS.</p>
-    </div>
-
     <h3>Voix</h3>
     <div class="field">
       <label for="rate">Vitesse de la voix arabe : <span id="rateVal"></span></label>
@@ -237,7 +228,7 @@ details[open] summary{margin-bottom:12px}
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const VERSION = "v2.0 · 22/10 19:59";
+  const VERSION = "v2.1 · 22/10 20:12";
   const KEY = "derja-express-v1";
   const MODELS = { geminiModel: "gemini-3.8-flash", claudeModel: "claude-haiku-5-5" };
   const EXAMPLE = {
@@ -249,11 +240,11 @@ details[open] summary{margin-bottom:12px}
       variante: null, note: "Formule polie et chaleureuse, très courante au café ou au restaurant." }
   };
 
-  const state = { dir:"fr2tn", engine:"gemini", geminiKey:"", claudeKey:"", ...MODELS, micListen:"",
+  const state = { dir:"fr2tn", engine:"gemini", geminiKey:"", claudeKey:"", ...MODELS,
     validation:"immediate", registre:"naturel", rate:0.9, voiceURI:"", history:[] };
   try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch {}
   // Nettoyage des anciens réglages (Whisper, Groq, choix d'écoute, bascule)
-  ["groqKey", "groqModel", "whisperModel", "listen", "geminiFallback", "micSpeak"].forEach(k => delete state[k]);
+  ["groqKey", "groqModel", "whisperModel", "listen", "geminiFallback", "micSpeak", "micListen"].forEach(k => delete state[k]);
   if (state.engine !== "claude") state.engine = "gemini";
   // Anciennes phrases : le mot à mot était rangé à plat
   (state.history || []).forEach(h => { if (!h.detail && Array.isArray(h.mot_a_mot) && h.mot_a_mot.length) h.detail = { mot_a_mot: h.mot_a_mot, variante: h.variante || null, note: h.note || "", arabe: h.arabe || "" }; });
@@ -642,15 +633,36 @@ Réponds uniquement avec ce JSON : {"mot_a_mot":[{"tn":"...","fr":"..."}],"varia
     renderAll(); startTimer();
   }
 
+  // Repère le micro intégré de l'iPhone (les noms ne sont visibles qu'après l'autorisation du micro)
+  let phoneMicId = "";
+  async function findPhoneMic() {
+    try {
+      const ins = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput" && d.deviceId && d.label);
+      const ext = /airpods|bluetooth|beats|headset|casque|écouteur/i;
+      const m = ins.find(d => /iphone|built-in|intégré|interne|internal/i.test(d.label) && !ext.test(d.label))
+        || ins.find(d => d.deviceId !== "default" && !ext.test(d.label));
+      return m ? m.deviceId : "";
+    } catch { return ""; }
+  }
+
   // Enregistrement audio, envoyé à Gemini
   async function startRec() {
+    stream = null;
     try {
       const listening = state.dir === "tn2fr";
-      const id = listening ? state.micListen : "";
       // En écoute, pas de réduction de bruit : elle efface les voix éloignées
       const base = { echoCancellation: true, noiseSuppression: !listening, autoGainControl: true };
-      try { stream = await navigator.mediaDevices.getUserMedia({ audio: id ? { ...base, deviceId: { exact: id } } : base }); }
-      catch (e) { if (!id || (e && e.name === "NotAllowedError")) throw e; stream = await navigator.mediaDevices.getUserMedia({ audio: base }); }
+      const gum = c => navigator.mediaDevices.getUserMedia({ audio: c });
+      // Pour écouter le tunisien : toujours le micro de l'iPhone, jamais celui des AirPods
+      if (listening && phoneMicId) { try { stream = await gum({ ...base, deviceId: { exact: phoneMicId } }); } catch { phoneMicId = ""; } }
+      if (!stream) stream = await gum(base);
+      if (listening && !phoneMicId) {
+        phoneMicId = await findPhoneMic();
+        const cur = stream.getAudioTracks()[0], curId = cur && cur.getSettings ? cur.getSettings().deviceId : "";
+        if (phoneMicId && phoneMicId !== curId) {
+          try { const s2 = await gum({ ...base, deviceId: { exact: phoneMicId } }); stream.getTracks().forEach(x => x.stop()); stream = s2; } catch {}
+        }
+      }
       const tr = stream.getAudioTracks()[0];
       micUsed = tr && tr.label ? tr.label : "";
     } catch {
@@ -699,20 +711,6 @@ Réponds uniquement avec ce JSON : {"mot_a_mot":[{"tn":"...","fr":"..."}],"varia
   $("voice").addEventListener("change", e => { state.voiceURI = e.target.value; save(); pickVoice(); });
   $("testVoice").addEventListener("click", () => speak("مرحبا، شنوة أحوالك؟ نمشي للبيرو توا."));
 
-  // ---------- Choix du micro d'écoute ----------
-  async function listMics(ask) {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
-    try {
-      if (ask) { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach(t => t.stop()); }
-      const named = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput" && d.deviceId && d.deviceId !== "default" && d.label);
-      $("micListen").replaceChildren(new Option("Automatique (choix d'iOS)", ""), ...named.map(d => new Option(d.label, d.deviceId)));
-      $("micListen").value = named.some(d => d.deviceId === state.micListen) ? state.micListen : "";
-      $("micInfo").textContent = named.length ? named.length + " micro(s) détecté(s). Conseil : micro de l'iPhone pour écouter." : "Touche « Détecter les micros » et autorise l'accès pour voir la liste.";
-    } catch { $("micInfo").textContent = "Accès au micro refusé : autorise-le dans Réglages iOS > Safari > Microphone."; }
-  }
-  $("micListen").addEventListener("change", e => { state.micListen = e.target.value; save(); });
-  $("detectMics").addEventListener("click", () => listMics(true));
-  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener("devicechange", () => listMics(false));
 
   const bindText = (id, key) => {
     $(id).value = state[key] || "";
@@ -751,7 +749,7 @@ Réponds uniquement avec ce JSON : {"mot_a_mot":[{"tn":"...","fr":"..."}],"varia
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
-  $("openSettings").addEventListener("click", () => { $("clearMsg").textContent = ""; $("sheet").hidden = false; listMics(false); });
+  $("openSettings").addEventListener("click", () => { $("clearMsg").textContent = ""; $("sheet").hidden = false; });
   $("closeSettings").addEventListener("click", () => { $("sheet").hidden = true; });
   $("sheet").addEventListener("click", e => { if (e.target.id === "sheet") $("sheet").hidden = true; });
   let clearArmed = false;
