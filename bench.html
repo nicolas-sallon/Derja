@@ -85,13 +85,20 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v2 · 22/10 17:48";
-  const DEFAULT_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-pro"];
+  const VERSION = "banc v3 · 22/10 18:51";
+  // Un « modèle » peut porter des options : « · low » = réflexion réduite, « · essentiel » = réponse courte
+  const VARIANTS = ["gemini-3.8-flash", "gemini-3.8-flash · low", "gemini-3.8-flash · low · essentiel"];
+  const DEFAULT_MODELS = [...VARIANTS, "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   const CFG = "derja-bench-cfg";
 
   // ---------- Réglages (clé reprise de l'app si présente) ----------
   let cfg = { key: "", models: DEFAULT_MODELS.slice(), on: ["gemini-3.8-flash", "gemini-3.5-flash-lite"] };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG) || "{}")); } catch {}
+  // Passage au banc v3 : 2.5 Pro retiré (fermé aux nouveaux comptes), variantes 3.8 ajoutées et cochées
+  if ((cfg.v || 0) < 3) {
+    cfg.models = [...new Set([...DEFAULT_MODELS, ...cfg.models])].filter(m => m !== "gemini-2.5-pro");
+    cfg.on = VARIANTS.slice(); cfg.v = 3;
+  }
   if (!cfg.key) { try { cfg.key = (JSON.parse(localStorage.getItem("derja-express-v1") || "{}").geminiKey) || ""; } catch {} }
   const saveCfg = () => { try { localStorage.setItem(CFG, JSON.stringify(cfg)); } catch {} };
   $("key").value = cfg.key;
@@ -151,11 +158,21 @@ Réponds uniquement avec un objet JSON de cette forme :
 
   const parseJson = s => { s = String(s || ""); try { return JSON.parse(s); } catch {} const a = s.indexOf("{"), b = s.lastIndexOf("}"); if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)); } catch {} } throw new Error("Réponse mal formée"); };
 
-  async function ask(model, b64) {
+  // Consigne courte : seulement ce qui a été entendu et la traduction
+  const PROMPT_SHORT = `Tu es un interprète expert du dialecte tunisien (Derja). Écoute l'extrait audio joint : un Tunisien parle à un francophone, souvent avec des mots français mêlés.
+"entendu" : transcription fidèle et phonétique, mot pour mot, en arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ), sans corriger ni passer à l'arabe standard ; mots français en français ; [inaudible] si besoin.
+"francais" : traduction en français naturel et courant, fidèle au sens et au ton.
+Réponds uniquement avec ce JSON : {"entendu":"...","francais":"..."}`;
+
+  async function ask(variant, b64) {
+    const [model, ...opts] = variant.split(" · ").map(s => s.trim());
+    const gen = { temperature: 0.2, responseMimeType: "application/json" };
+    if (opts.includes("low")) gen.thinkingConfig = { thinkingLevel: "low" };
+    const prompt = opts.includes("essentiel") ? PROMPT_SHORT : PROMPT;
     const t0 = performance.now();
     const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
       method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cfg.key },
-      body: JSON.stringify({ contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64 } }, { text: PROMPT }] }], generationConfig: { temperature: 0.2, responseMimeType: "application/json" } })
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64 } }, { text: prompt }] }], generationConfig: gen })
     });
     const ms = Math.round(performance.now() - t0);
     const j = await r.json().catch(() => ({}));
@@ -163,7 +180,7 @@ Réponds uniquement avec un objet JSON de cette forme :
     const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
     const out = parseJson(parts.map(p => p.text || "").join(""));
     const u = j.usageMetadata || {};
-    return { francais: out.francais || "", entendu: out.entendu || out.arabizi || "", ms, tokIn: u.promptTokenCount || 0, tokOut: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) };
+    return { francais: out.francais || "", entendu: out.entendu || out.arabizi || "", ms, tokIn: u.promptTokenCount || 0, tokOut: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0), tokThink: u.thoughtsTokenCount || 0 };
   }
 
   const busy = new Set();
@@ -240,7 +257,7 @@ Réponds uniquement avec un objet JSON de cette forme :
           '<div class="row"><button class="btn" data-a="play" type="button">▶︎ Écouter</button><button class="btn" data-a="all" type="button">Relancer</button><button class="btn" data-a="del" type="button">Supprimer</button></div></div>' +
         ms.map(m => {
           const r = (c.results || {})[m], running = busy.has(c.id + "|" + m);
-          return '<div class="res" data-m="' + esc(m) + '"><div class="m">' + esc(m) + (r && r.ms ? ' · ' + (r.ms / 1000).toFixed(1) + ' s' : "") + (r && r.tokIn ? ' · ' + r.tokIn + '+' + r.tokOut + ' tokens' : "") + '</div>' +
+          return '<div class="res" data-m="' + esc(m) + '"><div class="m">' + esc(m) + (r && r.ms ? ' · ' + (r.ms / 1000).toFixed(1) + ' s' : "") + (r && r.tokIn ? ' · ' + r.tokIn + '+' + r.tokOut + ' tokens' + (r.tokThink ? ' (dont ' + r.tokThink + ' de réflexion)' : "") : "") + '</div>' +
             (running ? '<div class="muted"><span class="dot"></span> En cours…</div>'
               : !r ? '<div class="row"><button class="btn" data-a="one" type="button">Lancer</button></div>'
               : r.error ? '<div class="err">' + esc(r.error) + '</div><div class="row"><button class="btn" data-a="one" type="button">Réessayer</button></div>'
