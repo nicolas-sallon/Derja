@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v34).
+Mise à jour : 23/10/2026 (app v2.5, banc v35).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -201,8 +201,11 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
   - **Voix de la galerie :**
     - « Accepter « nom proposé » » ;
     - « Renommer… » ;
-    - « C'est en fait… » : fusion, la voix choisie garde son nom ;
-    - « Ce n'est pas X, c'est… » : correction de cette seule réplique, vers une autre voix ou « Inconnu ».
+    - « C'est quelqu'un d'autre… » (v35), puis le choix d'une voix ou de « Inconnu ».
+    - Pour une autre voix, une question de portée suit :
+      - « Seulement cette réplique » : correction de cette seule réplique ;
+      - « Toujours : V5 est Mamie » : fusion des deux voix, la voix choisie garde son nom.
+    - Pourquoi : en v34, « C'est en fait… » (fusion) et « Ce n'est pas X, c'est… » (correction) ouvraient la même liste. Le risque était de fusionner par erreur deux personnes.
   - **Réplique sans voix (nom en gris) :**
     - « C'est… » ;
     - « Créer la voix « nom » » : seulement si le morceau dure au moins 1,5 s. Référence provisoire si l'extrait contient plusieurs répliques, ou si le morceau a peu de voix ou plusieurs voix.

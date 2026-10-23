@@ -258,7 +258,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v34 · 23/10 21:13";
+  const VERSION = "banc v35 · 23/10 21:37";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -1331,7 +1331,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     if (atBottom && !whoMenu) se.scrollTop = se.scrollHeight;
   }
   // ---------- Menu sur le nom (ou la bulle) d'une réplique : accepter, renommer, fusionner, corriger, créer ----------
-  let whoMenu = null; // { id, ri, step } ; step : "" | "rename" | "merge" | "is" | "create"
+  let whoMenu = null; // { id, ri, step, to } ; step : "" | "rename" | "is" | "scope" | "create"
   const voiceList = (excl, act) => gallery.filter(o => o !== excl).sort((a, b) => (present.has(b.id) - present.has(a.id)) || (b.lastHeard || 0) - (a.lastHeard || 0))
     .map(o => '<button type="button" class="btn sm" data-m="' + act + '" data-v="' + o.id + '"><span class="mdot" style="background:' + o.color + '"></span>' + esc(labelOf(o)) + '</button>').join("");
   // Morceau audio d'une réplique (extrait entier si une seule réplique, sinon d'après les temps de Gemini, 0,5 s retirée de chaque côté)
@@ -1346,11 +1346,15 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     let h = '<div class="rmenu">';
     if (st === "rename") h += '<div class="row"><input id="mName" type="text" value="' + esc(v ? v.name || v.suggest || "" : r.nom || "") + '" placeholder="Nom" autocomplete="off">' + b("renameOk", "OK") + b("back", "Annuler") + '</div>';
     else if (st === "create") h += '<div class="row"><input id="mName" type="text" value="' + esc(r.nom || "") + '" placeholder="Nom de la voix" autocomplete="off">' + b("createOk", "Créer") + b("back", "Annuler") + '</div>';
-    else if (st === "merge") h += '<p>' + esc(v ? labelOf(v) : "") + ' est en fait :</p><div class="mlist">' + voiceList(v, "mergeTo") + '</div>' + b("back", "Annuler");
     else if (st === "is") h += '<p>Cette réplique est de :</p><div class="mlist">' + voiceList(v, "isTo") + b("isUnknown", "Inconnu") + '</div>' + b("back", "Annuler");
+    else if (st === "scope") { // une voix reconnue corrigée : cette réplique seulement, ou fusion des deux voix
+      const to = gallery.find(o => o.id === whoMenu.to);
+      h += '<p>Cette réplique est de ' + esc(to ? labelOf(to) : "?") + ' :</p><div class="mlist">' + b("scopeOne", "Seulement cette réplique") +
+        b("scopeAll", "Toujours : " + esc(v ? labelOf(v) : "") + " est " + esc(to ? labelOf(to) : "")) + '</div>' + b("back", "Annuler");
+    }
     else if (v) {
       if (!v.userNamed && v.suggest) h += b("accept", "Accepter « " + esc(v.suggest) + " »");
-      h += b("rename", "Renommer…") + b("merge", "C'est en fait…") + b("is", "Ce n'est pas " + esc(v.name || v.suggest || v.id) + ", c'est…");
+      h += b("rename", "Renommer…") + b("is", "C'est quelqu'un d'autre…");
     } else {
       const seg = segOf(it, r);
       h += b("is", "C'est…") + b("create", r.nom ? "Créer la voix « " + esc(r.nom) + " »" : "Créer une voix", !seg) + (!seg ? '<p>Morceau trop court ou plus disponible pour créer une voix.</p>' : "");
@@ -1361,7 +1365,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     const it = items.find(x => x.id === whoMenu.id), r = it && it.repliques[whoMenu.ri]; if (!r) { whoMenu = null; renderFeed(); return; }
     const v = r.vid ? voiceOf(r.vid) : null, act = m.dataset.m, target = m.dataset.v ? gallery.find(o => o.id === m.dataset.v) : null;
     const done = () => { whoMenu = null; renderFeed(); renderGallery(); };
-    if (["rename", "merge", "is", "create"].includes(act)) { whoMenu.step = act; renderFeed(); const n = $("mName"); if (n) n.focus(); return; }
+    if (["rename", "is", "create"].includes(act)) { whoMenu.step = act; renderFeed(); const n = $("mName"); if (n) n.focus(); return; }
     if (act === "back") { whoMenu.step = ""; renderFeed(); return; }
     if (act === "accept" && v) { v.name = v.suggest; v.userNamed = true; storeVoice(v); return done(); }
     if (act === "renameOk") {
@@ -1369,8 +1373,12 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
       if (v) { v.name = n; v.userNamed = true; storeVoice(v); } else r.nom = n;
       return done();
     }
-    if (act === "mergeTo" && v && target) { mergeVoice(v, target); return done(); }
-    if (act === "isTo" && target) { // correction de cette seule réplique ; elle sert aussi à améliorer la référence
+    if (act === "isTo" && target && v) { whoMenu.step = "scope"; whoMenu.to = target.id; renderFeed(); return; } // voix reconnue : demander la portée
+    const to = whoMenu.to && gallery.find(o => o.id === whoMenu.to);
+    if (act === "scopeAll" && v && to) { mergeVoice(v, to); improveFromCorrection(to, segOf(it, r)); return done(); } // les deux voix sont la même personne
+    const tgt = act === "scopeOne" ? to : act === "isTo" ? target : null;
+    if (tgt) { // correction de cette seule réplique ; elle sert aussi à améliorer la référence
+      const target = tgt;
       r.vid = target.id; r.manual = true; r.guard = ""; present.add(target.id); target.lastHeard = Date.now(); storeVoice(target);
       improveFromCorrection(target, segOf(it, r)); return done();
     }
