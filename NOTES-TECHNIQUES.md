@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v28).
+Mise à jour : 23/10/2026 (app v2.5, banc v29).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -66,20 +66,16 @@ Mise à jour : 23/10/2026 (app v2.5, banc v28).
   - Moins de 2 s, c'est trop court pour que Gemini comprenne. Plus de 20 s, le délai devient trop long.
 - **Contexte.** Les répliques (arabizi + français) des 3 derniers extraits sont envoyées en **texte**, jamais en audio : c'est moins cher et plus rapide.
 - **Plusieurs personnes dans un extrait.** Gemini découpe l'extrait en répliques.
-- **Identification des personnes (v17).**
-  - Gemini remplit seulement une fiche à cases fermées par réplique : genre, âge, hauteur, texture, débit.
-  - Il a pour consigne d'ignorer le volume, la distance, l'émotion, le chuchotement ou les cris, et le contenu.
-  - C'est l'**app** qui attribue l'identité (`classify`) : même trio genre + âge + hauteur = même personne.
-  - Texture et débit sont seulement affichés, car ils varient trop pour une même personne.
-  - Pourquoi : quand Gemini choisissait lui-même l'identifiant, il réutilisait P1 pour des voix différentes. L'analyse du signal côté app a été jugée trop complexe.
-  - Limites : deux personnes au trio identique sont fusionnées, et une hésitation de Gemini sur l'âge coupe une personne en deux.
+- **Identification des personnes.** Remplacée en v29 par la galerie de voix (section dédiée plus bas).
+  - Historique v17 : une fiche descriptive remplie par Gemini (genre, âge, hauteur, texture, débit), avec un rapprochement par l'app sur le trio genre + âge + hauteur.
+  - Abandonnée parce que la description variait pour une même personne, ce qui donnait des dédoublements et des fusions à tort.
 - **Affichage façon messagerie.**
   - Les bulles sont à gauche, teintées à 34 % de la couleur de la personne.
   - Couleurs : bleus et verts pour les hommes (`#7cc4ff`, `#7fe0a8`, `#9b9cff`), tons chauds pour les femmes (`#ff9fc4`, `#ffad85`, `#f0cf5a`), gris `#9a9ca6` pour une voix inconnue.
   - Le bleu de l'app `#3d8bff` est réservé à tes propres répliques, à droite, en couleur pleine (futur bouton « Répondre »).
 - **Mesures.**
   - Plus de boutons d'appréciation (Juste/Approx./Faux, Locuteur ✓/✗) : le test porte maintenant sur la tenue dans la durée. Le bouton ▶︎ de réécoute de chaque extrait est conservé.
-  - Le volet sous chaque extrait ne montre que le bouton de réécoute et la fiche de chaque voix. La durée de préparation (20 ms au plus, tout activé) n'est plus affichée ni mesurée dans le tableau.
+  - Le volet sous chaque extrait ne montre que le bouton de réécoute et, pour chaque réplique, la voix retenue, le code renvoyé par Gemini, la hauteur mesurée, l'écart de timbre et un éventuel refus du garde-fou. La durée de préparation (20 ms au plus, tout activé) n'est plus affichée ni mesurée dans le tableau.
   - Réécoute : un seul extrait à la fois. En lancer un autre arrête le premier, et toucher « ■ Arrêter » coupe la lecture.
   - Le coût est calculé à partir de `usageMetadata`.
   - Les statistiques sont regroupées par configuration : nettoyé ou brut, réduction iPhone, personnes.
@@ -120,6 +116,63 @@ Mise à jour : 23/10/2026 (app v2.5, banc v28).
 - **Contexte.** Mes réponses entrent dans le contexte écrit des extraits suivants, sous la forme « Moi : arabizi (= français) ».
 - **Affichage.** Ma bulle est à droite, en bleu plein `#3d8bff`, avec le français en gros et l'arabizi en dessous. Sous la bulle : heure, durée, « voix après X s » (du relâchement au début de la voix) et le volet de réécoute.
 - **Mesures.** La ligne « Réponses (Je parle) » donne le nombre de réponses et le délai moyen avant la voix. Le coût inclut la voix : 6 $ par million de tokens audio.
+
+## Contexte et galerie des voix (banc v29)
+Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
+- **Contexte libre** (`cfg.ctxText`, réglages) : décrit la conversation (lieu, personnes, sujet). Il est envoyé avec chaque extrait et chaque réponse « Je parle » (`ctxBlock`).
+- **Galerie permanente**, dans l'iPhone (IndexedDB `derja-voices`), 20 voix au plus.
+  - **Contenu d'une voix :**
+    - un code fixe (`V3`) ;
+    - un nom, proposé par Gemini (`suggest`, affiché « V3 · grand-mère ? ») puis modifiable. Une fois nommée par l'utilisateur (`userNamed`), Gemini ne la renomme plus ;
+    - le genre et la couleur (palette homme/femme d'origine, plus jaune pour enfant), couleur modifiable d'un toucher ;
+    - une référence audio de 5 s (Int16, 16 kHz) ;
+    - la hauteur médiane (`f0`) et l'empreinte de timbre (`mfcc`) ;
+    - un score de qualité (`voicedSec`, `snr`) et des marqueurs (`provisoire`, `importee`, `doubt`) ;
+    - la référence Google (`file`) et sa version (`refVer`).
+  - **Galerie pleine :** la voix sans nom entendue il y a le plus longtemps sort. Si toutes ont un nom, la voix nouvelle reste temporaire.
+  - **Ouverture depuis l'écran d'accueil impérative :** Safari peut effacer les données d'un site non visité pendant 7 jours, et le stockage d'un onglet est séparé de celui de l'app de l'écran d'accueil.
+- **Références chez Google (API Files).**
+  - Envoi « multipart » ; à défaut, « resumable ».
+  - Si l'API Files est inaccessible depuis la page, repli automatique (`filesMode = "inline"`) : les références sont jointes à chaque appel. Les réglages affichent le mode en cours.
+  - Une référence est renvoyée si elle est absente ou expire dans moins de 10 min (`ensureFile`). Les fichiers durent 48 h chez Google.
+  - Une ancienne référence n'est effacée que **5 min après** le basculement (`deleteFileLater`), car un appel en cours peut encore l'utiliser.
+- **Sélection des références,** recalculée **à chaque appel** (`selectRefs`, 6 au plus) :
+  - tant qu'aucune voix n'est présente : les voix nommées dans le contexte, puis les plus récentes ;
+  - ensuite : seulement les voix présentes et celles du contexte. C'est moins cher, et Gemini a moins de voix à départager.
+  - Un nouveau venu est rattrapé par la vérification des doublons.
+- **Coche « présente » :** mise automatiquement à la reconnaissance, ou à la main. Tout est décoché à l'arrêt de l'écoute continue, pas pendant « Je parle ».
+- **Appel d'un extrait.**
+  - Contenu : chaque référence précédée de « Voix de référence V3 (« Mamie ») : », puis « Extrait à traduire : » et l'audio.
+  - Gemini renvoie pour chaque réplique : `voix` (code ou « nouvelle », jugé sur le timbre), `nom`, `genre`, `debut`/`fin` (en secondes), `entendu`, `francais`.
+- **Attribution par l'app** (`attribute`) :
+  - **Code connu :** garde-fou sur la **hauteur seulement**. Refus, réplique en « ? », si la hauteur mesurée est à plus de 5 demi-tons de celle de la voix et que le morceau ne contient qu'une voix. L'écart de timbre est seulement affiché, pour calibrer plus tard.
+  - **« Nouvelle » :** une voix est créée si le morceau isolé ne contient qu'une voix et au moins 2 s de voix.
+    - Extrait à une seule réplique : on prend l'extrait entier.
+    - Extrait à plusieurs répliques : on découpe le morceau d'après `debut`/`fin`, en retirant 0,5 s de chaque côté, et la référence est **provisoire**.
+    - Sinon, la réplique affiche le nom proposé ou « ? ».
+  - **Mesures locales** (`analyze`, environ 10 à 50 ms pour 5 s, sans latence ajoutée) :
+    - énergie par trame de 10 ms ;
+    - hauteur YIN à 8 kHz (70 à 470 Hz), médiane ;
+    - contrôle « une seule voix » : au moins 70 % des trames à moins de 4 demi-tons de la médiane ;
+    - MFCC sur 12 coefficients, 26 filtres mel de 100 Hz à 7 kHz ;
+    - meilleure fenêtre de 5 s : celle qui contient le plus de voix.
+    - Validées sur des voix synthétiques : 120, 220 et 300 Hz bien mesurés, un mélange 120 + 230 Hz est bien refusé.
+  - **Genre à vérifier :** signalé si le genre contredit la hauteur (homme au-dessus de 185 Hz, femme en dessous de 140 Hz, enfant en dessous de 190 Hz).
+- **Traitements de fond** (`bgQueue`) : ils ne passent que lorsqu'aucun extrait ni aucune réponse n'est en traduction (compteur `inflight`).
+  - **Doublons :** à chaque voix nouvelle, on cherche des voix de hauteur proche (à 4 demi-tons près), classées par écart de timbre, 12 au plus. Aucun appel s'il n'y en a pas. Sinon, Gemini répond {"meme":"V…"/"aucune"}, et une réponse positive déclenche la fusion.
+  - **Fusion** (`mergeVoice`) : une correspondance (`meta.aliases`, V8 → V3) garde justes les bulles déjà affichées et les réponses qui arrivent après. Si la cible est provisoire, elle reprend la meilleure référence. Le nom donné par l'utilisateur est conservé.
+  - **Remplacement d'une référence** (`considerReplace`) :
+    - Conditions : un extrait à une seule voix, attribué à cette voix, avec au moins 3 s de voix et nettement meilleur (+3 dB de clarté, ou +1 s de voix).
+    - Fréquence : au plus un remplacement toutes les 10 min, sauf pour les références provisoires ou importées.
+    - Confirmation par Gemini : {"meme":true/false}.
+    - La nouvelle version est envoyée chez Google **avant** le basculement, qui est instantané. Le code de la voix ne change pas, donc aucun appel en cours ne peut voir apparaître une voix « nouvelle ».
+- **Galerie dans les réglages :** écouter, renommer, cocher « présente », changer la couleur, fusionner (⋯ → « = autre voix »), supprimer.
+- **Ajouter une voix à la main (« + »)** :
+  - soit enregistrer en maintenant le bouton, l'écoute étant arrêtée ;
+  - soit importer un fichier audio ou vidéo, décodé par `decodeAudioData` ;
+  - l'app choisit les 5 meilleures secondes (avec « Passage suivant » pour en changer), le nom est obligatoire et le genre est prérempli d'après la hauteur ;
+  - un fichier importé est marqué « importée », parce que son micro et sa pièce sont différents : il peut être remplacé par un bon extrait de conversation.
+- **Mesures :** la ligne « Voix (session) » donne la moyenne des références jointes par appel, les voix nouvelles, les fusions, les remplacements, les « ? », les refus par la hauteur, et le nombre et le coût des appels de fond.
 
 ## Tarifs (pour estimer)
 - Gemini 3.8 Flash : 0,75 $ par million de jetons en entrée, 3,75 $ par million en sortie.
