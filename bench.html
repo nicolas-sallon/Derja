@@ -19,11 +19,18 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--sans);-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px)}
+/* Marges des bords de l'écran (encoche en haut, barre d'accueil en bas), inversées quand l'affichage est retourné */
+:root{--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
+html.flipped{--st:env(safe-area-inset-bottom,0px);--sb:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
+/* La page défile dans .stage (et non dans le document) pour pouvoir la retourner d'un bloc */
+.stage{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;transition:transform .35s ease}
+html.flipped .stage,html.flipped .sheet{transform:rotate(180deg)}
+@media (prefers-reduced-motion:reduce){.stage{transition:none}}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 [hidden]{display:none!important}
 .app{display:flex;flex-direction:column;min-height:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:640px;margin:0 auto}
-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding-block:12px 8px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding-block:calc(12px + var(--st)) 8px}
 h1{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
 h1 small{display:block;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0}
 .ver{font-size:11px;opacity:.7;font-variant-numeric:tabular-nums;margin-left:4px;cursor:pointer}
@@ -54,7 +61,7 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .rate{display:flex;gap:6px;flex-wrap:wrap}
 .rate button{appearance:none;border:1px solid var(--line);background:none;color:var(--muted);border-radius:8px;padding:4px 8px;font:600 12px var(--sans);cursor:pointer}
 /* Barre du bas : mode, bouton, jauge */
-.composer{position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line)}
+.composer{position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + var(--sb));display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line)}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);border-radius:10px;padding:2px}
 .seg button{appearance:none;border:0;background:none;color:var(--muted);font:600 13px var(--sans);padding:8px 2px;border-radius:8px;cursor:pointer;line-height:1.2}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.4)}
@@ -78,7 +85,7 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .state b.voice{color:var(--good)} .state b.warn{color:var(--mid)} .state b.clip{color:var(--bad)}
 /* Feuille de réglages */
 .sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
-.sheet-in{background:var(--surface);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px;max-height:90%;overflow:auto}
+.sheet-in{background:var(--surface);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + var(--sb)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px;max-height:90%;overflow:auto}
 .sheet h2{margin:0;font-size:20px}
 .sheet h3{margin:6px 0 0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .field{display:flex;flex-direction:column;gap:8px}
@@ -100,6 +107,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 </style>
 </head>
 <body>
+<div class="stage" id="stage">
 <div class="app">
   <header>
     <h1>Derja Express<small>Banc d'essai <span id="ver" class="ver"></span></small></h1>
@@ -130,6 +138,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     <div class="state"><b id="state">Arrêté</b><span><span id="stateR"></span><button type="button" class="thauto" id="thAuto" hidden>Auto</button></span></div>
   </div>
 </div>
+</div>
 
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
@@ -158,6 +167,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     <div class="field">
       <label class="tog"><span>Nettoyage du son<small>Filtre de la bande vocale et mise à niveau du volume</small></span><input type="checkbox" id="optClean"></label>
       <label class="tog"><span>Réduction de bruit de l'iPhone<small>S'applique au prochain démarrage</small></span><input type="checkbox" id="optNs"></label>
+      <label class="tog"><span>Retourner l'affichage<small>Quand l'iPhone est tenu tête en bas, micro vers les personnes en face</small></span><input type="checkbox" id="optFlip"></label>
       <label class="tog"><span>Distinguer les personnes<small>P1, P2… d'après la description des voix</small></span><input type="checkbox" id="optSpk"></label>
       <div class="row"><span class="muted" style="min-width:140px">Pause de découpe : <b id="pauseVal"></b></span><input type="range" id="optPause" min="0.3" max="1.5" step="0.1"></div>
       <p>Seuil automatique : bruit de fond + 8 dB, ajustable du doigt sur la jauge. Un passage de moins de 2 s attend la suite ; après 2,5 s de silence, il part quand même s'il dure au moins 0,6 s. Maximum 20 s par passage.</p>
@@ -174,13 +184,13 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v20 · 23/10 02:39";
+  const VERSION = "banc v21 · 23/10 02:46";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
 
   // ---------- Réglages ----------
-  let cfg = { key: "", clean: true, ns: false, spk: false, pause: 0.8, th: 0, log: [] };
+  let cfg = { key: "", flip: true, clean: true, ns: false, spk: false, pause: 0.8, th: 0, log: [] };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG) || "{}")); } catch {}
   if (!cfg.key) for (const k of ["derja-bench-chain", "derja-express-v1"]) {
     try { const o = JSON.parse(localStorage.getItem(k) || "{}"); cfg.key = o.key || o.geminiKey || ""; } catch {}
@@ -196,6 +206,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   $("closeSettings").onclick = () => { $("sheet").hidden = true; };
   $("sheet").onclick = e => { if (e.target.id === "sheet") $("sheet").hidden = true; };
   const bindBox = (id, k) => { $(id).checked = !!cfg[k]; $(id).onchange = e => { cfg[k] = e.target.checked; save(); if (k === "clean") applyFilter(); }; };
+  bindBox("optFlip", "flip"); $("optFlip").addEventListener("change", () => { askMotion(); applyFlip(); });
   bindBox("optClean", "clean"); bindBox("optNs", "ns"); bindBox("optSpk", "spk");
   const showRanges = () => { $("pauseVal").textContent = cfg.pause.toFixed(1) + " s"; };
   $("optPause").value = cfg.pause;
@@ -266,7 +277,29 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     $("toggleLabel").textContent = "Démarrer l'écoute continue"; $("toggle").classList.remove("on");
     $("fill").style.width = "0"; setState("Arrêté", ""); renderStats();
   }
-  $("toggle").onclick = () => listening ? stop() : start();
+  $("toggle").onclick = () => { askMotion(); listening ? stop() : start(); };
+
+  // ---------- Affichage retourné (iPhone tête en bas, micro vers les personnes en face) ----------
+  // L'iPhone ne pivote jamais l'écran tête en bas tout seul : on lit l'inclinaison (beta) et on retourne la page en CSS.
+  // beta ≈ +90° tenu droit, ≈ -90° tête en bas. Entre -20° et +20° (posé à plat), on garde l'état précédent.
+  let flipped = false, motionAsked = false;
+  function applyFlip() {
+    const on = cfg.flip && flipped && !(screen.orientation && screen.orientation.angle === 180); // si le système a déjà pivoté, ne rien faire
+    document.documentElement.classList.toggle("flipped", on);
+  }
+  function onTilt(e) {
+    if (e.beta == null) return;
+    const was = flipped;
+    if (e.beta < -20) flipped = true; else if (e.beta > 20) flipped = false;
+    if (flipped !== was) applyFlip();
+  }
+  // iOS demande l'autorisation des capteurs de mouvement, pendant un geste (premier démarrage de l'écoute)
+  function askMotion() {
+    if (motionAsked || !cfg.flip) return; motionAsked = true;
+    const D = window.DeviceOrientationEvent;
+    if (D && typeof D.requestPermission === "function") D.requestPermission().then(s => { if (s === "granted") addEventListener("deviceorientation", onTilt); }).catch(() => {});
+    else addEventListener("deviceorientation", onTilt);
+  }
   document.addEventListener("visibilitychange", async () => { if (listening && document.visibilityState === "visible") { try { wake = await navigator.wakeLock.request("screen"); } catch {} } });
 
   // ---------- Détection de la parole et découpe sur les pauses ----------
@@ -277,7 +310,9 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   let thMan = null;
   function setManual(clientX) {
     const r = $("meterTouch").getBoundingClientRect();
-    const d = DB_MIN + Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * (DB_MAX - DB_MIN);
+    let f = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    if (document.documentElement.classList.contains("flipped")) f = 1 - f; // jauge retournée : le bas de l'échelle est à droite
+    const d = DB_MIN + f * (DB_MAX - DB_MIN);
     thMan = Math.round(Math.max(-65, Math.min(-10, d))); thr = thMan; showTh();
   }
   function showTh() {
@@ -462,7 +497,7 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
   const hm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   let openTools = 0; // extrait dont la ligne de notes est dépliée
   function renderFeed() {
-    const feed = $("feed"), se = document.scrollingElement, atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
+    const feed = $("feed"), se = $("stage"), atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
     let last = null, html = "";
     for (const it of items) {
       if (it.status === "run") { html += '<div class="bub typing" style="--c:' + GREY + '"><i></i><i></i><i></i></div>'; last = null; continue; }
