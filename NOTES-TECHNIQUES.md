@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v17).
+Mise à jour : 23/10/2026 (app v2.5, banc v18).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -59,7 +59,7 @@ Mise à jour : 23/10/2026 (app v2.5, banc v17).
 - **Seuil automatique.** C'est le 20ᵉ percentile des 120 derniers niveaux (environ 5 s), plus 8 dB. Il s'adapte au bruit de la pièce.
   Il peut être forcé dans les réglages (0 = automatique).
 - **Découpe sur les pauses uniquement.**
-  - Après 0,5 s de pause, on envoie si le passage dure au moins 2 s.
+  - Après 0,8 s de pause (0,5 s coupait des phrases), on envoie si le passage dure au moins 2 s.
   - Après 2,5 s de silence, on envoie dès 0,6 s.
   - Maximum 20 s par passage.
   - 0,2 s de marge avant et après le passage.
@@ -78,6 +78,7 @@ Mise à jour : 23/10/2026 (app v2.5, banc v17).
   - Couleurs : bleus et verts pour les hommes (`#7cc4ff`, `#7fe0a8`, `#9b9cff`), tons chauds pour les femmes (`#ff9fc4`, `#ffad85`, `#f0cf5a`), gris `#9a9ca6` pour une voix inconnue.
   - Le bleu de l'app `#3d8bff` est réservé à tes propres répliques, à droite, en couleur pleine (futur bouton « Répondre »).
 - **Mesures.**
+  - Plus de boutons d'appréciation (Juste/Approx./Faux, Locuteur ✓/✗) : le test porte maintenant sur la tenue dans la durée. Le bouton ▶︎ de réécoute de chaque extrait est conservé.
   - Le coût est calculé à partir de `usageMetadata`.
   - Les statistiques sont regroupées par configuration : nettoyé ou brut, réduction iPhone, personnes.
   - Stockage : `localStorage["derja-bench-listen"]`.

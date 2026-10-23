@@ -53,9 +53,6 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 @keyframes pulse{50%{opacity:.25}}
 .rate{display:flex;gap:6px;flex-wrap:wrap}
 .rate button{appearance:none;border:1px solid var(--line);background:none;color:var(--muted);border-radius:8px;padding:4px 8px;font:600 12px var(--sans);cursor:pointer}
-.rate button[aria-pressed="true"].ok{background:var(--good);border-color:var(--good);color:#000}
-.rate button[aria-pressed="true"].mid{background:var(--mid);border-color:var(--mid);color:#000}
-.rate button[aria-pressed="true"].ko{background:var(--bad);border-color:var(--bad);color:#000}
 /* Barre du bas : mode, bouton, jauge */
 .composer{position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line)}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);border-radius:10px;padding:2px}
@@ -173,18 +170,19 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v17 · 23/10 02:00";
+  const VERSION = "banc v18 · 23/10 02:21";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
 
   // ---------- Réglages ----------
-  let cfg = { key: "", clean: true, ns: false, spk: false, pause: 0.5, th: 0, log: [] };
+  let cfg = { key: "", clean: true, ns: false, spk: false, pause: 0.8, th: 0, log: [] };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG) || "{}")); } catch {}
   if (!cfg.key) for (const k of ["derja-bench-chain", "derja-express-v1"]) {
     try { const o = JSON.parse(localStorage.getItem(k) || "{}"); cfg.key = o.key || o.geminiKey || ""; } catch {}
     if (cfg.key) break;
   }
+  if (!cfg.p08) { cfg.pause = 0.8; cfg.p08 = true; } // pause portée de 0,5 à 0,8 s : des phrases étaient coupées
   try { localStorage.removeItem("derja-bench-chain"); } catch {} // ancien banc français -> tunisien
   const save = () => { try { localStorage.setItem(CFG, JSON.stringify(cfg)); } catch {} };
   save();
@@ -448,7 +446,6 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
     const feed = $("feed"), se = document.scrollingElement, atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
     let last = null, html = "";
     for (const it of items) {
-      const lg = cfg.log.find(l => l.id === it.id && l.at === it.at) || {};
       if (it.status === "run") { html += '<div class="bub typing" style="--c:' + GREY + '"><i></i><i></i><i></i></div>'; last = null; continue; }
       if (it.status === "err") { html += '<div class="bub err">' + esc(it.err) + '</div>'; last = null; }
       else for (const r of it.repliques) {
@@ -462,11 +459,9 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
       }
       // Infos du banc, discrètes ; toucher pour déplier les notes
       html += '<button type="button" class="meta" data-id="' + it.id + '" data-a="tools">' + hm(it.at) + ' · ' + it.dur.toFixed(1) + ' s' + (it.delay != null ? ' · délai ' + sec(it.delay) : "") +
-        (lg.rating ? ' · <b>' + ({ ok: "juste", mid: "approx.", ko: "faux" })[lg.rating] + '</b>' : "") + (openTools === it.id ? " ▴" : " ▾") + '</button>';
+        (openTools === it.id ? " ▴" : " ▾") + '</button>';
       if (openTools === it.id && it.status === "ok") {
-        html += '<div class="tools" data-id="' + it.id + '"><div class="rate">' + (it.url ? '<button type="button" data-a="play">▶︎</button>' : "") +
-          [["ok", "Juste"], ["mid", "Approx."], ["ko", "Faux"]].map(([k, l]) => '<button type="button" class="' + k + '" data-r="' + k + '" aria-pressed="' + (lg.rating === k) + '">' + l + '</button>').join("") +
-          (it.spk ? '<button type="button" class="ok" data-w="ok" aria-pressed="' + (lg.who === "ok") + '">Locuteur ✓</button><button type="button" class="ko" data-w="ko" aria-pressed="' + (lg.who === "ko") + '">Locuteur ✗</button>' : "") +
+        html += '<div class="tools" data-id="' + it.id + '"><div class="rate">' + (it.url ? '<button type="button" data-a="play">▶︎ Réécouter l\'extrait</button>' : "") +
           '</div><div class="muted" style="margin-top:4px">préparation ' + (it.prepMs ?? "–") + ' ms · ' + (it.clean ? "nettoyé" : "brut") + (it.ns ? " · réduc. iPhone" : "") +
           it.repliques.filter(r => r.voix).map(r => ' · ' + esc(r.personne) + ' : ' + esc(r.voix)).join("") + '</div></div>';
       }
@@ -478,12 +473,7 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
     const line = e.target.closest("[data-id]"); if (!line) return;
     if (e.target.closest("[data-a=tools]")) { const id = Number(line.dataset.id); openTools = openTools === id ? 0 : id; renderFeed(); return; }
     const it = items.find(x => x.id === Number(line.dataset.id)); if (!it) return;
-    const lg = cfg.log.find(l => l.id === it.id && l.at === it.at); if (!lg && !e.target.closest("[data-a]")) return;
-    if (e.target.closest("[data-a=play]") && it.url) { try { new Audio(it.url).play(); } catch {} return; }
-    const r = e.target.closest("[data-r]"), w = e.target.closest("[data-w]");
-    if (r) lg.rating = lg.rating === r.dataset.r ? "" : r.dataset.r;
-    if (w) lg.who = lg.who === w.dataset.w ? "" : w.dataset.w;
-    save(); renderFeed(); renderStats();
+    if (e.target.closest("[data-a=play]") && it.url) { try { new Audio(it.url).play(); } catch {} }
   };
 
   // ---------- Mesures ----------
@@ -496,16 +486,15 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
     const hours = (listenedMs + (listening ? performance.now() - t0Listen : 0)) / 3600000;
     const all = cost(L), audio = L.reduce((s, l) => s + l.dur, 0);
     const rows = Object.entries(groups).map(([n, a]) => {
-      const c = k => a.filter(x => x.rating === k).length, w = k => a.filter(x => x.who === k).length;
-      return '<tr><td>' + esc(n) + '</td><td>' + a.length + '</td><td>' + sec(avg(a, "delay")) + '</td><td>' + Math.round(avg(a, "prepMs") || 0) + ' ms</td><td>' + c("ok") + ' / ' + c("mid") + ' / ' + c("ko") + '</td><td>' + (a[0].spk ? w("ok") + ' / ' + w("ko") : "–") + '</td></tr>';
+      return '<tr><td>' + esc(n) + '</td><td>' + a.length + '</td><td>' + sec(avg(a, "delay")) + '</td><td>' + Math.round(avg(a, "prepMs") || 0) + ' ms</td></tr>';
     }).join("");
-    $("stats").innerHTML = '<tr><th>Réglage</th><th>Passages</th><th>Délai moyen</th><th>Prépa.</th><th>Juste / Approx. / Faux</th><th>Locuteur ✓ / ✗</th></tr>' +
-      (rows || '<tr><td colspan="6" class="muted">Aucun passage traduit pour l\'instant.</td></tr>') +
-      '<tr><td colspan="6"></td></tr>' +
-      '<tr><td>Écoute (session)</td><td colspan="5">' + (hours * 60).toFixed(1) + ' min · ' + audio.toFixed(0) + ' s d\'audio envoyé · coût ' + (all * 100).toFixed(2) + ' centimes $' +
+    $("stats").innerHTML = '<tr><th>Réglage</th><th>Passages</th><th>Délai moyen</th><th>Prépa.</th></tr>' +
+      (rows || '<tr><td colspan="4" class="muted">Aucun passage traduit pour l\'instant.</td></tr>') +
+      '<tr><td colspan="4"></td></tr>' +
+      '<tr><td>Écoute (session)</td><td colspan="3">' + (hours * 60).toFixed(1) + ' min · ' + audio.toFixed(0) + ' s d\'audio envoyé · coût ' + (all * 100).toFixed(2) + ' centimes $' +
       (hours > 0.01 ? ' · soit ≈ ' + (all / hours).toFixed(2) + ' $ par heure' : "") + '</td></tr>';
-    $("stats").dataset.text = Object.entries(groups).map(([n, a]) => { const c = k => a.filter(x => x.rating === k).length, w = k => a.filter(x => x.who === k).length;
-      return n + " : " + a.length + " passages, délai moyen " + sec(avg(a, "delay")) + ", préparation " + Math.round(avg(a, "prepMs") || 0) + " ms, " + c("ok") + " juste / " + c("mid") + " approx. / " + c("ko") + " faux" + (a[0].spk ? ", locuteur " + w("ok") + " ✓ / " + w("ko") + " ✗" : ""); }).join("\n") +
+    $("stats").dataset.text = Object.entries(groups).map(([n, a]) =>
+      n + " : " + a.length + " passages, délai moyen " + sec(avg(a, "delay")) + ", préparation " + Math.round(avg(a, "prepMs") || 0) + " ms").join("\n") +
       "\nCoût : " + (all * 100).toFixed(2) + " centimes $ pour " + audio.toFixed(0) + " s d'audio" + (hours > 0.01 ? ", ≈ " + (all / hours).toFixed(2) + " $ par heure d'écoute" : "");
   }
   $("copy").onclick = async () => {
