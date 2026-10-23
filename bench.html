@@ -173,7 +173,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v16 · 23/10 01:50";
+  const VERSION = "banc v17 · 23/10 02:00";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -344,7 +344,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       const res = await gemini(wav, it);
       Object.assign(it, res, { status: "ok", shownAt: performance.now() });
       it.delay = it.shownAt - it.speechEnd;
-      if (it.spk) res.repliques.forEach(addSpeaker);
+      if (it.spk) res.repliques.forEach(r => { r.personne = classify(r); });
     } catch (e) { it.status = "err"; it.err = e.message || String(e); }
     cfg.log.push(logOf(it)); cfg.log = cfg.log.slice(-400); save();
     renderFeed(); renderStats();
@@ -367,11 +367,21 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   const PAL = { homme: ["#7cc4ff", "#7fe0a8", "#9b9cff"], femme: ["#ff9fc4", "#ffad85", "#f0cf5a"] }, GREY = "#9a9ca6";
   const genreOf = g => /^(h|m)/i.test(g || "") ? "homme" : /^f/i.test(g || "") ? "femme" : ""; // enfant ou inconnu : gris
   // Fiche vocale à cases fermées, résumée en une ligne
-  const ficheOf = r => [r.genre, r.age && r.age + (/\d$/.test(r.age) ? " ans" : ""), r.hauteur, r.texture, r.debit && "débit " + r.debit, r.signe].filter(Boolean).join(", ");
-  function addSpeaker(r) {
-    if (!r.personne || speakers.some(p => p.id === r.personne)) return;
-    const g = genreOf(r.genre), n = speakers.filter(p => p.genre === g).length;
-    speakers.push({ id: r.personne, fiche: r.voix, genre: g, color: g ? PAL[g][n % 3] : GREY });
+  const ficheOf = r => [r.genre, r.age && r.age + (/\d$/.test(r.age) ? " ans" : ""), r.hauteur, r.texture, r.debit && "débit " + r.debit].filter(Boolean).join(", ");
+  // Classification par l'app : une personne = un trio genre + âge + hauteur identique.
+  // Même trio qu'une personne connue -> même personne ; sinon -> nouvelle personne (nouvelle couleur).
+  const norm = s => String(s || "").trim().toLowerCase();
+  function classify(r) {
+    const key = [norm(r.genre), norm(r.age), norm(r.hauteur)];
+    if (key.some(k => !k || k === "?")) return "?";
+    const k = key.join("|");
+    let p = speakers.find(x => x.key === k);
+    if (!p) {
+      const g = genreOf(r.genre), n = speakers.filter(x => x.genre === g).length;
+      p = { id: "P" + (speakers.length + 1), key: k, fiche: ficheOf(r), genre: g || norm(r.genre), color: g ? PAL[g][n % 3] : GREY };
+      speakers.push(p);
+    }
+    return p.id;
   }
   const colorOf = (it, r) => { if (!it.spk || !r.personne) return GREY; const p = speakers.find(x => x.id === r.personne); return p ? p.color : GREY; };
   const ARABIZI = "arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ)";
@@ -379,21 +389,18 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     const prev = items.filter(x => x.status === "ok" && x.id < it.id).slice(-3).flatMap(x => x.repliques || [])
       .map(r => "- " + (r.personne ? r.personne + " : " : "") + r.entendu + " (= " + r.francais + ")").join("\n");
     const spk = it.spk ? `
-Pour chaque réplique, remplis la fiche de la voix en choisissant OBLIGATOIREMENT parmi les valeurs proposées. Décris la voix elle-même : ignore le volume, la distance au micro, l'émotion et le contenu.
+Pour chaque réplique, remplis la fiche de la voix en choisissant OBLIGATOIREMENT une des valeurs proposées, sans autre mot. Décris la voix elle-même : ignore le volume, la distance au micro, l'émotion, la manière de parler du moment (chuchoter, crier) et le contenu.
 "genre" : "homme" | "femme" | "enfant"
 "age" : "ado" | "20-35" | "35-55" | "55-70" | "70+"
 "hauteur" : (par rapport à son genre) "très grave" | "grave" | "moyenne" | "aiguë" | "très aiguë"
 "texture" : "claire" | "rauque" | "nasale" | "soufflée"
-"debit" : "lent" | "moyen" | "rapide"
-"signe" : un signe particulier très reconnaissable (roule les r, zézaie, rire, tic de langage…), sinon ""
-"personne" : identifiant de la personne. ${speakers.length ? "Personnes déjà entendues : " + speakers.map(p => p.id + " = " + p.fiche).join(" ; ") + "." : "Commence par P1."}
-Règle d'identification : ne réutilise un identifiant QUE si la voix correspond clairement à sa fiche (même genre, même tranche d'âge, même hauteur). Si l'un de ces critères diffère, ou au moindre doute, crée une NOUVELLE personne avec l'identifiant suivant (P${speakers.length + 1}, puis…). Mieux vaut deux identifiants pour une même personne qu'une seule pour deux personnes différentes. Dans un même extrait, deux répliques de la même voix gardent le même identifiant.` : "";
+"debit" : "lent" | "moyen" | "rapide"` : "";
     return `Tu es un interprète expert du dialecte tunisien (Derja). Écoute l'extrait audio joint : un passage d'une conversation familiale en tunisien, souvent avec des mots français mêlés. L'extrait peut commencer ou finir au milieu d'une phrase.
 Plusieurs personnes peuvent parler dans l'extrait : découpe-le en répliques, une par changement de personne, dans l'ordre. Une seule personne = une seule réplique.
 "entendu" : transcription fidèle et phonétique de la réplique, mot pour mot, en ${ARABIZI}, sans corriger ni passer à l'arabe standard ; mots français en français ; [inaudible] si besoin.
 "francais" : traduction de la réplique en français naturel et courant, fidèle au sens et au ton.${spk}
 ${prev ? "\nContexte, passages précédents :\n" + prev + "\n" : ""}
-Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"personne":"P…","genre":"…","age":"…","hauteur":"…","texture":"…","debit":"…","signe":"",' : ""}"entendu":"...","francais":"..."}]}`;
+Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age":"…","hauteur":"…","texture":"…","debit":"…",' : ""}"entendu":"...","francais":"..."}]}`;
   }
   async function gemini(wav, it) {
     const body = JSON.stringify({ contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64(wav) } }, { text: prompt(it) }] }],
@@ -408,7 +415,7 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"personne":"P…",
       let o; try { o = JSON.parse(txt); } catch { const a = txt.indexOf("{"), b = txt.lastIndexOf("}"); o = JSON.parse(txt.slice(a, b + 1)); }
       const u = j.usageMetadata || {};
       let rep = Array.isArray(o.repliques) ? o.repliques : Array.isArray(o) ? o : [o];
-      rep = rep.filter(r => r && (r.francais || r.entendu)).map(r => ({ personne: r.personne || "", genre: r.genre || "", voix: ficheOf(r), entendu: r.entendu || "", francais: r.francais || "" }));
+      rep = rep.filter(r => r && (r.francais || r.entendu)).map(r => ({ personne: "", genre: r.genre || "", age: r.age || "", hauteur: r.hauteur || "", voix: ficheOf(r), entendu: r.entendu || "", francais: r.francais || "" }));
       if (!rep.length) throw new Error("Réponse vide");
       return { repliques: rep,
         tin: u.promptTokenCount || 0, tout: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) };
