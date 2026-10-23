@@ -39,7 +39,10 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .empty{color:var(--muted);font-size:15px;text-align:center;padding:40px 12px}
 .sub-line{background:var(--surface);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
 .sub-line .meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;gap:8px;flex-wrap:wrap}
-.sub-line .who{font-weight:700;color:var(--accent)}
+.sub-line .who{font-weight:700;color:var(--accent);min-width:22px}
+.sub-line .rep{display:flex;gap:10px;align-items:flex-start}
+.sub-line .rep + .rep{border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
+.sub-line .rep .fr{flex:1}
 .sub-line .fr{font-size:19px;font-weight:600;line-height:1.3}
 .sub-line .tn{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 .sub-line .err{color:var(--bad);font-size:14px}
@@ -168,7 +171,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v13 · 23/10 00:55";
+  const VERSION = "banc v14 · 23/10 01:04";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -339,7 +342,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       const res = await gemini(wav, it);
       Object.assign(it, res, { status: "ok", shownAt: performance.now() });
       it.delay = it.shownAt - it.speechEnd;
-      if (it.spk && res.personne) { if (!speakers.some(p => p.id === res.personne)) speakers.push({ id: res.personne, voix: res.voix || "" }); }
+      if (it.spk) res.repliques.forEach(r => { if (r.personne && !speakers.some(p => p.id === r.personne)) speakers.push({ id: r.personne, voix: r.voix }); });
     } catch (e) { it.status = "err"; it.err = e.message || String(e); }
     cfg.log.push(logOf(it)); cfg.log = cfg.log.slice(-400); save();
     renderFeed(); renderStats();
@@ -360,16 +363,18 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   const speakers = [];
   const ARABIZI = "arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ)";
   function prompt(it) {
-    const prev = items.filter(x => x.status === "ok" && x.id < it.id).slice(-3)
-      .map(x => "- " + (x.personne ? x.personne + " : " : "") + x.entendu + " (= " + x.francais + ")").join("\n");
+    const prev = items.filter(x => x.status === "ok" && x.id < it.id).slice(-3).flatMap(x => x.repliques || [])
+      .map(r => "- " + (r.personne ? r.personne + " : " : "") + r.entendu + " (= " + r.francais + ")").join("\n");
     const spk = it.spk ? `
-"personne" : identifiant de la personne qui parle le plus dans l'extrait. ${speakers.length ? "Personnes déjà entendues : " + speakers.map(p => p.id + " = " + p.voix).join(" ; ") + ". Réutilise l'identifiant si la voix correspond, sinon crée le suivant." : "Commence par P1."}
+Pour chaque réplique :
+"personne" : identifiant de la personne qui parle. ${speakers.length ? "Personnes déjà entendues : " + speakers.map(p => p.id + " = " + p.voix).join(" ; ") + ". Réutilise l'identifiant si la voix correspond, sinon crée le suivant." : "Commence par P1, puis P2…"}
 "voix" : description courte de cette voix (genre, âge approximatif, timbre), 6 mots maximum.` : "";
     return `Tu es un interprète expert du dialecte tunisien (Derja). Écoute l'extrait audio joint : un passage d'une conversation familiale en tunisien, souvent avec des mots français mêlés. L'extrait peut commencer ou finir au milieu d'une phrase.
-"entendu" : transcription fidèle et phonétique, mot pour mot, en ${ARABIZI}, sans corriger ni passer à l'arabe standard ; mots français en français ; [inaudible] si besoin.
-"francais" : traduction en français naturel et courant, fidèle au sens et au ton.${spk}
+Plusieurs personnes peuvent parler dans l'extrait : découpe-le en répliques, une par changement de personne, dans l'ordre. Une seule personne = une seule réplique.
+"entendu" : transcription fidèle et phonétique de la réplique, mot pour mot, en ${ARABIZI}, sans corriger ni passer à l'arabe standard ; mots français en français ; [inaudible] si besoin.
+"francais" : traduction de la réplique en français naturel et courant, fidèle au sens et au ton.${spk}
 ${prev ? "\nContexte, passages précédents :\n" + prev + "\n" : ""}
-Réponds uniquement avec ce JSON : {${it.spk ? '"personne":"P1","voix":"...",' : ""}"entendu":"...","francais":"..."}`;
+Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"personne":"P1","voix":"...",' : ""}"entendu":"...","francais":"..."}]}`;
   }
   async function gemini(wav, it) {
     const body = JSON.stringify({ contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64(wav) } }, { text: prompt(it) }] }],
@@ -383,7 +388,10 @@ Réponds uniquement avec ce JSON : {${it.spk ? '"personne":"P1","voix":"...",' :
       const c = (j.candidates || [])[0], txt = ((c && c.content && c.content.parts) || []).map(p => p.text || "").join("");
       let o; try { o = JSON.parse(txt); } catch { const a = txt.indexOf("{"), b = txt.lastIndexOf("}"); o = JSON.parse(txt.slice(a, b + 1)); }
       const u = j.usageMetadata || {};
-      return { entendu: o.entendu || "", francais: o.francais || "", personne: o.personne || "", voix: o.voix || "",
+      let rep = Array.isArray(o.repliques) ? o.repliques : Array.isArray(o) ? o : [o];
+      rep = rep.filter(r => r && (r.francais || r.entendu)).map(r => ({ personne: r.personne || "", voix: r.voix || "", entendu: r.entendu || "", francais: r.francais || "" }));
+      if (!rep.length) throw new Error("Réponse vide");
+      return { repliques: rep,
         tin: u.promptTokenCount || 0, tout: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) };
     }
     throw new Error("Gemini saturé");
@@ -413,11 +421,12 @@ Réponds uniquement avec ce JSON : {${it.spk ? '"personne":"P1","voix":"...",' :
     const feed = $("feed"), se = document.scrollingElement, atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
     feed.innerHTML = items.length ? items.map(it => {
       const lg = cfg.log.find(l => l.id === it.id && l.at === it.at) || {};
-      return '<div class="sub-line" data-id="' + it.id + '"><div class="meta"><span>' + hm(it.at) + '</span>' + (it.personne ? '<span class="who">' + esc(it.personne) + '</span>' : "") +
+      return '<div class="sub-line" data-id="' + it.id + '"><div class="meta"><span>' + hm(it.at) + '</span>' + (it.repliques && it.repliques.length > 1 ? '<span>' + it.repliques.length + ' répliques</span>' : "") +
         '<span>' + it.dur.toFixed(1) + ' s audio</span>' + (it.prepMs != null ? '<span>préparation ' + it.prepMs + ' ms</span>' : "") + (it.delay != null ? '<span>délai ' + sec(it.delay) + '</span>' : "") +
         '<span>' + (it.clean ? "nettoyé" : "brut") + (it.ns ? " · réduc. iPhone" : "") + '</span></div>' +
         (it.status === "run" ? '<div class="pend"><span class="dot"></span>Traduction en cours…</div>' : it.status === "err" ? '<div class="err">' + esc(it.err) + '</div>'
-          : '<div class="fr">' + esc(it.francais) + '</div><div class="tn">' + esc(it.entendu) + (it.voix ? ' · <i>' + esc(it.voix) + '</i>' : "") + '</div>' +
+          : it.repliques.map(r => '<div class="rep">' + (it.spk ? '<span class="who">' + esc(r.personne || "?") + '</span>' : (it.repliques.length > 1 ? '<span class="who">—</span>' : "")) +
+              '<div><div class="fr">' + esc(r.francais) + '</div><div class="tn">' + esc(r.entendu) + (r.voix ? ' · <i>' + esc(r.voix) + '</i>' : "") + '</div></div></div>').join("") +
             '<div class="rate">' + (it.url ? '<button type="button" data-a="play">▶︎</button>' : "") +
             [["ok", "Juste"], ["mid", "Approx."], ["ko", "Faux"]].map(([k, l]) => '<button type="button" class="' + k + '" data-r="' + k + '" aria-pressed="' + (lg.rating === k) + '">' + l + '</button>').join("") +
             (it.spk ? '<button type="button" class="ok" data-w="ok" aria-pressed="' + (lg.who === "ok") + '">Locuteur ✓</button><button type="button" class="ko" data-w="ko" aria-pressed="' + (lg.who === "ko") + '">Locuteur ✗</button>' : "") + '</div>') +
