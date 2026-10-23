@@ -64,6 +64,8 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 /* Deux boutons de même taille : J'écoute (gauche), Je parle à maintenir (droite) */
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .duo .mic{padding:0 10px;text-align:center;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+.mic.paused{background:var(--surface-2);color:var(--muted)}
+.mic:disabled{cursor:default}
 .mic.talk{background:color-mix(in srgb,var(--me) 38%,var(--surface));color:#fff}
 .mic.talk.hold{background:var(--me)}
 .mic.talk:disabled{opacity:.6;cursor:default}
@@ -194,7 +196,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v27 · 23/10 03:37";
+  const VERSION = "banc v28 · 23/10 03:52";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -311,7 +313,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   }
   $("toggle").onclick = () => {
     ensureCtx();
-    if (talk) { resumeAfter = !resumeAfter; renderButtons(); return; } // pendant une réponse : choisit seulement si l'écoute reprend après
+    if (talk) return; // inactif pendant ma réponse
     listening ? stop() : start();
   };
   document.addEventListener("visibilitychange", async () => { if (listening && document.visibilityState === "visible") { try { wake = await navigator.wakeLock.request("screen"); } catch {} } });
@@ -643,6 +645,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     it.status = "run"; it.dur = durS; renderFeed(); renderButtons(); setState("Traduction de ta réponse…", "");
     try {
       const wav = await prepWav(pcm, talkRate, it.clean);
+      it.urlFr = URL.createObjectURL(new Blob([wav], { type: "audio/wav" })); // mon français, tel qu'envoyé à Gemini
       Object.assign(it, await geminiReply(wav, it), { status: "ok" });
     } catch (e) { it.status = "err"; it.err = e.message || String(e); }
     renderFeed();
@@ -663,8 +666,11 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     }, 300);
   }
   function renderButtons() {
-    const on = listening || resumeAfter; // resumeAfter : l'écoute reprendra après la réponse
-    $("toggleLabel").textContent = on ? "Arrêter l'écoute" : "J'écoute"; $("toggle").classList.toggle("on", !!on);
+    // Pendant ma réponse, le bouton de gauche est inactif : « Écoute en pause » (gris) si elle reprendra après, sinon « J'écoute »
+    const paused = !!talk && resumeAfter, on = listening && !talk;
+    $("toggleLabel").textContent = paused ? "Écoute en pause" : on ? "Arrêter l'écoute" : "J'écoute";
+    $("toggle").classList.toggle("on", on); $("toggle").classList.toggle("paused", paused);
+    $("toggle").disabled = !!talk;
     $("talkLabel").textContent = talk === "rec" ? "Je t'écoute…" : talk === "wait" ? "Traduction…" : talk === "speak" ? "■ Arrêter la voix" : "Je parle";
     $("talk").classList.toggle("hold", talk === "rec");
   }
@@ -705,7 +711,10 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
         if (it.status === "ok" || it.status === "err") {
           html += '<button type="button" class="meta me" data-id="' + it.id + '" data-a="tools">' + hm(it.at) + ' · ' + it.dur.toFixed(1) + ' s' +
             (it.delay != null ? ' · voix après ' + sec(it.delay) : "") + (it.voiceErr ? ' · voix indisponible' : "") + (openTools === it.id ? " ▴" : " ▾") + '</button>';
-          if (openTools === it.id && it.url) html += '<div class="tools me" data-id="' + it.id + '"><div class="rate"><button type="button" data-a="play">' + (playingId === it.id ? "■ Arrêter" : "▶︎ Réécouter") + '</button></div></div>';
+          if (openTools === it.id && (it.url || it.urlFr)) {
+            const pbtn = (k, l, u) => u ? '<button type="button" data-a="play" data-k="' + k + '">' + (playingId === it.id + ":" + k ? "■ Arrêter" : "▶︎ " + l) + '</button>' : "";
+            html += '<div class="tools me" data-id="' + it.id + '"><div class="rate">' + pbtn("fr", "Français", it.urlFr) + pbtn("tn", "Tunisien", it.url) + '</div></div>';
+          }
         }
         continue;
       }
@@ -732,12 +741,14 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     if (atBottom) se.scrollTop = se.scrollHeight;
   }
   // Réécoute : un seul extrait à la fois ; toucher de nouveau l'extrait en cours l'arrête
+  // playingId : extrait en cours ("12") ou, pour mes réponses, "12:fr" (mon français) / "12:tn" (voix tunisienne)
   let player = null, playingId = 0;
   function stopPlay() { if (player) { player.pause(); player.onended = null; } player = null; playingId = 0; }
-  function togglePlay(it) {
-    const same = playingId === it.id; stopPlay();
+  function togglePlay(it, kind) {
+    const key = kind ? it.id + ":" + kind : it.id, url = kind === "fr" ? it.urlFr : it.url;
+    const same = playingId === key; stopPlay();
     if (same) { renderFeed(); return; }
-    player = new Audio(it.url); playingId = it.id;
+    player = new Audio(url); playingId = key;
     player.onended = () => { player = null; playingId = 0; renderFeed(); };
     player.play().catch(() => { stopPlay(); renderFeed(); });
     renderFeed();
@@ -746,7 +757,8 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     const line = e.target.closest("[data-id]"); if (!line) return;
     if (e.target.closest("[data-a=tools]")) { const id = Number(line.dataset.id); openTools = openTools === id ? 0 : id; renderFeed(); return; }
     const it = items.find(x => x.id === Number(line.dataset.id)); if (!it) return;
-    if (e.target.closest("[data-a=play]") && it.url) togglePlay(it);
+    const pb = e.target.closest("[data-a=play]");
+    if (pb && pb.dataset.k) togglePlay(it, pb.dataset.k); else if (pb && it.url) togglePlay(it);
   };
 
   // ---------- Mesures ----------

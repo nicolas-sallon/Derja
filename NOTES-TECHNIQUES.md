@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v27).
+Mise à jour : 23/10/2026 (app v2.5, banc v28).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -106,9 +106,17 @@ Mise à jour : 23/10/2026 (app v2.5, banc v27).
   - La traduction est au masculin. Le registre vient de l'app. Le contexte reprend les 3 derniers échanges.
 - **Voix.**
   - Elle utilise la voix choisie dans l'app (Orus ou Charon), lue depuis `localStorage["derja-express-v1"]` : même site, donc stockage partagé.
-  - Elle est lue en continu, comme dans l'app. Le son reçu est gardé dans un WAV pour « ▶︎ Réécouter », sans nouvel appel.
+  - Elle est lue en continu, comme dans l'app. Le son reçu est gardé dans un WAV pour la réécoute, sans nouvel appel.
+- **Réécoute (v28).** Le volet sous ma bulle a deux boutons, « ▶︎ Français » et « ▶︎ Tunisien ». Un seul son est joué à la fois (`playingId` = `id:fr` ou `id:tn`).
+  - Français : mon enregistrement, tel qu'envoyé à Gemini (`urlFr`).
+  - Tunisien : la voix de Gemini (`url`).
+  - Utile pour savoir si une erreur vient de la compréhension de ma voix ou de la traduction.
   - Toucher Je parle pendant la voix l'arrête.
-- **Reprise.** 0,3 s après la fin de la voix, l'écoute reprend si elle était active à l'appui (`resumeAfter`). Toucher J'écoute pendant une réponse change seulement ce choix.
+- **Reprise.** 0,3 s après la fin de la voix, l'écoute reprend si elle était active à l'appui (`resumeAfter`).
+- **Bouton de gauche pendant ma réponse (v28)** : il est **inactif**, du premier appui jusqu'à la fin de la voix (choix validé).
+  - Il affiche « Écoute en pause » en gris si l'écoute reprendra ensuite.
+  - Sinon il affiche « J'écoute ».
+  - Il redevient « Arrêter l'écoute » en rouge à la reprise.
 - **Contexte.** Mes réponses entrent dans le contexte écrit des extraits suivants, sous la forme « Moi : arabizi (= français) ».
 - **Affichage.** Ma bulle est à droite, en bleu plein `#3d8bff`, avec le français en gros et l'arabizi en dessous. Sous la bulle : heure, durée, « voix après X s » (du relâchement au début de la voix) et le volet de réécoute.
 - **Mesures.** La ligne « Réponses (Je parle) » donne le nombre de réponses et le délai moyen avant la voix. Le coût inclut la voix : 6 $ par million de tokens audio.
