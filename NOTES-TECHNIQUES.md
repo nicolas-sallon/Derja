@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v29).
+Mise à jour : 23/10/2026 (app v2.5, banc v31).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -124,7 +124,7 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
   - **Contenu d'une voix :**
     - un code fixe (`V3`) ;
     - un nom, proposé par Gemini (`suggest`, affiché « V3 · grand-mère ? ») puis modifiable. Une fois nommée par l'utilisateur (`userNamed`), Gemini ne la renomme plus ;
-    - le genre et la couleur (palette homme/femme d'origine, plus jaune pour enfant), couleur modifiable d'un toucher ;
+    - le genre et la couleur. La première couleur est proposée automatiquement : tons froids pour un homme, chauds pour une femme, la moins utilisée du groupe. Cette répartition ne sert qu'à ce premier choix ;
     - une référence audio de 5 s (Int16, 16 kHz) ;
     - la hauteur médiane (`f0`) et l'empreinte de timbre (`mfcc`) ;
     - un score de qualité (`voicedSec`, `snr`) et des marqueurs (`provisoire`, `importee`, `doubt`) ;
@@ -167,11 +167,23 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
     - Confirmation par Gemini : {"meme":true/false}.
     - La nouvelle version est envoyée chez Google **avant** le basculement, qui est instantané. Le code de la voix ne change pas, donc aucun appel en cours ne peut voir apparaître une voix « nouvelle ».
 - **Galerie dans les réglages :** écouter, renommer, cocher « présente », changer la couleur, fusionner (⋯ → « = autre voix »), supprimer.
+- **Couleurs (v31).** Un toucher sur le rond ouvre un nuancier sous la ligne, sans titres de catégories, dans cet ordre :
+  - hommes : bleu ciel, vert menthe, pervenche, turquoise, vert d'eau ;
+  - femmes : rose poudré, pêche, jaune doré, corail, lilas ;
+  - enfants : jaune citron, sable ;
+  - puis les couleurs personnalisées déjà utilisées, et « + », qui ouvre la roue de couleurs de l'iPhone (`input type=color`).
+  - Un petit point marque une couleur déjà prise par une autre voix ; on peut la choisir quand même. Le choix s'applique tout de suite, dans la galerie et dans les bulles.
+  - Le nom affiché au-dessus des bulles est éclairci si la couleur est trop sombre pour le fond noir (`readable`). La bulle garde la couleur choisie.
 - **Ajouter une voix à la main (« + »)** :
   - soit enregistrer en maintenant le bouton, l'écoute étant arrêtée ;
   - soit importer un fichier audio ou vidéo, décodé par `decodeAudioData`. Le sélecteur n'a **aucun filtre de type** : avec `accept="audio/*,video/*"`, iOS grisait certains fichiers (même correctif que pour l'app) ;
   - l'app choisit les 5 meilleures secondes (avec « Passage suivant » pour en changer), le nom est obligatoire et le genre est prérempli d'après la hauteur ;
   - un fichier importé est marqué « importée », parce que son micro et sa pièce sont différents : il peut être remplacé par un bon extrait de conversation.
+  - **Vérification après l'ajout (v31, `checkManualDup`)** : immédiate, sans passer par la file de fond, puisque c'est l'utilisateur qui l'a lancée. Même tri par hauteur et même question à Gemini que pour les doublons.
+    - Pas de fusion automatique : un bandeau « Ressemble à X : [Fusionner] [Garder les deux] » s'affiche sur la ligne.
+    - Fusionner : le nom que tu viens de donner l'emporte, et la meilleure des deux références est gardée.
+    - Garder les deux : la paire est mémorisée (`notDup`), et la question n'est plus posée.
+    - Pendant la conversation, rien ne change. Une voix nouvelle n'a jamais de nom donné par l'utilisateur, donc la fusion y reste automatique et garde le nom déjà donné.
 - **Mesures :** la ligne « Voix (session) » donne la moyenne des références jointes par appel, les voix nouvelles, les fusions, les remplacements, les « ? », les refus par la hauteur, et le nombre et le coût des appels de fond.
 
 ## Tarifs (pour estimer)

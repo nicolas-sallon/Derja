@@ -127,6 +127,16 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 .seg2{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:2px}
 .seg2 button{appearance:none;border:0;background:none;color:var(--muted);font:600 13px var(--sans);padding:6px 10px;border-radius:8px;cursor:pointer}
 .seg2 button[aria-pressed="true"]{background:var(--surface);color:var(--fg)}
+.gw{border-bottom:1px solid var(--line)}
+.gw .gv{border-bottom:0}
+.gnote{font-size:12px;color:var(--muted);padding:0 0 8px 30px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.gnote b{color:var(--fg)}
+.cpanel{display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 10px 30px}
+.csw{appearance:none;border:2px solid transparent;width:30px;height:30px;border-radius:50%;cursor:pointer;position:relative;padding:0}
+.csw.on{border-color:var(--fg)}
+.csw i{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:var(--surface);border:2px solid var(--fg)}
+.csw.plus{display:grid;place-items:center;background:var(--surface-2);color:var(--fg);font:600 18px var(--sans);border:1px dashed var(--muted);overflow:hidden}
+.csw.plus input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
 .addp{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
 .muted{color:var(--muted);font-size:13px}
 @media (prefers-reduced-motion:reduce){.meter .fill,.mic{transition:none}.dot{animation:none}}
@@ -237,7 +247,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v30 · 23/10 16:32";
+  const VERSION = "banc v31 · 23/10 17:31";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -603,8 +613,13 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   }
   const resolve = id => { let k = id, i = 0; while (k && meta.aliases[k] && i++ < 10) k = meta.aliases[k]; return k; };
   const voiceOf = id => { const k = resolve(id); return k ? gallery.find(v => v.id === k) || null : null; };
-  const PAL = { homme: ["#7cc4ff", "#7fe0a8", "#9b9cff"], femme: ["#ff9fc4", "#ffad85", "#f0cf5a"], enfant: ["#ece38c"] }, GREY = "#9a9ca6";
+  // Nuancier : hommes (tons froids), femmes (tons chauds), enfants. La répartition ne sert qu'à la première couleur proposée.
+  const PAL = { homme: ["#7cc4ff", "#7fe0a8", "#9b9cff", "#6fd6d0", "#a8e6c1"], femme: ["#ff9fc4", "#ffad85", "#f0cf5a", "#ff8f7a", "#c9a7f5"], enfant: ["#ece38c", "#e3c79a"] }, GREY = "#9a9ca6";
   const ALL_COLORS = [...PAL.homme, ...PAL.femme, ...PAL.enfant];
+  // Couleur du nom au-dessus des bulles : éclaircie si la couleur choisie est trop sombre pour le fond noir
+  const readable = c => { const m = /^#([0-9a-f]{6})$/i.exec(c || ""); if (!m) return c; const n = parseInt(m[1], 16), r = n >> 16, g = n >> 8 & 255, b = n & 255;
+    const L = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; if (L >= 0.45) return c; const k = (0.45 - L) / (1 - L); const f = x => Math.round(x + (255 - x) * k);
+    return "#" + [f(r), f(g), f(b)].map(x => x.toString(16).padStart(2, "0")).join(""); };
   const genreOf = g => /^(h|m)/i.test(g || "") ? "homme" : /^f/i.test(g || "") ? "femme" : /^e/i.test(g || "") ? "enfant" : "";
   function nextColor(genre) {
     const pal = PAL[genre] || PAL.homme, used = c => gallery.filter(v => v.color === c).length;
@@ -640,13 +655,14 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     storeMeta(); idb.del(v.id).catch(() => {}); if (v.file) deleteFileLater(v.file, 0);
   }
   // Fusion : « from » est la même personne que « to » (les bulles déjà affichées changent de nom et de couleur)
-  function mergeVoice(from, to) {
+  function mergeVoice(from, to, manual = false) {
     if (!from || !to || from === to) return;
     meta.aliases[from.id] = to.id;
-    if (!to.userNamed && from.userNamed) { to.name = from.name; to.userNamed = true; }
+    if (from.userNamed && (!to.userNamed || manual)) { to.name = from.name; to.userNamed = true; } // fusion proposée après un ajout : le nom que tu viens de donner l'emporte
     if (!to.suggest && from.suggest) to.suggest = from.suggest;
-    if (to.provisoire && !from.provisoire) { // garder la meilleure référence
-      const old = to.file; Object.assign(to, { ref: from.ref, f0: from.f0, mfcc: from.mfcc, voicedSec: from.voicedSec, snr: from.snr, file: from.file, provisoire: false, refVer: to.refVer + 1 });
+    const fromBetter = manual && !from.provisoire && (to.provisoire || to.importee && !from.importee || (from.snr >= to.snr + 3) || (from.voicedSec >= to.voicedSec + 1 && from.snr >= to.snr - 1));
+    if ((to.provisoire && !from.provisoire) || fromBetter) { // garder la meilleure référence
+      const old = to.file; Object.assign(to, { ref: from.ref, f0: from.f0, mfcc: from.mfcc, voicedSec: from.voicedSec, snr: from.snr, file: from.file, provisoire: false, importee: from.importee, refVer: to.refVer + 1 });
       if (old) deleteFileLater(old); from.file = null;
     }
     if (present.has(from.id)) present.add(to.id);
@@ -816,24 +832,37 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   }
 
   // ---------- Galerie dans les réglages ----------
-  let galPlaying = null;
+  let galPlaying = null, openColor = null;
+  // Panneau de couleurs : hommes, femmes, enfants, puis couleurs personnalisées déjà utilisées et « + » (roue de l'iPhone)
+  function colorPanel(v) {
+    const custom = [...new Set(gallery.map(o => o.color).filter(c => c && !ALL_COLORS.includes(c)))];
+    const sw = c => '<button type="button" class="csw' + (c === v.color ? " on" : "") + '" data-g="pick" data-c="' + c + '" style="background:' + c + '" aria-label="Couleur ' + c + '">' +
+      (gallery.some(o => o !== v && o.color === c) ? '<i></i>' : "") + '</button>';
+    return '<div class="cpanel">' + [...ALL_COLORS, ...custom].map(sw).join("") +
+      '<label class="csw plus" aria-label="Couleur personnalisée">+<input type="color" data-g="custom" value="' + (/^#[0-9a-f]{6}$/i.test(v.color) ? v.color : "#7cc4ff") + '"></label></div>';
+  }
   function renderGallery() {
     const el = $("gallery"); if (!el) return;
     const list = gallery.slice().sort((a, b) => (present.has(b.id) - present.has(a.id)) || (b.lastHeard || 0) - (a.lastHeard || 0));
-    el.innerHTML = list.length ? list.map(v => '<div class="gv" data-v="' + v.id + '">' +
+    el.innerHTML = list.length ? list.map(v => '<div class="gw" data-v="' + v.id + '"><div class="gv">' +
       '<button type="button" class="gdot" data-g="color" style="background:' + v.color + '" aria-label="Changer la couleur"></button>' +
       '<div class="gmain"><input type="text" data-g="name" value="' + esc(v.name) + '" placeholder="' + esc(v.suggest ? v.suggest + " ?" : "Nom") + '" autocomplete="off">' +
       '<small>' + v.id + ' · ' + v.genre + (v.f0 ? ' · ' + v.f0 + ' Hz' : "") + (v.provisoire ? ' · provisoire' : "") + (v.importee ? ' · importée' : "") + (v.temp ? ' · temporaire' : "") + (v.doubt ? ' · <b>genre à vérifier</b>' : "") + '</small></div>' +
       '<label class="gchk" title="Présente"><input type="checkbox" data-g="present"' + (present.has(v.id) ? " checked" : "") + '></label>' +
       '<button type="button" class="btn sm" data-g="play">' + (galPlaying === v.id ? "■" : "▶︎") + '</button>' +
       '<select data-g="merge" aria-label="Fusionner avec"><option value="">⋯</option>' + gallery.filter(o => o !== v).map(o => '<option value="' + o.id + '">= ' + esc(labelOf(o)) + '</option>').join("") + '<option value="__del">Supprimer</option></select>' +
-      '</div>').join("") : '<p class="muted">Aucune voix pour l\'instant : elles s\'ajoutent toutes seules au fil des conversations, ou avec « + Ajouter une voix ».</p>';
+      '</div>' + (v.checking ? '<div class="gnote">Vérification : cette voix existe-t-elle déjà ?</div>' : "") +
+      (v.dupOf && voiceOf(v.dupOf) ? '<div class="gnote">Ressemble à <b>' + esc(labelOf(voiceOf(v.dupOf))) + '</b> : <button type="button" class="btn sm" data-g="dupMerge">Fusionner</button> <button type="button" class="btn sm" data-g="dupKeep">Garder les deux</button></div>' : "") +
+      (openColor === v.id ? colorPanel(v) : "") + '</div>').join("") : '<p class="muted">Aucune voix pour l\'instant : elles s\'ajoutent toutes seules au fil des conversations, ou avec « + Ajouter une voix ».</p>';
     $("galleryMode").textContent = filesMode === "files" ? "Références envoyées une fois chez Google (API Files), renvoyées après 48 h." : "API Files indisponible : références jointes à chaque appel (plus lourd). " + filesErr;
   }
   $("gallery").addEventListener("click", e => {
     const row = e.target.closest("[data-v]"), b = e.target.closest("[data-g]"); if (!row || !b) return;
     const v = gallery.find(x => x.id === row.dataset.v); if (!v) return;
-    if (b.dataset.g === "color") { v.color = ALL_COLORS[(ALL_COLORS.indexOf(v.color) + 1) % ALL_COLORS.length]; storeVoice(v); renderGallery(); renderFeed(); }
+    if (b.dataset.g === "color") { openColor = openColor === v.id ? null : v.id; renderGallery(); }
+    if (b.dataset.g === "pick") { v.color = b.dataset.c; openColor = null; storeVoice(v); renderGallery(); renderFeed(); }
+    if (b.dataset.g === "dupMerge") { const to = voiceOf(v.dupOf); v.dupOf = null; if (to) mergeVoice(v, to, true); else renderGallery(); }
+    if (b.dataset.g === "dupKeep") { v.notDup = [...(v.notDup || []), v.dupOf]; v.dupOf = null; storeVoice(v); renderGallery(); }
     if (b.dataset.g === "play") {
       stopPlay(); if (galPlaying === v.id) { galPlaying = null; renderGallery(); return; }
       galPlaying = v.id; player = new Audio(URL.createObjectURL(new Blob([refWav(v)], { type: "audio/wav" })));
@@ -845,6 +874,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     const v = gallery.find(x => x.id === row.dataset.v); if (!v) return;
     if (b.dataset.g === "name") { v.name = b.value.trim(); v.userNamed = !!v.name; storeVoice(v); renderFeed(); }
     if (b.dataset.g === "present") { b.checked ? present.add(v.id) : present.delete(v.id); }
+    if (b.dataset.g === "custom") { v.color = b.value; openColor = null; storeVoice(v); renderGallery(); renderFeed(); }
     if (b.dataset.g === "merge") {
       const to = b.value; b.value = "";
       if (to === "__del") { if (confirm("Supprimer " + labelOf(v) + " de la galerie ?")) { removeVoice(v); renderGallery(); renderFeed(); } return; }
@@ -852,6 +882,24 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       if (t && confirm(labelOf(v) + " est la même personne que " + labelOf(t) + " : fusionner ?")) mergeVoice(v, t);
     }
   });
+
+  // Après un ajout manuel : vérification immédiate (sans attendre les traductions en cours, c'est toi qui l'as demandée).
+  // Pas de fusion automatique : un bandeau propose « Fusionner » ou « Garder les deux ».
+  async function checkManualDup(v) {
+    const cands = gallery.filter(o => o !== v && !(v.notDup || []).includes(o.id) && o.f0 && v.f0 && Math.abs(st(o.f0) - st(v.f0)) <= 4)
+      .sort((p, q) => (timbreDist(p.mfcc, v.mfcc) ?? 99) - (timbreDist(q.mfcc, v.mfcc) ?? 99)).slice(0, 12);
+    if (!cands.length || !cfg.key) return;
+    v.checking = true; renderGallery();
+    try {
+      await Promise.all([v, ...cands].map(ensureFile));
+      const parts = [];
+      cands.forEach(o => parts.push({ text: "Voix de référence " + o.id + " :" }, refPart(o)));
+      parts.push({ text: "Nouvelle voix X :" }, refPart(v), { text: 'La nouvelle voix X est-elle la même personne que l\'une des voix de référence ? Juge uniquement sur le timbre de la voix, pas sur le contenu. Réponds uniquement avec ce JSON : {"meme":"V…"} ou {"meme":"aucune"}' });
+      const o = await askJson(parts), m = String(o.meme || "").toUpperCase();
+      if (cands.some(x => x.id === m) && gallery.includes(v)) v.dupOf = m;
+    } catch {}
+    v.checking = false; renderGallery();
+  }
 
   // ---------- Ajouter une voix à la main : enregistrer ou importer un fichier ----------
   let addRec = false, addBuf = [], addLen = 0, addX = null, addA = null, addWins = [], addIdx = 0, addImported = false, addGenre = "";
@@ -881,6 +929,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     const v = createVoice({ x: addX, a: addA, genre: addGenre, name, userNamed: true, importee: addImported, start: addWins[addIdx] || 0 });
     if (listening) present.add(v.id);
     addGenre = ""; addShow(false); renderGallery();
+    checkManualDup(v);
   };
   const addRecBtn = $("addRec");
   addRecBtn.addEventListener("pointerdown", async e => {
@@ -1190,7 +1239,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
         // Voix de la galerie (nom et couleur à jour, même après un renommage ou une fusion), sinon nom proposé ou « ? »
         const v = it.spk && r.vid ? voiceOf(r.vid) : null, c = v ? v.color : GREY;
         const key = !it.spk ? "" : v ? v.id : "?" + (r.nom || "");
-        if (it.spk && key !== last) html += '<div class="who" style="color:' + c + '">' + esc(v ? labelOf(v) : r.nom ? r.nom + " ?" : "?") + '</div>';
+        if (it.spk && key !== last) html += '<div class="who" style="color:' + readable(c) + '">' + esc(v ? labelOf(v) : r.nom ? r.nom + " ?" : "?") + '</div>';
         last = key;
         html += '<div class="bub" style="--c:' + c + '"><div class="fr">' + esc(r.francais) + '</div><div class="tn">' + esc(r.entendu) + '</div></div>';
       }
