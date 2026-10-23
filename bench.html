@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v32 · 23/10 17:47";
+  const VERSION = "banc v33 · 23/10 17:54";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -608,6 +608,18 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       const all = await idb.all();
       meta = all.find(x => x.id === "_meta") || meta;
       gallery = all.filter(x => x.id !== "_meta").sort((a, b) => a.n - b.n);
+      // Renumérotation à l'ouverture (V1, V2… dans l'ordre de création, sans trous) : sans risque à ce moment,
+      // aucun appel n'est en cours et le fil est vide. Les correspondances de fusion de la session précédente ne servent plus.
+      const map = {}; gallery.forEach((v, i) => { map[v.id] = "V" + (i + 1); });
+      const changed = gallery.filter(v => map[v.id] !== v.id);
+      if (changed.length) await Promise.all(changed.map(v => idb.del(v.id)));
+      gallery.forEach((v, i) => {
+        const old = v.id; v.id = map[old]; v.n = i + 1;
+        if (v.dupOf) v.dupOf = map[v.dupOf] || null;
+        if (v.notDup) v.notDup = v.notDup.map(k => map[k]).filter(Boolean);
+        if (old !== v.id || v.dupOf === null) storeVoice(v);
+      });
+      meta.aliases = {}; meta.nextN = gallery.length + 1; storeMeta();
     } catch { gallery = []; }
     renderGallery(); renderFeed();
   }

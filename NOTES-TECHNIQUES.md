@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v32).
+Mise à jour : 23/10/2026 (app v2.5, banc v33).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -129,6 +129,10 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
     - la hauteur médiane (`f0`) et l'empreinte de timbre (`mfcc`) ;
     - un score de qualité (`voicedSec`, `snr`) et des marqueurs (`provisoire`, `importee`, `doubt`) ;
     - la référence Google (`file`) et sa version (`refVer`).
+  - **Numéros des voix (v33).**
+    - Pendant une session, un numéro libéré par une fusion ou une suppression n'est jamais réutilisé. Un appel en cours ou une bulle affichée peuvent encore porter ce code, rattaché via `meta.aliases`.
+    - À l'ouverture du banc, les voix sont renumérotées V1, V2… dans l'ordre de création, sans trous, et les correspondances sont effacées. C'est sans risque : aucun appel n'est en cours et le fil est vide.
+    - Les références chez Google ne dépendent pas du numéro.
   - **Galerie pleine :** la voix sans nom entendue il y a le plus longtemps sort. Si toutes ont un nom, la voix nouvelle reste temporaire.
   - **Ouverture depuis l'écran d'accueil impérative :** Safari peut effacer les données d'un site non visité pendant 7 jours, et le stockage d'un onglet est séparé de celui de l'app de l'écran d'accueil.
 - **Références chez Google (API Files).**
