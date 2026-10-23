@@ -26,12 +26,15 @@ body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--sans);-webkit-font
    Toujours verticale, à l'endroit ou à l'envers : --rot, --w et --h sont calculés en JS (voir « Orientation »). */
 .stage,.sheet{position:fixed;top:50%;left:50%;width:100vw;height:100vh;transform:translate(-50%,-50%) rotate(var(--rot,0deg))}
 html.side .stage,html.side .sheet{width:100vh;height:100vw}
+/* Hauteur minimale de la page donnée explicitement : Safari calculait « 100 % » d'après la hauteur de l'écran en paysage (page à moitié vide) */
+.stage>.app{min-height:100vh}
+html.side .stage>.app{min-height:100vw}
 .stage{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 html.anim .stage,html.anim .sheet{transition:transform .35s ease}
 @media (prefers-reduced-motion:reduce){html.anim .stage,html.anim .sheet{transition:none}}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 [hidden]{display:none!important}
-.app{display:flex;flex-direction:column;min-height:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:640px;margin:0 auto}
+.app{display:flex;flex-direction:column;min-height:100%;padding-left:max(16px,var(--sl,env(safe-area-inset-left,0px)));padding-right:max(16px,var(--sr,env(safe-area-inset-right,0px)));max-width:640px;margin:0 auto}
 header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding-block:calc(12px + var(--st)) 8px}
 h1{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
 h1 small{display:block;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0}
@@ -186,7 +189,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v24 · 23/10 03:04";
+  const VERSION = "banc v25 · 23/10 03:08";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -311,6 +314,9 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     const st = $("stage").getBoundingClientRect();
     $("dbg").textContent = " · " + W + "×" + H + " i" + innerWidth + "×" + innerHeight + " s" + screen.width + "×" + screen.height + " o" + osAngle() + " r" + r + " p" + Math.round(st.width) + "×" + Math.round(st.height);
     s.setProperty("--st", "env(safe-area-inset-" + top + ",0px)"); s.setProperty("--sb", "env(safe-area-inset-" + OPP[top] + ",0px)");
+    // Bords gauche et droit de la page : en paysage, ce sont les bords haut et bas de l'écran (l'encoche n'y est plus)
+    const left = { 0: "left", 90: "top", 180: "right", "-90": "bottom" }[r];
+    s.setProperty("--sl", "env(safe-area-inset-" + left + ",0px)"); s.setProperty("--sr", "env(safe-area-inset-" + OPP[left] + ",0px)");
   }
   // iOS envoie « resize » et « orientationchange » dans un ordre variable : on recalcule plusieurs fois après une rotation
   const relayout = () => { applyFlip(); [100, 300, 700].forEach(ms => setTimeout(applyFlip, ms)); };
