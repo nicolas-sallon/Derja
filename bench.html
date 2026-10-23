@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v31 · 23/10 17:31";
+  const VERSION = "banc v32 · 23/10 17:47";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -658,7 +658,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   function mergeVoice(from, to, manual = false) {
     if (!from || !to || from === to) return;
     meta.aliases[from.id] = to.id;
-    if (from.userNamed && (!to.userNamed || manual)) { to.name = from.name; to.userNamed = true; } // fusion proposée après un ajout : le nom que tu viens de donner l'emporte
+    if (from.userNamed && !to.userNamed) { to.name = from.name; to.userNamed = true; } // le nom déjà connu (voix existante) est gardé ; sinon celui de la voix fusionnée
     if (!to.suggest && from.suggest) to.suggest = from.suggest;
     const fromBetter = manual && !from.provisoire && (to.provisoire || to.importee && !from.importee || (from.snr >= to.snr + 3) || (from.voicedSec >= to.voicedSec + 1 && from.snr >= to.snr - 1));
     if ((to.provisoire && !from.provisoire) || fromBetter) { // garder la meilleure référence

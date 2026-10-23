@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v31).
+Mise à jour : 23/10/2026 (app v2.5, banc v32).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -181,7 +181,7 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
   - un fichier importé est marqué « importée », parce que son micro et sa pièce sont différents : il peut être remplacé par un bon extrait de conversation.
   - **Vérification après l'ajout (v31, `checkManualDup`)** : immédiate, sans passer par la file de fond, puisque c'est l'utilisateur qui l'a lancée. Même tri par hauteur et même question à Gemini que pour les doublons.
     - Pas de fusion automatique : un bandeau « Ressemble à X : [Fusionner] [Garder les deux] » s'affiche sur la ligne.
-    - Fusionner : le nom que tu viens de donner l'emporte, et la meilleure des deux références est gardée.
+    - Fusionner : le **nom de la voix existante** est gardé, puisque c'est celui que l'utilisateur connaît déjà (choix du 23/10). Le nouveau nom ne sert que si la voix existante n'en avait pas. La meilleure des deux références est gardée.
     - Garder les deux : la paire est mémorisée (`notDup`), et la question n'est plus posée.
     - Pendant la conversation, rien ne change. Une voix nouvelle n'a jamais de nom donné par l'utilisateur, donc la fusion y reste automatique et garde le nom déjà donné.
 - **Mesures :** la ligne « Voix (session) » donne la moyenne des références jointes par appel, les voix nouvelles, les fusions, les remplacements, les « ? », les refus par la hauteur, et le nombre et le coût des appels de fond.
