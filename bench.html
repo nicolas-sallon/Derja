@@ -24,7 +24,8 @@ html,body{height:100%;margin:0;overflow:hidden}
 body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
 /* La page défile dans .stage (et non dans le document) pour pouvoir la tourner d'un bloc.
    Toujours verticale, à l'endroit ou à l'envers : --rot, --w et --h sont calculés en JS (voir « Orientation »). */
-.stage,.sheet{position:fixed;top:50%;left:50%;width:var(--w,100vw);height:var(--h,100vh);transform:translate(-50%,-50%) rotate(var(--rot,0deg))}
+.stage,.sheet{position:fixed;top:50%;left:50%;width:100vw;height:100vh;transform:translate(-50%,-50%) rotate(var(--rot,0deg))}
+html.side .stage,html.side .sheet{width:100vh;height:100vw}
 .stage{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 html.anim .stage,html.anim .sheet{transition:transform .35s ease}
 @media (prefers-reduced-motion:reduce){html.anim .stage,html.anim .sheet{transition:none}}
@@ -111,7 +112,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 <div class="stage" id="stage">
 <div class="app">
   <header>
-    <h1>Derja Express<small>Banc d'essai <span id="ver" class="ver"></span></small></h1>
+    <h1>Derja Express<small>Banc d'essai <span id="ver" class="ver"></span><span id="dbg" class="ver"></span></small></h1>
     <button class="icon-btn" id="openSettings" aria-label="Réglages">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button>
@@ -185,7 +186,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v23 · 23/10 03:00";
+  const VERSION = "banc v24 · 23/10 03:04";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -305,7 +306,10 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     lastOs = os; rot = r;
     const s = de.style, top = EDGE[r];
     s.setProperty("--rot", r + "deg");
-    s.setProperty("--w", (side ? H : W) + "px"); s.setProperty("--h", (side ? W : H) + "px");
+    de.classList.toggle("side", side);
+    // Diagnostic provisoire, affiché à côté de la version (à retirer une fois la rotation validée sur iPhone)
+    const st = $("stage").getBoundingClientRect();
+    $("dbg").textContent = " · " + W + "×" + H + " i" + innerWidth + "×" + innerHeight + " s" + screen.width + "×" + screen.height + " o" + osAngle() + " r" + r + " p" + Math.round(st.width) + "×" + Math.round(st.height);
     s.setProperty("--st", "env(safe-area-inset-" + top + ",0px)"); s.setProperty("--sb", "env(safe-area-inset-" + OPP[top] + ",0px)");
   }
   // iOS envoie « resize » et « orientationchange » dans un ordre variable : on recalcule plusieurs fois après une rotation
