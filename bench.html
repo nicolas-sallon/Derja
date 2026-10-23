@@ -192,7 +192,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <div id="gallery"></div>
       <button class="btn" id="addOpen" type="button">+ Ajouter une voix</button>
       <div class="addp" id="addPanel" hidden>
-        <div class="row"><button class="btn" id="addRec" type="button">● Maintenir pour enregistrer</button><label class="btn">Importer un fichier<input type="file" id="addFile" accept="audio/*,video/*" hidden></label></div>
+        <div class="row"><button class="btn" id="addRec" type="button">● Maintenir pour enregistrer</button><label class="btn">Importer un fichier<input type="file" id="addFile" hidden></label></div>
         <p class="muted" id="addInfo" style="margin:0;font-size:13px"></p>
         <div id="addTools" hidden style="display:flex;flex-direction:column;gap:8px">
           <div class="row"><button class="btn sm" id="addPlay" type="button">▶︎ Écouter</button><button class="btn sm" id="addNext" type="button">Passage suivant</button></div>
@@ -237,7 +237,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v29 · 23/10 15:33";
+  const VERSION = "banc v30 · 23/10 16:32";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -906,7 +906,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       const mono = new Float32Array(buf.length);
       for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) mono[i] += d[i] / buf.numberOfChannels; }
       addLoad(await resample16(mono, buf.sampleRate, true), true);
-    } catch { $("addInfo").textContent = "Fichier illisible : essaie un mémo vocal (m4a), un mp3, un wav ou une vidéo."; }
+    } catch { $("addInfo").textContent = "Format non lu par l'iPhone (" + (f.name.split(".").pop() || "?") + ") : essaie un mémo vocal (m4a), un mp3, un wav ou une vidéo (mp4, mov)."; }
   });
 
 

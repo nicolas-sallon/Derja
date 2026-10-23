@@ -169,7 +169,7 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
 - **Galerie dans les réglages :** écouter, renommer, cocher « présente », changer la couleur, fusionner (⋯ → « = autre voix »), supprimer.
 - **Ajouter une voix à la main (« + »)** :
   - soit enregistrer en maintenant le bouton, l'écoute étant arrêtée ;
-  - soit importer un fichier audio ou vidéo, décodé par `decodeAudioData` ;
+  - soit importer un fichier audio ou vidéo, décodé par `decodeAudioData`. Le sélecteur n'a **aucun filtre de type** : avec `accept="audio/*,video/*"`, iOS grisait certains fichiers (même correctif que pour l'app) ;
   - l'app choisit les 5 meilleures secondes (avec « Passage suivant » pour en changer), le nom est obligatoire et le genre est prérempli d'après la hauteur ;
   - un fichier importé est marqué « importée », parce que son micro et sa pièce sont différents : il peut être remplacé par un bon extrait de conversation.
 - **Mesures :** la ligne « Voix (session) » donne la moyenne des références jointes par appel, les voix nouvelles, les fusions, les remplacements, les « ? », les refus par la hauteur, et le nombre et le coût des appels de fond.
