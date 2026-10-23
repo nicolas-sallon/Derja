@@ -11,7 +11,7 @@
 /* Banc d'essai à l'image de l'app : sous-titres en haut, mode et bouton en bas, réglages et mesures dans la feuille de réglages */
 :root{
   --bg:#0b0c0f; --surface:#17181d; --surface-2:#22242b; --line:#2e3038;
-  --fg:#f4f5f7; --muted:#9a9ca6; --accent:#3d8bff; --accent-ink:#fff; --rec:#ff453a;
+  --fg:#f4f5f7; --muted:#9a9ca6; --accent:#3d8bff; --accent-ink:#fff; --me:#3d8bff; --rec:#ff453a;
   --good:#30d158; --mid:#ffb340; --bad:#ff6961; --quiet:#4a4d57;
   --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
   --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;
@@ -61,6 +61,19 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .seg button:disabled{opacity:.4;cursor:default}
 .mic{appearance:none;border:0;width:100%;min-height:72px;border-radius:20px;background:var(--accent);color:var(--accent-ink);font:650 17px var(--sans);display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:background .15s}
 .mic.on{background:var(--rec)}
+/* Deux boutons de même taille : J'écoute (gauche), Je parle à maintenir (droite) */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.duo .mic{padding:0 10px;text-align:center;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+.mic.talk{background:color-mix(in srgb,var(--me) 38%,var(--surface));color:#fff}
+.mic.talk.hold{background:var(--me)}
+.mic.talk:disabled{opacity:.6;cursor:default}
+.hint{font-size:12px;color:var(--muted);text-align:center;margin-top:-4px}
+/* Mes répliques : à droite, bleu plein */
+.bub.me{align-self:flex-end;border-left:0;background:var(--me);border-radius:18px 18px 6px 18px;padding:8px 12px}
+.bub.me .tn{color:rgba(255,255,255,.85)}
+.bub.me.typing i{background:#fff}
+.bub.me.wait .fr{font-weight:500;font-style:italic;opacity:.9}
+.meta.me,.tools.me{align-self:flex-end;margin-right:10px;text-align:right}
 /* Jauge : gris = silence / bruit, vert = voix captée, rouge = saturation */
 .meter{position:relative;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--surface-2) 0%,var(--surface-2) 85%,color-mix(in srgb,var(--bad) 25%,var(--surface-2)) 85%);overflow:hidden}
 .meter .fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:7px;background:var(--quiet);transition:width 60ms linear}
@@ -122,12 +135,19 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <button type="button" disabled>J'écoute<br>TN → FR</button>
       <button type="button" aria-pressed="true">Écoute<br>continue</button>
     </div>
-    <button type="button" class="mic" id="toggle">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-      <span id="toggleLabel">Démarrer l'écoute continue</span>
-    </button>
+    <div class="duo">
+      <button type="button" class="mic" id="toggle">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg>
+        <span id="toggleLabel">J'écoute</span>
+      </button>
+      <button type="button" class="mic talk" id="talk" aria-label="Je parle : maintiens appuyé pendant que tu parles français">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        <span id="talkLabel">Je parle</span>
+      </button>
+    </div>
     <div class="meter-touch" id="meterTouch" role="slider" aria-label="Seuil de parole : fais glisser le trait"><div class="meter"><div class="fill" id="fill"></div><div class="nf" id="nf"></div><div class="th" id="th"></div></div></div>
     <div class="state"><b id="state">Arrêté</b><span><span id="stateR"></span><button type="button" class="thauto" id="thAuto" hidden>Auto</button></span></div>
+    <div class="hint">Je parle : maintiens appuyé pendant ta phrase. Désactive le mode silencieux pour entendre la voix.</div>
   </div>
 </div>
 
@@ -174,7 +194,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v26 · 23/10 03:14";
+  const VERSION = "banc v27 · 23/10 03:37";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -224,10 +244,19 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     if (cfg.clean) { srcNode.connect(hp); hp.connect(lp); lp.connect(proc); } else srcNode.connect(proc);
   }
 
-  async function start() {
-    if (!cfg.key) { setState("Ajoute ta clé Gemini dans les réglages", "warn"); $("sheet").hidden = false; return; }
-    const AC = window.AudioContext || window.webkitAudioContext;
-    ctx = new AC(); try { ctx.resume(); } catch {} // créé pendant le geste (exigence d'iOS)
+  // Un seul circuit audio pour toute la session : créé au premier geste (exigence d'iOS), jamais fermé.
+  // Il sert à capter (écoute continue, Je parle) et à jouer la voix tunisienne.
+  function ensureCtx() {
+    try {
+      if (!ctx || ctx.state === "closed") { const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC(); }
+      if (ctx.state !== "running") ctx.resume();
+    } catch {}
+  }
+  // Micro ouvert seulement quand on capte : pendant la voix tunisienne il est fermé,
+  // sinon iOS envoie le son vers l'écouteur (faible) au lieu du haut-parleur.
+  let micOpen = false, drawing = false;
+  async function openMic() {
+    if (micOpen) return true;
     const base = { echoCancellation: true, noiseSuppression: !!cfg.ns, autoGainControl: true };
     try {
       const gum = c => navigator.mediaDevices.getUserMedia({ audio: c });
@@ -238,7 +267,8 @@ th{color:var(--muted);font-weight:600;font-size:12px}
         const cur = stream.getAudioTracks()[0], curId = cur && cur.getSettings ? cur.getSettings().deviceId : "";
         if (phoneMicId && phoneMicId !== curId) { try { const s2 = await gum({ ...base, deviceId: { exact: phoneMicId } }); stream.getTracks().forEach(t => t.stop()); stream = s2; } catch {} }
       }
-    } catch { setState("Micro refusé : autorise-le dans les réglages de Safari.", "warn"); try { ctx.close(); } catch {} ctx = null; return; }
+    } catch { stream = null; setState("Micro refusé : autorise-le dans les réglages de Safari.", "warn"); return false; }
+    ensureCtx();
     micLabel = (stream.getAudioTracks()[0] || {}).label || "";
     srcNode = ctx.createMediaStreamSource(stream);
     hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 100;
@@ -248,25 +278,42 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     proc.onaudioprocess = e => onFrame(e.inputBuffer.getChannelData(0));
     proc.connect(sink); sink.connect(ctx.destination);
     applyFilter();
-    resetVad(); listening = true; t0Listen = performance.now(); levels.length = 0;
-    try { wake = await navigator.wakeLock.request("screen"); } catch {}
-    $("toggleLabel").textContent = "Arrêter l'écoute continue"; $("toggle").classList.add("on");
-    setState("Écoute en cours", "");
-    requestAnimationFrame(draw);
+    micOpen = true; levels.length = 0;
+    if (!wake) { try { wake = await navigator.wakeLock.request("screen"); } catch {} }
+    if (!drawing) { drawing = true; requestAnimationFrame(draw); }
+    return true;
+  }
+  function closeMic() {
+    micOpen = false;
+    try { proc && (proc.onaudioprocess = null); } catch {}
+    try { srcNode && srcNode.disconnect(); hp && hp.disconnect(); lp && lp.disconnect(); proc && proc.disconnect(); sink && sink.disconnect(); } catch {}
+    try { stream && stream.getTracks().forEach(t => t.stop()); } catch {}
+    stream = srcNode = proc = sink = null;
+    $("fill").style.width = "0";
+  }
+  function releaseWake() { if (!listening && !talk) { try { wake && wake.release(); } catch {} wake = null; } }
+
+  async function start() {
+    if (!cfg.key) { setState("Ajoute ta clé Gemini dans les réglages", "warn"); $("sheet").hidden = false; return; }
+    ensureCtx(); // pendant le geste (exigence d'iOS)
+    if (!(await openMic())) return;
+    resetVad(); listening = true; t0Listen = performance.now();
+    renderButtons(); setState("Écoute en cours", "");
   }
   function stop() {
     if (listening && seg && speechDur() >= 0.6) emit(); // envoie le dernier passage en cours
-    listening = false;
-    listenedMs += performance.now() - t0Listen;
-    try { proc && (proc.onaudioprocess = null); } catch {}
-    try { stream && stream.getTracks().forEach(t => t.stop()); } catch {}
-    try { ctx && ctx.close(); } catch {}
-    ctx = stream = srcNode = proc = null;
-    try { wake && wake.release(); } catch {} wake = null;
-    $("toggleLabel").textContent = "Démarrer l'écoute continue"; $("toggle").classList.remove("on");
-    $("fill").style.width = "0"; setState("Arrêté", ""); renderStats();
+    if (listening) listenedMs += performance.now() - t0Listen;
+    listening = false; resetVad();
+    if (!talk) closeMic();
+    releaseWake(); renderButtons();
+    if (!talk) setState("Arrêté", "");
+    renderStats();
   }
-  $("toggle").onclick = () => listening ? stop() : start();
+  $("toggle").onclick = () => {
+    ensureCtx();
+    if (talk) { resumeAfter = !resumeAfter; renderButtons(); return; } // pendant une réponse : choisit seulement si l'écoute reprend après
+    listening ? stop() : start();
+  };
   document.addEventListener("visibilitychange", async () => { if (listening && document.visibilityState === "visible") { try { wake = await navigator.wakeLock.request("screen"); } catch {} } });
 
   // ---------- Détection de la parole et découpe sur les pauses ----------
@@ -294,11 +341,13 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   const speechDur = () => seg ? seg.len / seg.rate - silence : 0;
 
   function onFrame(input) {
-    if (!listening) return;
+    if (!listening && talk !== "rec") return;
     const f = new Float32Array(input); // copie : le tampon est réutilisé par le navigateur
     let s = 0, peak = 0;
     for (let i = 0; i < f.length; i++) { s += f[i] * f[i]; const a = Math.abs(f[i]); if (a > peak) peak = a; }
     level = dB(Math.sqrt(s / f.length)); clipped = peak > 0.98;
+    // Je parle : tout est gardé pour ta phrase ; ta voix n'entre pas dans la mesure du bruit de fond
+    if (talk === "rec") { talkBuf.push(f); talkLen += f.length; talkRate = ctx.sampleRate; if (level >= Math.max(thr, -55)) talkVoiced += frameSec(); return; }
     levels.push(level); if (levels.length > 120) levels.shift();
     const sorted = levels.slice().sort((a, b) => a - b);
     noise = sorted[Math.floor(sorted.length * 0.2)] ?? -60;
@@ -337,24 +386,26 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     process(it, pcm, rate);
   }
 
-  async function process(it, pcm, rate) {
-    const tp = performance.now();
-    let wav;
-    try {
-      // Rééchantillonnage à 16 kHz
+  // Rééchantillonnage à 16 kHz, mise à niveau du volume si « Nettoyage », puis WAV
+  async function prepWav(pcm, rate, clean) {
       const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(pcm.length * SR_OUT / rate)), SR_OUT);
       const b = off.createBuffer(1, pcm.length, rate); b.getChannelData(0).set(pcm);
       const sn = off.createBufferSource(); sn.buffer = b; sn.connect(off.destination); sn.start();
       let out = (await off.startRendering()).getChannelData(0);
       // Mise à niveau du volume : les voix lointaines deviennent aussi audibles que les proches (gain limité à x8)
-      if (it.clean) {
+      if (clean) {
         let s = 0, peak = 0; for (let i = 0; i < out.length; i++) { s += out[i] * out[i]; const a = Math.abs(out[i]); if (a > peak) peak = a; }
         const rms = Math.sqrt(s / out.length) || 1e-6;
         const g = Math.min(8, 0.1 / rms, 0.95 / (peak || 1e-6));
         if (g > 1.05 || g < 0.95) { const c = new Float32Array(out.length); for (let i = 0; i < out.length; i++) c[i] = out[i] * g; out = c; }
       }
-      wav = toWav(out, SR_OUT);
-    } catch (e) { it.status = "err"; it.err = "Préparation du son impossible"; renderFeed(); return; }
+      return toWav(out, SR_OUT);
+  }
+  async function process(it, pcm, rate) {
+    const tp = performance.now();
+    let wav;
+    try { wav = await prepWav(pcm, rate, it.clean); }
+    catch (e) { it.status = "err"; it.err = "Préparation du son impossible"; renderFeed(); return; }
     it.prepMs = Math.round(performance.now() - tp);
     it.url = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
     try {
@@ -366,7 +417,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     cfg.log.push(logOf(it)); cfg.log = cfg.log.slice(-400); save();
     renderFeed(); renderStats();
   }
-  const logOf = it => ({ id: it.id, at: it.at, dur: it.dur, prepMs: it.prepMs, delay: it.delay, tin: it.tin || 0, tout: it.tout || 0, clean: it.clean, ns: it.ns, spk: it.spk, pause: it.pause, ok: it.status === "ok", rating: "", who: "" });
+  const logOf = it => ({ type: it.me ? "rep" : "tn", tts: it.ttsOut || 0, id: it.id, at: it.at, dur: it.dur, prepMs: it.prepMs, delay: it.delay, tin: it.tin || 0, tout: it.tout || 0, clean: it.clean, ns: it.ns, spk: it.spk, pause: it.pause, ok: it.status === "ok", rating: "", who: "" });
 
   function toWav(f, rate) {
     const v = new DataView(new ArrayBuffer(44 + f.length * 2));
@@ -402,9 +453,12 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   }
   const colorOf = (it, r) => { if (!it.spk || !r.personne) return GREY; const p = speakers.find(x => x.id === r.personne); return p ? p.color : GREY; };
   const ARABIZI = "arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ)";
+  // Contexte écrit : les 3 derniers échanges réussis (extraits entendus et mes réponses), du plus ancien au plus récent
+  const contextLines = beforeId => items.filter(x => x.status === "ok" && x.id < beforeId).slice(-3)
+    .flatMap(x => x.me ? [{ who: "Moi", tn: x.arabizi, fr: x.francais }] : (x.repliques || []).map(r => ({ who: r.personne, tn: r.entendu, fr: r.francais })))
+    .map(r => "- " + (r.who ? r.who + " : " : "") + r.tn + " (= " + r.fr + ")").join("\n");
   function prompt(it) {
-    const prev = items.filter(x => x.status === "ok" && x.id < it.id).slice(-3).flatMap(x => x.repliques || [])
-      .map(r => "- " + (r.personne ? r.personne + " : " : "") + r.entendu + " (= " + r.francais + ")").join("\n");
+    const prev = contextLines(it.id);
     const spk = it.spk ? `
 Pour chaque réplique, remplis la fiche de la voix en choisissant OBLIGATOIREMENT une des valeurs proposées, sans autre mot. Décris la voix elle-même : ignore le volume, la distance au micro, l'émotion, la manière de parler du moment (chuchoter, crier) et le contenu.
 "genre" : "homme" | "femme" | "enfant"
@@ -440,17 +494,194 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
     throw new Error("Gemini saturé");
   }
 
+  // ---------- Je parle : ma réponse en français -> tunisien, dite par la voix de Gemini ----------
+  // Réglages repris de l'app (même site, donc même stockage) : voix Orus ou Charon, registre
+  const appState = () => { try { return JSON.parse(localStorage.getItem("derja-express-v1") || "{}"); } catch { return {}; } };
+  const TTS_MODEL = "gemini-3.8-flash-lite-tts", PRICE_TTS_OUT = 6; // $ par million de tokens audio (tarif 2026)
+  let talk = null;          // null | "rec" (bouton maintenu) | "wait" (traduction) | "speak" (voix en cours)
+  let resumeAfter = false;  // l'écoute continue reprend après la voix (elle était active à l'appui)
+  let talkBuf = [], talkLen = 0, talkRate = 48000, talkVoiced = 0, talkItem = null, talkHeld = false, opening = false;
+
+  function replyPrompt(it) {
+    const a = appState(), prev = contextLines(it.id);
+    return `Tu es un traducteur expert du dialecte tunisien (Derja), tel qu'on le parle à Tunis aujourd'hui. Écoute l'extrait audio joint : un francophone répond en français, au cours d'une conversation familiale en tunisien. Transcris ce qu'il dit, puis traduis-le en tunisien parlé, pour une conversation en face à face.
+- Registre : ${a.registre === "pur"
+    ? "tunisien « pur » : remplace les mots français par leur équivalent tunisien quand il existe."
+    : "naturel : garde les mots français couramment employés en Tunisie (bureau, normalement, voiture…), comme on parle vraiment."}
+- Celui qui parle (« je ») est un homme : accorde au masculin. « Tu » au masculin par défaut (enti) ; féminin (enty) ou pluriel (entouma) seulement si la phrase ou le contexte l'indique. Le vouvoiement devient le pluriel ou une formule de politesse tunisienne selon le contexte.
+- "francais" : ce qu'il a dit, en français correct.
+- "arabizi" : la phrase tunisienne en ${ARABIZI}.
+- "arabe" : exactement la même phrase, ENTIÈREMENT en lettres arabes, y compris les mots d'origine française (bureau → بيرو). Aucune lettre latine ni chiffre : ce champ est lu par une voix de synthèse.
+${prev ? "\nContexte, derniers échanges (« Moi » = celui qui parle) :\n" + prev + "\n" : ""}
+Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..."}`;
+  }
+  async function geminiReply(wav, it) {
+    const body = JSON.stringify({ contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64(wav) } }, { text: replyPrompt(it) }] }],
+      generationConfig: { temperature: 0.2, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "low" } } });
+    for (let i = 0; i < 3; i++) {
+      if (i) await new Promise(r => setTimeout(r, 1200 * i));
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent", { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cfg.key }, body });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 503 || r.status === 500) continue;
+      if (!r.ok) throw new Error("Erreur " + r.status + (j.error && j.error.message ? " · " + String(j.error.message).slice(0, 100) : ""));
+      const c = (j.candidates || [])[0], txt = ((c && c.content && c.content.parts) || []).map(p => p.text || "").join("");
+      let o; try { o = JSON.parse(txt); } catch { const a = txt.indexOf("{"), b = txt.lastIndexOf("}"); o = JSON.parse(txt.slice(a, b + 1)); }
+      if (Array.isArray(o)) o = o[0] || {};
+      if (!o.arabizi && !o.arabe) throw new Error("Rien compris : réessaie en parlant plus près du téléphone");
+      const u = j.usageMetadata || {};
+      return { francais: o.francais || "", arabizi: o.arabizi || "", arabe: o.arabe || o.arabizi || "",
+        tin: u.promptTokenCount || 0, tout: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) };
+    }
+    throw new Error("Gemini saturé");
+  }
+
+  // Voix tunisienne en continu (comme dans l'app) : jouée dès les premiers morceaux reçus.
+  // Le son reçu est aussi gardé pour « Réécouter », sans nouvel appel.
+  let ttsSeq = 0, ttsAbort = null, ttsSources = [];
+  function stopVoice() {
+    ttsSeq++;
+    try { ttsAbort && ttsAbort.abort(); } catch {} ttsAbort = null;
+    ttsSources.forEach(s => { try { s.stop(); } catch {} }); ttsSources = [];
+  }
+  const findAudio = o => {
+    if (!o || typeof o !== "object") return null;
+    const d = o.inlineData || o.inline_data;
+    if (d && d.data) return { data: d.data, mime: d.mimeType || d.mime_type || "audio/wav" };
+    for (const k in o) { const f = findAudio(o[k]); if (f) return f; }
+    return null;
+  };
+  async function speakReply(it, onStart) {
+    stopVoice(); ensureCtx();
+    const my = ttsSeq, ab = new AbortController(); ttsAbort = ab;
+    let next = 0, carry = null, started = false, rate = 24000; const kept = [];
+    const playChunk = a => {
+      if (my !== ttsSeq || !ctx) return;
+      const bin = atob(a.data); let u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      if (u8[0] === 82 && u8[1] === 73 && u8[2] === 70 && u8[3] === 70) u8 = u8.subarray(44); // en-tête WAV éventuel
+      if (carry) { const m = new Uint8Array(carry.length + u8.length); m.set(carry); m.set(u8, carry.length); u8 = m; carry = null; }
+      if (u8.length % 2) { carry = u8.slice(-1); u8 = u8.subarray(0, u8.length - 1); }
+      const n = u8.length / 2; if (!n) return;
+      const mr = String(a.mime).match(/rate=(\d+)/); rate = mr ? Number(mr[1]) : 24000;
+      const dv = new DataView(u8.buffer, u8.byteOffset, u8.length), buf = ctx.createBuffer(1, n, rate), ch = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) ch[i] = dv.getInt16(i * 2, true) / 32768;
+      kept.push(new Float32Array(ch));
+      const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+      const at = Math.max(next, ctx.currentTime + 0.05); src.start(at); next = at + buf.duration;
+      ttsSources.push(src); src.onended = () => { ttsSources = ttsSources.filter(x => x !== src); };
+      if (!started) { started = true; onStart && onStart(); }
+    };
+    try {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + TTS_MODEL + ":streamGenerateContent?alt=sse", {
+        method: "POST", signal: ab.signal, headers: { "content-type": "application/json", "x-goog-api-key": cfg.key },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: it.arabe }] }],
+          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { voice: appState().ttsVoice === "Charon" ? "Charon" : "Orus" } } } }) });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const reader = r.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+          if (!line.startsWith("data:")) continue;
+          let j; try { j = JSON.parse(line.slice(5)); } catch { continue; }
+          if (j.usageMetadata) it.ttsOut = Math.max(it.ttsOut || 0, j.usageMetadata.candidatesTokenCount || 0);
+          const a = findAudio(j); if (a) playChunk(a);
+        }
+      }
+      if (!started) throw new Error("pas de son");
+      // Attendre la fin de la lecture (ou l'arrêt demandé)
+      await new Promise(res => { const chk = () => (my !== ttsSeq || ctx.currentTime >= next - 0.02) ? res() : setTimeout(chk, 100); chk(); });
+    } catch (e) {
+      if (!(my !== ttsSeq || (e && e.name === "AbortError"))) it.voiceErr = true;
+    }
+    if (kept.length) { // son gardé pour la réécoute
+      const len = kept.reduce((s, c) => s + c.length, 0), all = new Float32Array(len); let o = 0;
+      kept.forEach(c => { all.set(c, o); o += c.length; });
+      it.url = URL.createObjectURL(new Blob([toWav(all, rate)], { type: "audio/wav" }));
+    }
+  }
+
+  // Bouton Je parle : maintenir pendant la phrase
+  const talkBtn = $("talk");
+  talkBtn.addEventListener("pointerdown", e => { e.preventDefault(); try { talkBtn.setPointerCapture(e.pointerId); } catch {} talkDown(); });
+  ["pointerup", "pointercancel"].forEach(ev => talkBtn.addEventListener(ev, talkUp));
+  talkBtn.addEventListener("contextmenu", e => e.preventDefault());
+  async function talkDown() {
+    ensureCtx(); stopPlay();
+    if (talk === "speak") { stopVoice(); return; } // toucher pendant la voix : l'arrête, puis l'écoute reprend
+    if (talk) return;                               // traduction en cours : on attend
+    if (!cfg.key) { setState("Ajoute ta clé Gemini dans les réglages", "warn"); $("sheet").hidden = false; return; }
+    resumeAfter = listening;
+    if (listening) { // l'écoute continue s'interrompt ; le passage déjà capté part quand même
+      if (seg && speechDur() >= 0.6) emit();
+      resetVad(); listenedMs += performance.now() - t0Listen; listening = false;
+    }
+    talk = "rec"; talkHeld = true; talkBuf = []; talkLen = 0; talkVoiced = 0;
+    talkItem = { id: ++segId, me: true, at: Date.now(), status: "rec", dur: 0, clean: cfg.clean };
+    items.push(talkItem); renderFeed(); renderButtons(); setState("Ta réponse…", "voice");
+    opening = true; const ok = await openMic(); opening = false;
+    if (!ok) { items.splice(items.indexOf(talkItem), 1); renderFeed(); talk = null; talkItem = null; resumeAfter = false; renderButtons(); return; }
+    if (!talkHeld) finishTalk(); // relâché pendant l'ouverture du micro
+  }
+  function talkUp() {
+    talkHeld = false;
+    if (talk !== "rec" || opening) return;
+    finishTalk();
+  }
+  async function finishTalk() {
+    const it = talkItem, durS = talkLen / talkRate, voiced = talkVoiced, releasedAt = performance.now();
+    const pcm = new Float32Array(talkLen); let o = 0; talkBuf.forEach(c => { pcm.set(c, o); o += c.length; }); talkBuf = [];
+    talk = "wait"; closeMic(); // micro fermé avant la voix : sinon iOS joue le son dans l'écouteur
+    if (durS < 0.5 || voiced < 0.3) { // trop court, ou rien entendu : annulé
+      items.splice(items.indexOf(it), 1); renderFeed();
+      return endTalk(durS < 0.5 ? "Trop court : maintiens Je parle pendant ta phrase" : "Rien entendu : parle plus près du téléphone");
+    }
+    it.status = "run"; it.dur = durS; renderFeed(); renderButtons(); setState("Traduction de ta réponse…", "");
+    try {
+      const wav = await prepWav(pcm, talkRate, it.clean);
+      Object.assign(it, await geminiReply(wav, it), { status: "ok" });
+    } catch (e) { it.status = "err"; it.err = e.message || String(e); }
+    renderFeed();
+    if (it.status === "ok") {
+      talk = "speak"; renderButtons(); setState("Voix tunisienne · touche Je parle pour l'arrêter", "voice");
+      await speakReply(it, () => { it.delay = performance.now() - releasedAt; renderFeed(); });
+    }
+    cfg.log.push(logOf(it)); cfg.log = cfg.log.slice(-400); save();
+    renderFeed(); renderStats();
+    endTalk();
+  }
+  // Fin de la réponse : l'écoute continue reprend 0,3 s après la voix si elle était active
+  function endTalk(msg) {
+    setTimeout(async () => {
+      talk = null; talkItem = null;
+      if (resumeAfter) { await start(); resumeAfter = false; renderButtons(); if (msg) setState(msg, "warn"); }
+      else { renderButtons(); closeMic(); releaseWake(); setState(msg || "Arrêté", msg ? "warn" : ""); }
+    }, 300);
+  }
+  function renderButtons() {
+    const on = listening || resumeAfter; // resumeAfter : l'écoute reprendra après la réponse
+    $("toggleLabel").textContent = on ? "Arrêter l'écoute" : "J'écoute"; $("toggle").classList.toggle("on", !!on);
+    $("talkLabel").textContent = talk === "rec" ? "Je t'écoute…" : talk === "wait" ? "Traduction…" : talk === "speak" ? "■ Arrêter la voix" : "Je parle";
+    $("talk").classList.toggle("hold", talk === "rec");
+  }
+
   // ---------- Affichage ----------
   function setState(t, cls) { $("state").textContent = t; $("state").className = cls || ""; }
   function draw() {
-    if (!listening) return;
+    if (!micOpen) { drawing = false; return; }
     const p = pct(level), voice = level >= thr;
     $("fill").style.width = p + "%";
     $("fill").className = "fill" + (clipped ? " clip" : voice ? " voice" : "");
     showTh();
     $("nf").style.left = "calc(" + pct(noise) + "% - 1px)";
     const pending = items.filter(x => x.status === "run").length;
-    if (clipped) setState("Saturation : trop près du téléphone", "clip");
+    if (talk === "rec") setState("Ta réponse · " + (talkLen / talkRate).toFixed(1) + " s", "voice");
+    else if (!listening) { /* état fixé ailleurs */ }
+    else if (clipped) setState("Saturation : trop près du téléphone", "clip");
     else if (seg) setState("Parole détectée · " + (seg.len / seg.rate).toFixed(1) + " s", "voice");
     else if (level > noise + 3 && !voice) setState("Voix trop faible ? Rapproche le téléphone", "warn");
     else setState("Silence", "");
@@ -465,6 +696,19 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
     const feed = $("feed"), se = document.scrollingElement, atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
     let last = null, html = "";
     for (const it of items) {
+      if (it.me) { // mes réponses (Je parle) : à droite, en bleu
+        last = null;
+        if (it.status === "rec") html += '<div class="bub me wait"><div class="fr">Je t\'écoute…</div></div>';
+        else if (it.status === "run") html += '<div class="bub me typing"><i></i><i></i><i></i></div>';
+        else if (it.status === "err") html += '<div class="bub err" style="align-self:flex-end">' + esc(it.err) + '</div>';
+        else html += '<div class="bub me"><div class="fr">' + esc(it.francais) + '</div><div class="tn">' + esc(it.arabizi) + '</div></div>';
+        if (it.status === "ok" || it.status === "err") {
+          html += '<button type="button" class="meta me" data-id="' + it.id + '" data-a="tools">' + hm(it.at) + ' · ' + it.dur.toFixed(1) + ' s' +
+            (it.delay != null ? ' · voix après ' + sec(it.delay) : "") + (it.voiceErr ? ' · voix indisponible' : "") + (openTools === it.id ? " ▴" : " ▾") + '</button>';
+          if (openTools === it.id && it.url) html += '<div class="tools me" data-id="' + it.id + '"><div class="rate"><button type="button" data-a="play">' + (playingId === it.id ? "■ Arrêter" : "▶︎ Réécouter") + '</button></div></div>';
+        }
+        continue;
+      }
       if (it.status === "run") { html += '<div class="bub typing" style="--c:' + GREY + '"><i></i><i></i><i></i></div>'; last = null; continue; }
       if (it.status === "err") { html += '<div class="bub err">' + esc(it.err) + '</div>'; last = null; }
       else for (const r of it.repliques) {
@@ -484,7 +728,7 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
           '</div>' + (it.repliques.some(r => r.voix) ? '<div class="muted" style="margin-top:4px">' + it.repliques.filter(r => r.voix).map(r => esc(r.personne) + ' : ' + esc(r.voix)).join("<br>") + '</div>' : "") + '</div>';
       }
     }
-    feed.innerHTML = html || '<div class="empty">' + (cfg.key ? "Démarre l'écoute continue : la conversation s'affichera ici, les messages les plus récents en bas." : "Ajoute ta clé Gemini dans les réglages (roue crantée) pour commencer.") + '</div>';
+    feed.innerHTML = html || '<div class="empty">' + (cfg.key ? "Touche J'écoute pour suivre la conversation, et maintiens Je parle pour répondre en français. Les messages les plus récents s'affichent en bas." : "Ajoute ta clé Gemini dans les réglages (roue crantée) pour commencer.") + '</div>';
     if (atBottom) se.scrollTop = se.scrollHeight;
   }
   // Réécoute : un seul extrait à la fois ; toucher de nouveau l'extrait en cours l'arrête
@@ -508,22 +752,25 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
   // ---------- Mesures ----------
   const cfgName = l => (l.clean ? "Nettoyé" : "Brut") + (l.ns ? " + réduc. iPhone" : "") + (l.spk ? " + personnes" : "");
   function renderStats() {
-    const L = cfg.log.filter(l => l.ok);
+    const L = cfg.log.filter(l => l.ok && l.type !== "rep"), R = cfg.log.filter(l => l.ok && l.type === "rep");
     const groups = {}; L.forEach(l => (groups[cfgName(l)] = groups[cfgName(l)] || []).push(l));
     const avg = (a, k) => { const v = a.map(x => x[k]).filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
     const cost = a => a.reduce((s, l) => s + l.tin * PRICE_IN / 1e6 + l.tout * PRICE_OUT / 1e6, 0);
     const hours = (listenedMs + (listening ? performance.now() - t0Listen : 0)) / 3600000;
-    const all = cost(L), audio = L.reduce((s, l) => s + l.dur, 0);
+    const costR = R.reduce((s, l) => s + l.tin * PRICE_IN / 1e6 + l.tout * PRICE_OUT / 1e6 + (l.tts || 0) * PRICE_TTS_OUT / 1e6, 0);
+    const all = cost(L) + costR, audio = L.reduce((s, l) => s + l.dur, 0) + R.reduce((s, l) => s + l.dur, 0);
+    const repRow = R.length ? '<tr><td>Réponses (Je parle)</td><td>' + R.length + '</td><td>' + sec(avg(R, "delay")) + ' avant la voix</td></tr>' : "";
     const rows = Object.entries(groups).map(([n, a]) => {
       return '<tr><td>' + esc(n) + '</td><td>' + a.length + '</td><td>' + sec(avg(a, "delay")) + '</td></tr>';
     }).join("");
     $("stats").innerHTML = '<tr><th>Réglage</th><th>Passages</th><th>Délai moyen</th></tr>' +
-      (rows || '<tr><td colspan="3" class="muted">Aucun passage traduit pour l\'instant.</td></tr>') +
+      (rows || '<tr><td colspan="3" class="muted">Aucun passage traduit pour l\'instant.</td></tr>') + repRow +
       '<tr><td colspan="3"></td></tr>' +
       '<tr><td>Écoute (session)</td><td colspan="2">' + (hours * 60).toFixed(1) + ' min · ' + audio.toFixed(0) + ' s d\'audio envoyé · coût ' + (all * 100).toFixed(2) + ' centimes $' +
       (hours > 0.01 ? ' · soit ≈ ' + (all / hours).toFixed(2) + ' $ par heure' : "") + '</td></tr>';
     $("stats").dataset.text = Object.entries(groups).map(([n, a]) =>
       n + " : " + a.length + " passages, délai moyen " + sec(avg(a, "delay"))).join("\n") +
+      (R.length ? "\nRéponses (Je parle) : " + R.length + ", voix après " + sec(avg(R, "delay")) + " en moyenne, coût " + (costR * 100).toFixed(2) + " centimes $" : "") +
       "\nCoût : " + (all * 100).toFixed(2) + " centimes $ pour " + audio.toFixed(0) + " s d'audio" + (hours > 0.01 ? ", ≈ " + (all / hours).toFixed(2) + " $ par heure d'écoute" : "");
   }
   $("copy").onclick = async () => {

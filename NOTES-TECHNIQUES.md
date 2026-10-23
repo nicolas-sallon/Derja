@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v26, identique à v20).
+Mise à jour : 23/10/2026 (app v2.5, banc v27).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -85,6 +85,34 @@ Mise à jour : 23/10/2026 (app v2.5, banc v26, identique à v20).
   - Les statistiques sont regroupées par configuration : nettoyé ou brut, réduction iPhone, personnes.
   - Stockage : `localStorage["derja-bench-listen"]`.
 
+## Deux boutons et réponse « Je parle » (banc v27)
+- **Disposition.** Deux boutons de même taille sous le sélecteur à 3 cases, qui reste en place pour l'instant.
+  - À gauche, « J'écoute » : un toucher lance ou arrête l'écoute continue. Il devient rouge, « Arrêter l'écoute », quand elle est active.
+  - À droite, « Je parle » : à **maintenir** pendant la phrase. Bleu clair au repos, bleu vif pendant l'appui.
+- **Un seul circuit audio pour la session** (`ensureCtx`) : créé au premier geste, jamais fermé. Il sert à capter et à jouer la voix.
+  - Le micro s'ouvre et se ferme à part (`openMic`/`closeMic`).
+  - Le micro est **fermé pendant la voix tunisienne**. Micro ouvert, iOS passe en mode lecture-et-enregistrement et joue le son dans l'écouteur, faiblement (constaté sur l'app avant la v2.5).
+- **Capture du français : Gemini audio** (choix validé), avec le micro déjà ouvert pour l'écoute.
+  - Pas de dictée d'Apple : elle risquait d'entrer en conflit avec le micro de l'écoute continue sur iOS.
+  - Ce qu'on perd : le texte français ne s'affiche pas pendant qu'on parle.
+- **Appui sur Je parle.**
+  - Si un passage était en cours chez l'interlocuteur, il part en traduction (au moins 0,6 s). Puis la découpe s'arrête.
+  - Les images du micro vont dans le tampon de la réponse (`talkBuf`). Elles n'entrent pas dans la mesure du bruit de fond.
+  - Si l'écoute était arrêtée, le micro s'ouvre juste le temps de la phrase.
+- **Relâchement.**
+  - Le micro se ferme.
+  - Moins de 0,5 s, ou moins de 0,3 s de voix au-dessus du seuil : annulé, avec un message.
+  - Sinon, le son est préparé comme les extraits (`prepWav`), puis envoyé à Gemini (`replyPrompt`), qui renvoie `francais`, `arabizi` et `arabe`.
+  - La traduction est au masculin. Le registre vient de l'app. Le contexte reprend les 3 derniers échanges.
+- **Voix.**
+  - Elle utilise la voix choisie dans l'app (Orus ou Charon), lue depuis `localStorage["derja-express-v1"]` : même site, donc stockage partagé.
+  - Elle est lue en continu, comme dans l'app. Le son reçu est gardé dans un WAV pour « ▶︎ Réécouter », sans nouvel appel.
+  - Toucher Je parle pendant la voix l'arrête.
+- **Reprise.** 0,3 s après la fin de la voix, l'écoute reprend si elle était active à l'appui (`resumeAfter`). Toucher J'écoute pendant une réponse change seulement ce choix.
+- **Contexte.** Mes réponses entrent dans le contexte écrit des extraits suivants, sous la forme « Moi : arabizi (= français) ».
+- **Affichage.** Ma bulle est à droite, en bleu plein `#3d8bff`, avec le français en gros et l'arabizi en dessous. Sous la bulle : heure, durée, « voix après X s » (du relâchement au début de la voix) et le volet de réécoute.
+- **Mesures.** La ligne « Réponses (Je parle) » donne le nombre de réponses et le délai moyen avant la voix. Le coût inclut la voix : 6 $ par million de tokens audio.
+
 ## Tarifs (pour estimer)
 - Gemini 3.8 Flash : 0,75 $ par million de jetons en entrée, 3,75 $ par million en sortie.
 - Synthèse vocale : Flash 9 $, Lite 6 $ par million de jetons en sortie.
@@ -99,6 +127,5 @@ Mise à jour : 23/10/2026 (app v2.5, banc v26, identique à v20).
   - Décision : abandonné. À reconsidérer seulement dans une app native.
 
 ## À venir
-- Bouton « Répondre » pendant l'écoute continue : il met l'écoute en pause, lance la chaîne français → tunisien, affiche ta bulle bleue à droite, puis reprend l'écoute après la voix.
 - Écoute continue portée dans l'app comme 3ᵉ mode, une fois validée au banc.
 - Renommer ou corriger une personne à la main.
