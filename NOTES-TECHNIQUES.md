@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v19).
+Mise à jour : 23/10/2026 (app v2.5, banc v20).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -57,7 +57,7 @@ Mise à jour : 23/10/2026 (app v2.5, banc v19).
   - Option « Nettoyage » : un filtre passe-bande 100 Hz – 7 kHz s'applique **en direct**, donc sans délai à l'envoi.
   - Avant l'envoi, le volume est normalisé (RMS) pour que les voix lointaines soient aussi audibles que les proches. Le gain est limité à ×8 pour ne pas amplifier le bruit.
 - **Seuil automatique.** C'est le 20ᵉ percentile des 120 derniers niveaux (environ 5 s), plus 8 dB. Il s'adapte au bruit de la pièce.
-  Il peut être forcé dans les réglages (0 = automatique).
+  Il se règle aussi au doigt : poser le doigt sur la jauge et glisser place un seuil manuel (trait orange, entre -65 et -10 dB). Ce seuil reste fixe, car le bruit de fond peut monter d'un coup et le seuil automatique suit mal. Le bouton « Auto » rétablit le réglage automatique. Le seuil manuel ne dure que la session, car le bruit change d'une pièce à l'autre. Le curseur de seuil a été retiré des réglages.
 - **Découpe sur les pauses uniquement.**
   - Après 0,8 s de pause (0,5 s coupait des phrases), on envoie si le passage dure au moins 2 s.
   - Après 2,5 s de silence, on envoie dès 0,6 s.

@@ -67,6 +67,11 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .meter .fill.voice{background:var(--good)}
 .meter .fill.clip{background:var(--bad)}
 .meter .th{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--fg);border-radius:2px;left:0}
+.meter-touch{padding:12px 0;margin:-12px 0;touch-action:none;cursor:ew-resize;-webkit-user-select:none;user-select:none}
+.meter-touch .meter{overflow:visible}
+.meter-touch .th::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:22px;transform:translate(-50%,-50%);border-radius:6px;background:var(--fg);opacity:.9;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.meter-touch.manual .th,.meter-touch.manual .th::after{background:var(--mid)}
+.thauto{appearance:none;border:1px solid var(--line);background:none;color:var(--fg);border-radius:8px;padding:1px 8px;font:600 12px var(--sans);cursor:pointer;margin-left:6px}
 .meter .nf{position:absolute;top:0;bottom:0;width:2px;background:var(--muted);opacity:.6;left:0}
 .state{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
 .state b{color:var(--fg);font-weight:600}
@@ -121,8 +126,8 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
       <span id="toggleLabel">Démarrer l'écoute continue</span>
     </button>
-    <div class="meter" aria-hidden="true"><div class="fill" id="fill"></div><div class="nf" id="nf"></div><div class="th" id="th"></div></div>
-    <div class="state"><b id="state">Arrêté</b><span id="stateR"></span></div>
+    <div class="meter-touch" id="meterTouch" role="slider" aria-label="Seuil de parole : fais glisser le trait"><div class="meter"><div class="fill" id="fill"></div><div class="nf" id="nf"></div><div class="th" id="th"></div></div></div>
+    <div class="state"><b id="state">Arrêté</b><span><span id="stateR"></span><button type="button" class="thauto" id="thAuto" hidden>Auto</button></span></div>
   </div>
 </div>
 
@@ -143,7 +148,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
         <span class="sw" style="background:var(--quiet)"></span><span>Gris : silence ou bruit de fond, rien n'est envoyé</span>
         <span class="sw" style="background:var(--good)"></span><span>Vert : une voix est bien captée</span>
         <span class="sw" style="background:var(--bad)"></span><span>Rouge : saturation, quelqu'un parle trop près du téléphone</span>
-        <span class="sw" style="background:var(--fg);width:4px;justify-self:center"></span><span>Trait blanc : seuil de parole, placé automatiquement au-dessus du bruit de fond</span>
+        <span class="sw" style="background:var(--fg);width:4px;justify-self:center"></span><span>Trait blanc : seuil de parole, placé automatiquement au-dessus du bruit de fond. Pose le doigt sur la jauge et fais-le glisser pour le placer toi-même : il devient orange et ne bouge plus. Touche « Auto » pour revenir au réglage automatique.</span>
         <span class="sw" style="background:var(--muted);width:3px;justify-self:center"></span><span>Trait gris : bruit de fond mesuré dans la pièce</span>
       </div>
       <p>Pose le téléphone au milieu des personnes, bas du téléphone vers elles. La jauge doit passer au vert quand quelqu'un parle.</p>
@@ -155,8 +160,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <label class="tog"><span>Réduction de bruit de l'iPhone<small>S'applique au prochain démarrage</small></span><input type="checkbox" id="optNs"></label>
       <label class="tog"><span>Distinguer les personnes<small>P1, P2… d'après la description des voix</small></span><input type="checkbox" id="optSpk"></label>
       <div class="row"><span class="muted" style="min-width:140px">Pause de découpe : <b id="pauseVal"></b></span><input type="range" id="optPause" min="0.3" max="1.5" step="0.1"></div>
-      <div class="row"><span class="muted" style="min-width:140px">Seuil : <b id="thVal"></b></span><input type="range" id="optTh" min="0" max="30" step="1"></div>
-      <p>Seuil à 0 = automatique (bruit de fond + 8 dB). Un passage de moins de 2 s attend la suite ; après 2,5 s de silence, il part quand même s'il dure au moins 0,6 s. Maximum 20 s par passage.</p>
+      <p>Seuil automatique : bruit de fond + 8 dB, ajustable du doigt sur la jauge. Un passage de moins de 2 s attend la suite ; après 2,5 s de silence, il part quand même s'il dure au moins 0,6 s. Maximum 20 s par passage.</p>
     </div>
 
     <h3>Mesures</h3>
@@ -170,7 +174,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v19 · 23/10 02:30";
+  const VERSION = "banc v20 · 23/10 02:39";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -193,10 +197,9 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   $("sheet").onclick = e => { if (e.target.id === "sheet") $("sheet").hidden = true; };
   const bindBox = (id, k) => { $(id).checked = !!cfg[k]; $(id).onchange = e => { cfg[k] = e.target.checked; save(); if (k === "clean") applyFilter(); }; };
   bindBox("optClean", "clean"); bindBox("optNs", "ns"); bindBox("optSpk", "spk");
-  const showRanges = () => { $("pauseVal").textContent = cfg.pause.toFixed(1) + " s"; $("thVal").textContent = cfg.th ? "forcé +" + cfg.th + " dB" : "automatique"; };
-  $("optPause").value = cfg.pause; $("optTh").value = cfg.th;
+  const showRanges = () => { $("pauseVal").textContent = cfg.pause.toFixed(1) + " s"; };
+  $("optPause").value = cfg.pause;
   $("optPause").oninput = e => { cfg.pause = Number(e.target.value); save(); showRanges(); };
-  $("optTh").oninput = e => { cfg.th = Number(e.target.value); save(); showRanges(); };
   showRanges();
 
   // ---------- Capture audio ----------
@@ -269,6 +272,22 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   // ---------- Détection de la parole et découpe sur les pauses ----------
   // Seuil automatique : bruit de fond (niveau bas habituel des 5 dernières secondes) + 8 dB
   const levels = []; let level = DB_MIN, noise = -60, thr = -52, micLabel = "";
+  // Seuil réglé au doigt sur la jauge : il reste fixe (le bruit de fond peut monter d'un coup) jusqu'à « Auto ».
+  // Gardé pour la session seulement : le bruit change d'une pièce à l'autre.
+  let thMan = null;
+  function setManual(clientX) {
+    const r = $("meterTouch").getBoundingClientRect();
+    const d = DB_MIN + Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * (DB_MAX - DB_MIN);
+    thMan = Math.round(Math.max(-65, Math.min(-10, d))); thr = thMan; showTh();
+  }
+  function showTh() {
+    $("th").style.left = "calc(" + pct(thr) + "% - 1px)";
+    $("meterTouch").classList.toggle("manual", thMan != null); $("thAuto").hidden = thMan == null;
+    if (!listening) $("stateR").textContent = thMan != null ? "seuil manuel " + thMan + " dB" : "";
+  }
+  $("meterTouch").addEventListener("pointerdown", e => { e.preventDefault(); $("meterTouch").setPointerCapture(e.pointerId); setManual(e.clientX); });
+  $("meterTouch").addEventListener("pointermove", e => { if ($("meterTouch").hasPointerCapture(e.pointerId)) setManual(e.clientX); });
+  $("thAuto").onclick = () => { thMan = null; thr = Math.max(noise + 8, -60); showTh(); };
   let seg = null, pre = [], preLen = 0, silence = 0, t0Listen = 0, listenedMs = 0, lastVoiceAt = 0;
   const frameSec = () => 2048 / (ctx ? ctx.sampleRate : 48000);
   function resetVad() { seg = null; pre = []; preLen = 0; silence = 0; }
@@ -283,7 +302,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     levels.push(level); if (levels.length > 120) levels.shift();
     const sorted = levels.slice().sort((a, b) => a - b);
     noise = sorted[Math.floor(sorted.length * 0.2)] ?? -60;
-    thr = cfg.th ? -60 + cfg.th : Math.max(noise + 8, -60);
+    thr = thMan != null ? thMan : Math.max(noise + 8, -60);
     const voice = level >= thr, fs = frameSec(), rate = ctx.sampleRate;
     if (!seg) {
       pre.push(f); preLen += f.length;
@@ -428,14 +447,14 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
     const p = pct(level), voice = level >= thr;
     $("fill").style.width = p + "%";
     $("fill").className = "fill" + (clipped ? " clip" : voice ? " voice" : "");
-    $("th").style.left = "calc(" + pct(thr) + "% - 1px)";
+    showTh();
     $("nf").style.left = "calc(" + pct(noise) + "% - 1px)";
     const pending = items.filter(x => x.status === "run").length;
     if (clipped) setState("Saturation : trop près du téléphone", "clip");
     else if (seg) setState("Parole détectée · " + (seg.len / seg.rate).toFixed(1) + " s", "voice");
     else if (level > noise + 3 && !voice) setState("Voix trop faible ? Rapproche le téléphone", "warn");
     else setState("Silence", "");
-    $("stateR").textContent = (pending ? pending + " en traduction · " : "") + "seuil " + Math.round(thr) + " dB" + (micLabel ? " · " + micLabel : "");
+    $("stateR").textContent = (pending ? pending + " en traduction · " : "") + "seuil " + (thMan != null ? "manuel " : "") + Math.round(thr) + " dB" + (micLabel ? " · " + micLabel : "");
     requestAnimationFrame(draw);
   }
 
