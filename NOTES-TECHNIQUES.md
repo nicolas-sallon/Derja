@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v18).
+Mise à jour : 23/10/2026 (app v2.5, banc v19).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -79,6 +79,8 @@ Mise à jour : 23/10/2026 (app v2.5, banc v18).
   - Le bleu de l'app `#3d8bff` est réservé à tes propres répliques, à droite, en couleur pleine (futur bouton « Répondre »).
 - **Mesures.**
   - Plus de boutons d'appréciation (Juste/Approx./Faux, Locuteur ✓/✗) : le test porte maintenant sur la tenue dans la durée. Le bouton ▶︎ de réécoute de chaque extrait est conservé.
+  - Le volet sous chaque extrait ne montre que le bouton de réécoute et la fiche de chaque voix. La durée de préparation (20 ms au plus, tout activé) n'est plus affichée ni mesurée dans le tableau.
+  - Réécoute : un seul extrait à la fois. En lancer un autre arrête le premier, et toucher « ■ Arrêter » coupe la lecture.
   - Le coût est calculé à partir de `usageMetadata`.
   - Les statistiques sont regroupées par configuration : nettoyé ou brut, réduction iPhone, personnes.
   - Stockage : `localStorage["derja-bench-listen"]`.

@@ -170,7 +170,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v18 · 23/10 02:21";
+  const VERSION = "banc v19 · 23/10 02:30";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -461,19 +461,29 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
       html += '<button type="button" class="meta" data-id="' + it.id + '" data-a="tools">' + hm(it.at) + ' · ' + it.dur.toFixed(1) + ' s' + (it.delay != null ? ' · délai ' + sec(it.delay) : "") +
         (openTools === it.id ? " ▴" : " ▾") + '</button>';
       if (openTools === it.id && it.status === "ok") {
-        html += '<div class="tools" data-id="' + it.id + '"><div class="rate">' + (it.url ? '<button type="button" data-a="play">▶︎ Réécouter l\'extrait</button>' : "") +
-          '</div><div class="muted" style="margin-top:4px">préparation ' + (it.prepMs ?? "–") + ' ms · ' + (it.clean ? "nettoyé" : "brut") + (it.ns ? " · réduc. iPhone" : "") +
-          it.repliques.filter(r => r.voix).map(r => ' · ' + esc(r.personne) + ' : ' + esc(r.voix)).join("") + '</div></div>';
+        html += '<div class="tools" data-id="' + it.id + '"><div class="rate">' + (it.url ? '<button type="button" data-a="play">' + (playingId === it.id ? "■ Arrêter" : "▶︎ Réécouter l\'extrait") + '</button>' : "") +
+          '</div>' + (it.repliques.some(r => r.voix) ? '<div class="muted" style="margin-top:4px">' + it.repliques.filter(r => r.voix).map(r => esc(r.personne) + ' : ' + esc(r.voix)).join("<br>") + '</div>' : "") + '</div>';
       }
     }
     feed.innerHTML = html || '<div class="empty">' + (cfg.key ? "Démarre l'écoute continue : la conversation s'affichera ici, les messages les plus récents en bas." : "Ajoute ta clé Gemini dans les réglages (roue crantée) pour commencer.") + '</div>';
     if (atBottom) se.scrollTop = se.scrollHeight;
   }
+  // Réécoute : un seul extrait à la fois ; toucher de nouveau l'extrait en cours l'arrête
+  let player = null, playingId = 0;
+  function stopPlay() { if (player) { player.pause(); player.onended = null; } player = null; playingId = 0; }
+  function togglePlay(it) {
+    const same = playingId === it.id; stopPlay();
+    if (same) { renderFeed(); return; }
+    player = new Audio(it.url); playingId = it.id;
+    player.onended = () => { player = null; playingId = 0; renderFeed(); };
+    player.play().catch(() => { stopPlay(); renderFeed(); });
+    renderFeed();
+  }
   $("feed").onclick = e => {
     const line = e.target.closest("[data-id]"); if (!line) return;
     if (e.target.closest("[data-a=tools]")) { const id = Number(line.dataset.id); openTools = openTools === id ? 0 : id; renderFeed(); return; }
     const it = items.find(x => x.id === Number(line.dataset.id)); if (!it) return;
-    if (e.target.closest("[data-a=play]") && it.url) { try { new Audio(it.url).play(); } catch {} }
+    if (e.target.closest("[data-a=play]") && it.url) togglePlay(it);
   };
 
   // ---------- Mesures ----------
@@ -486,15 +496,15 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"genre":"…","age
     const hours = (listenedMs + (listening ? performance.now() - t0Listen : 0)) / 3600000;
     const all = cost(L), audio = L.reduce((s, l) => s + l.dur, 0);
     const rows = Object.entries(groups).map(([n, a]) => {
-      return '<tr><td>' + esc(n) + '</td><td>' + a.length + '</td><td>' + sec(avg(a, "delay")) + '</td><td>' + Math.round(avg(a, "prepMs") || 0) + ' ms</td></tr>';
+      return '<tr><td>' + esc(n) + '</td><td>' + a.length + '</td><td>' + sec(avg(a, "delay")) + '</td></tr>';
     }).join("");
-    $("stats").innerHTML = '<tr><th>Réglage</th><th>Passages</th><th>Délai moyen</th><th>Prépa.</th></tr>' +
-      (rows || '<tr><td colspan="4" class="muted">Aucun passage traduit pour l\'instant.</td></tr>') +
-      '<tr><td colspan="4"></td></tr>' +
-      '<tr><td>Écoute (session)</td><td colspan="3">' + (hours * 60).toFixed(1) + ' min · ' + audio.toFixed(0) + ' s d\'audio envoyé · coût ' + (all * 100).toFixed(2) + ' centimes $' +
+    $("stats").innerHTML = '<tr><th>Réglage</th><th>Passages</th><th>Délai moyen</th></tr>' +
+      (rows || '<tr><td colspan="3" class="muted">Aucun passage traduit pour l\'instant.</td></tr>') +
+      '<tr><td colspan="3"></td></tr>' +
+      '<tr><td>Écoute (session)</td><td colspan="2">' + (hours * 60).toFixed(1) + ' min · ' + audio.toFixed(0) + ' s d\'audio envoyé · coût ' + (all * 100).toFixed(2) + ' centimes $' +
       (hours > 0.01 ? ' · soit ≈ ' + (all / hours).toFixed(2) + ' $ par heure' : "") + '</td></tr>';
     $("stats").dataset.text = Object.entries(groups).map(([n, a]) =>
-      n + " : " + a.length + " passages, délai moyen " + sec(avg(a, "delay")) + ", préparation " + Math.round(avg(a, "prepMs") || 0) + " ms").join("\n") +
+      n + " : " + a.length + " passages, délai moyen " + sec(avg(a, "delay"))).join("\n") +
       "\nCoût : " + (all * 100).toFixed(2) + " centimes $ pour " + audio.toFixed(0) + " s d'audio" + (hours > 0.01 ? ", ≈ " + (all / hours).toFixed(2) + " $ par heure d'écoute" : "");
   }
   $("copy").onclick = async () => {
