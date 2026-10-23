@@ -1,0 +1,93 @@
+# Notes techniques — Derja
+
+Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
+Mise à jour : 23/10/2026 (app v2.5, banc v17).
+
+## Fichiers
+- `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
+- `bench.html` : banc d'essai. Toute nouvelle fonctionnalité y est mise au point avant d'aller dans l'app.
+  Il sert actuellement à l'écoute continue tunisien → français.
+- Hébergement : GitHub Pages (`nicolas-sallon/Derja`). Le dépôt est **public**, donc jamais de clé API dans les fichiers.
+  Les clés sont saisies dans les réglages et ne sont gardées que dans le `localStorage` de l'iPhone.
+
+## Mise à jour et version
+- Chaque page affiche une constante `VERSION` (heure réelle de Tunis).
+- Le détecteur relit la page avec `?check=<horodatage>` et compare `VERSION`. Si elle a changé, il propose de recharger.
+- Le rechargement utilise `?v=<horodatage>` : une adresse jamais vue force GitHub Pages et iOS à contourner leur cache.
+
+## Moteurs (choix issus des essais au banc)
+- **Tunisien → français : Gemini 3.8 Flash uniquement.**
+  - Au banc, 3/3 phrases justes contre 0/3 pour Gemini 3.6 Flash, 3.5 Flash-Lite et Whisper + gpt-oss.
+  - Whisper invente de l'arabe standard. Groq et Whisper ont été retirés complètement.
+  - Gemini 2.5 Pro répond 404 (fermé aux nouveaux comptes).
+- **Réglages des appels.**
+  - `thinkingConfig.thinkingLevel: "low"` et réponses « essentielles » : 15,8 s → 4,4 s de délai.
+  - `responseMimeType: "application/json"` pour des réponses lisibles directement.
+- **Erreur 503 (saturation)** : on réessaie le **même** modèle. Jamais de repli vers un modèle plus léger, car ils ne comprennent pas le tunisien.
+- **Français → tunisien.**
+  - La parole française est transcrite par la reconnaissance d'Apple (`webkitSpeechRecognition`, fr-FR). C'est gratuit, et le texte s'affiche en direct.
+  - En secours, l'audio est envoyé à Gemini.
+  - iOS coupe parfois la reconnaissance en pleine phrase : elle est relancée tant que le bouton reste maintenu.
+  - La traduction se fait avec Gemini ou Claude, au choix dans les réglages.
+- **L'arabizi** (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ) est la forme écrite du tunisien partout. Les mots français restent en français.
+
+## Audio envoyé à Gemini
+- Format : WAV 16 kHz mono en base64, envoyé directement dans la requête. Gemini compte 25 jetons par seconde d'audio.
+- `toWav` retire **uniquement** le silence au début et à la fin. Les pauses entre les mots restent, pour ne pas abîmer le sens.
+- **Micro.** Pour écouter le tunisien, c'est toujours le micro de l'iPhone (`findPhoneMic`), jamais celui des AirPods, qui est de trop mauvaise qualité.
+  Les noms des micros ne sont visibles qu'après l'autorisation du micro.
+- En écoute, la réduction de bruit d'iOS est coupée par défaut : elle efface les voix éloignées.
+
+## Voix tunisienne (synthèse)
+- Modèle : `gemini-3.8-flash-lite-tts`, avec la voix Orus ou Charon (réglage).
+  - Lite plutôt que Flash : 6 $ au lieu de 9 $ par million de jetons, pour une qualité jugée équivalente.
+  - Les 120 voix de la bibliothèque Google ont été écartées : aucune n'est tunisienne.
+  - Les voix générées ne sont pas mémorisées.
+- **Lecture en continu.** On utilise `:streamGenerateContent?alt=sse`. Les morceaux PCM (L16, 24 kHz) sont décodés et joués au fil de l'eau dans Web Audio. On gagne plus d'1 s.
+- **Contraintes d'iOS.**
+  - L'`AudioContext` doit être créé ou relancé pendant un geste (`freshCtx`/`ensureCtx`) : toucher Traduire, Écouter, Tester…, jamais pendant que le micro écoute.
+  - Web Audio est coupé par le bouton silencieux. Il y a donc un simple rappel sous la zone de saisie.
+- **Pas de `navigator.audioSession`.** La bascule play-and-record/playback a été essayée puis retirée en v2.5 :
+  - le son sortait faiblement par l'écouteur interne ;
+  - le micro était perdu en mode silencieux.
+- **Secours** : les voix de l'iPhone (`speakIos`). Une web app n'accède qu'aux voix de base, donc Majed (ar-001).
+
+## Écoute continue (banc, pas encore dans l'app)
+- **Capture.** `ScriptProcessor` de 2048 échantillons.
+  - Option « Nettoyage » : un filtre passe-bande 100 Hz – 7 kHz s'applique **en direct**, donc sans délai à l'envoi.
+  - Avant l'envoi, le volume est normalisé (RMS) pour que les voix lointaines soient aussi audibles que les proches. Le gain est limité à ×8 pour ne pas amplifier le bruit.
+- **Seuil automatique.** C'est le 20ᵉ percentile des 120 derniers niveaux (environ 5 s), plus 8 dB. Il s'adapte au bruit de la pièce.
+  Il peut être forcé dans les réglages (0 = automatique).
+- **Découpe sur les pauses uniquement.**
+  - Après 0,5 s de pause, on envoie si le passage dure au moins 2 s.
+  - Après 2,5 s de silence, on envoie dès 0,6 s.
+  - Maximum 20 s par passage.
+  - 0,2 s de marge avant et après le passage.
+  - Moins de 2 s, c'est trop court pour que Gemini comprenne. Plus de 20 s, le délai devient trop long.
+- **Contexte.** Les répliques (arabizi + français) des 3 derniers extraits sont envoyées en **texte**, jamais en audio : c'est moins cher et plus rapide.
+- **Plusieurs personnes dans un extrait.** Gemini découpe l'extrait en répliques.
+- **Identification des personnes (v17).**
+  - Gemini remplit seulement une fiche à cases fermées par réplique : genre, âge, hauteur, texture, débit.
+  - Il a pour consigne d'ignorer le volume, la distance, l'émotion, le chuchotement ou les cris, et le contenu.
+  - C'est l'**app** qui attribue l'identité (`classify`) : même trio genre + âge + hauteur = même personne.
+  - Texture et débit sont seulement affichés, car ils varient trop pour une même personne.
+  - Pourquoi : quand Gemini choisissait lui-même l'identifiant, il réutilisait P1 pour des voix différentes. L'analyse du signal côté app a été jugée trop complexe.
+  - Limites : deux personnes au trio identique sont fusionnées, et une hésitation de Gemini sur l'âge coupe une personne en deux.
+- **Affichage façon messagerie.**
+  - Les bulles sont à gauche, teintées à 34 % de la couleur de la personne.
+  - Couleurs : bleus et verts pour les hommes (`#7cc4ff`, `#7fe0a8`, `#9b9cff`), tons chauds pour les femmes (`#ff9fc4`, `#ffad85`, `#f0cf5a`), gris `#9a9ca6` pour une voix inconnue.
+  - Le bleu de l'app `#3d8bff` est réservé à tes propres répliques, à droite, en couleur pleine (futur bouton « Répondre »).
+- **Mesures.**
+  - Le coût est calculé à partir de `usageMetadata`.
+  - Les statistiques sont regroupées par configuration : nettoyé ou brut, réduction iPhone, personnes.
+  - Stockage : `localStorage["derja-bench-listen"]`.
+
+## Tarifs (pour estimer)
+- Gemini 3.8 Flash : 0,75 $ par million de jetons en entrée, 3,75 $ par million en sortie.
+- Synthèse vocale : Flash 9 $, Lite 6 $ par million de jetons en sortie.
+- Les prix doublent au 01/01/2027.
+
+## À venir
+- Bouton « Répondre » pendant l'écoute continue : il met l'écoute en pause, lance la chaîne français → tunisien, affiche ta bulle bleue à droite, puis reprend l'écoute après la voix.
+- Écoute continue portée dans l'app comme 3ᵉ mode, une fois validée au banc.
+- Renommer ou corriger une personne à la main.
