@@ -35,21 +35,23 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;font:600 15px var(--sans);background:var(--surface-2);color:var(--fg);cursor:pointer}
 .btn.primary{background:var(--accent);color:var(--accent-ink)}
 /* Fil de sous-titres */
-.feed{display:flex;flex-direction:column;gap:10px}
+.feed{display:flex;flex-direction:column}
 .empty{color:var(--muted);font-size:15px;text-align:center;padding:40px 12px}
-.sub-line{background:var(--surface);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
-.sub-line .meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;gap:8px;flex-wrap:wrap}
-.sub-line .who{font-weight:700;color:var(--accent);min-width:22px}
-.sub-line .rep{display:flex;gap:10px;align-items:flex-start}
-.sub-line .rep + .rep{border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
-.sub-line .rep .fr{flex:1}
-.sub-line .fr{font-size:19px;font-weight:600;line-height:1.3}
-.sub-line .tn{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
-.sub-line .err{color:var(--bad);font-size:14px}
-.sub-line .pend{color:var(--muted);font-size:15px;display:flex;align-items:center;gap:8px}
+/* Fil façon messagerie : interlocuteurs à gauche, bulles teintées avec un liseré de leur couleur */
+.who{font-size:12px;font-weight:700;margin:10px 0 2px 8px}
+.bub{max-width:82%;align-self:flex-start;border-radius:18px 18px 18px 6px;padding:8px 12px 8px 10px;border-left:4px solid var(--c);background:color-mix(in srgb,var(--c) 34%,var(--surface));margin-top:4px}
+.bub .fr{font-size:17px;font-weight:600;line-height:1.3}
+.bub .tn{font-size:12px;color:#d4d6dc;overflow-wrap:anywhere}
+.bub.typing{display:flex;gap:5px;align-items:center;padding:12px 14px}
+.bub.typing i{width:7px;height:7px;border-radius:50%;background:var(--fg);opacity:.5;animation:pulse 1s ease-in-out infinite}
+.bub.typing i:nth-child(2){animation-delay:.2s}.bub.typing i:nth-child(3){animation-delay:.4s}
+.bub.err{--c:var(--bad);font-size:14px}
+.meta{align-self:flex-start;margin:3px 0 6px 10px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;background:none;border:0;padding:0;cursor:pointer;font-family:var(--sans);text-align:left}
+.meta b{color:var(--fg);font-weight:600}
+.tools{align-self:flex-start;margin:0 0 8px 10px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1s ease-in-out infinite;display:inline-block}
 @keyframes pulse{50%{opacity:.25}}
-.rate{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.rate{display:flex;gap:6px;flex-wrap:wrap}
 .rate button{appearance:none;border:1px solid var(--line);background:none;color:var(--muted);border-radius:8px;padding:4px 8px;font:600 12px var(--sans);cursor:pointer}
 .rate button[aria-pressed="true"].ok{background:var(--good);border-color:var(--good);color:#000}
 .rate button[aria-pressed="true"].mid{background:var(--mid);border-color:var(--mid);color:#000}
@@ -171,7 +173,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v14 · 23/10 01:04";
+  const VERSION = "banc v15 · 23/10 01:28";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -342,7 +344,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       const res = await gemini(wav, it);
       Object.assign(it, res, { status: "ok", shownAt: performance.now() });
       it.delay = it.shownAt - it.speechEnd;
-      if (it.spk) res.repliques.forEach(r => { if (r.personne && !speakers.some(p => p.id === r.personne)) speakers.push({ id: r.personne, voix: r.voix }); });
+      if (it.spk) res.repliques.forEach(addSpeaker);
     } catch (e) { it.status = "err"; it.err = e.message || String(e); }
     cfg.log.push(logOf(it)); cfg.log = cfg.log.slice(-400); save();
     renderFeed(); renderStats();
@@ -360,21 +362,31 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   const b64 = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
 
   // ---------- Gemini : contexte écrit (3 derniers sous-titres), personnes optionnelles ----------
+  // Personnes entendues, avec leur couleur fixée à la première apparition
   const speakers = [];
+  const PAL = { homme: ["#7cc4ff", "#7fe0a8", "#9b9cff"], femme: ["#ff9fc4", "#ffad85", "#f0cf5a"] }, GREY = "#9a9ca6";
+  const genreOf = g => /^(h|m)/i.test(g || "") ? "homme" : /^f/i.test(g || "") ? "femme" : "";
+  function addSpeaker(r) {
+    if (!r.personne || speakers.some(p => p.id === r.personne)) return;
+    const g = genreOf(r.genre), n = speakers.filter(p => p.genre === g).length;
+    speakers.push({ id: r.personne, voix: r.voix, genre: g, color: g ? PAL[g][n % 3] : GREY });
+  }
+  const colorOf = (it, r) => { if (!it.spk || !r.personne) return GREY; const p = speakers.find(x => x.id === r.personne); return p ? p.color : GREY; };
   const ARABIZI = "arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ)";
   function prompt(it) {
     const prev = items.filter(x => x.status === "ok" && x.id < it.id).slice(-3).flatMap(x => x.repliques || [])
       .map(r => "- " + (r.personne ? r.personne + " : " : "") + r.entendu + " (= " + r.francais + ")").join("\n");
     const spk = it.spk ? `
 Pour chaque réplique :
-"personne" : identifiant de la personne qui parle. ${speakers.length ? "Personnes déjà entendues : " + speakers.map(p => p.id + " = " + p.voix).join(" ; ") + ". Réutilise l'identifiant si la voix correspond, sinon crée le suivant." : "Commence par P1, puis P2…"}
-"voix" : description courte de cette voix (genre, âge approximatif, timbre), 6 mots maximum.` : "";
+"personne" : identifiant de la personne qui parle. ${speakers.length ? "Personnes déjà entendues : " + speakers.map(p => p.id + " = " + (p.genre ? p.genre + ", " : "") + p.voix).join(" ; ") + ". Réutilise l'identifiant si la voix correspond, sinon crée le suivant." : "Commence par P1, puis P2…"}
+"genre" : "homme" ou "femme" ("?" si impossible à dire).
+"voix" : description courte de cette voix (âge approximatif, timbre), 6 mots maximum.` : "";
     return `Tu es un interprète expert du dialecte tunisien (Derja). Écoute l'extrait audio joint : un passage d'une conversation familiale en tunisien, souvent avec des mots français mêlés. L'extrait peut commencer ou finir au milieu d'une phrase.
 Plusieurs personnes peuvent parler dans l'extrait : découpe-le en répliques, une par changement de personne, dans l'ordre. Une seule personne = une seule réplique.
 "entendu" : transcription fidèle et phonétique de la réplique, mot pour mot, en ${ARABIZI}, sans corriger ni passer à l'arabe standard ; mots français en français ; [inaudible] si besoin.
 "francais" : traduction de la réplique en français naturel et courant, fidèle au sens et au ton.${spk}
 ${prev ? "\nContexte, passages précédents :\n" + prev + "\n" : ""}
-Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"personne":"P1","voix":"...",' : ""}"entendu":"...","francais":"..."}]}`;
+Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"personne":"P1","genre":"homme","voix":"...",' : ""}"entendu":"...","francais":"..."}]}`;
   }
   async function gemini(wav, it) {
     const body = JSON.stringify({ contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64(wav) } }, { text: prompt(it) }] }],
@@ -389,7 +401,7 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"personne":"P1","v
       let o; try { o = JSON.parse(txt); } catch { const a = txt.indexOf("{"), b = txt.lastIndexOf("}"); o = JSON.parse(txt.slice(a, b + 1)); }
       const u = j.usageMetadata || {};
       let rep = Array.isArray(o.repliques) ? o.repliques : Array.isArray(o) ? o : [o];
-      rep = rep.filter(r => r && (r.francais || r.entendu)).map(r => ({ personne: r.personne || "", voix: r.voix || "", entendu: r.entendu || "", francais: r.francais || "" }));
+      rep = rep.filter(r => r && (r.francais || r.entendu)).map(r => ({ personne: r.personne || "", genre: r.genre || "", voix: r.voix || "", entendu: r.entendu || "", francais: r.francais || "" }));
       if (!rep.length) throw new Error("Réponse vide");
       return { repliques: rep,
         tin: u.promptTokenCount || 0, tout: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) };
@@ -417,25 +429,40 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"personne":"P1","v
 
   const sec = ms => ms == null ? "–" : (ms / 1000).toFixed(1) + " s";
   const hm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  let openTools = 0; // extrait dont la ligne de notes est dépliée
   function renderFeed() {
     const feed = $("feed"), se = document.scrollingElement, atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
-    feed.innerHTML = items.length ? items.map(it => {
+    let last = null, html = "";
+    for (const it of items) {
       const lg = cfg.log.find(l => l.id === it.id && l.at === it.at) || {};
-      return '<div class="sub-line" data-id="' + it.id + '"><div class="meta"><span>' + hm(it.at) + '</span>' + (it.repliques && it.repliques.length > 1 ? '<span>' + it.repliques.length + ' répliques</span>' : "") +
-        '<span>' + it.dur.toFixed(1) + ' s audio</span>' + (it.prepMs != null ? '<span>préparation ' + it.prepMs + ' ms</span>' : "") + (it.delay != null ? '<span>délai ' + sec(it.delay) + '</span>' : "") +
-        '<span>' + (it.clean ? "nettoyé" : "brut") + (it.ns ? " · réduc. iPhone" : "") + '</span></div>' +
-        (it.status === "run" ? '<div class="pend"><span class="dot"></span>Traduction en cours…</div>' : it.status === "err" ? '<div class="err">' + esc(it.err) + '</div>'
-          : it.repliques.map(r => '<div class="rep">' + (it.spk ? '<span class="who">' + esc(r.personne || "?") + '</span>' : (it.repliques.length > 1 ? '<span class="who">—</span>' : "")) +
-              '<div><div class="fr">' + esc(r.francais) + '</div><div class="tn">' + esc(r.entendu) + (r.voix ? ' · <i>' + esc(r.voix) + '</i>' : "") + '</div></div></div>').join("") +
-            '<div class="rate">' + (it.url ? '<button type="button" data-a="play">▶︎</button>' : "") +
-            [["ok", "Juste"], ["mid", "Approx."], ["ko", "Faux"]].map(([k, l]) => '<button type="button" class="' + k + '" data-r="' + k + '" aria-pressed="' + (lg.rating === k) + '">' + l + '</button>').join("") +
-            (it.spk ? '<button type="button" class="ok" data-w="ok" aria-pressed="' + (lg.who === "ok") + '">Locuteur ✓</button><button type="button" class="ko" data-w="ko" aria-pressed="' + (lg.who === "ko") + '">Locuteur ✗</button>' : "") + '</div>') +
-        '</div>';
-    }).join("") : '<div class="empty">' + (cfg.key ? "Démarre l'écoute continue : les traductions s'afficheront ici au fil de la conversation, les plus récentes en bas." : "Ajoute ta clé Gemini dans les réglages (roue crantée) pour commencer.") + '</div>';
+      if (it.status === "run") { html += '<div class="bub typing" style="--c:' + GREY + '"><i></i><i></i><i></i></div>'; last = null; continue; }
+      if (it.status === "err") { html += '<div class="bub err">' + esc(it.err) + '</div>'; last = null; }
+      else for (const r of it.repliques) {
+        const c = colorOf(it, r), key = it.spk ? (r.personne || "?") : "";
+        if (it.spk && key !== last) {
+          const p = speakers.find(x => x.id === r.personne);
+          html += '<div class="who" style="color:' + c + '">' + esc(key) + (p && p.genre ? " · " + p.genre : "") + '</div>';
+        }
+        last = key;
+        html += '<div class="bub" style="--c:' + c + '"><div class="fr">' + esc(r.francais) + '</div><div class="tn">' + esc(r.entendu) + '</div></div>';
+      }
+      // Infos du banc, discrètes ; toucher pour déplier les notes
+      html += '<button type="button" class="meta" data-id="' + it.id + '" data-a="tools">' + hm(it.at) + ' · ' + it.dur.toFixed(1) + ' s' + (it.delay != null ? ' · délai ' + sec(it.delay) : "") +
+        (lg.rating ? ' · <b>' + ({ ok: "juste", mid: "approx.", ko: "faux" })[lg.rating] + '</b>' : "") + (openTools === it.id ? " ▴" : " ▾") + '</button>';
+      if (openTools === it.id && it.status === "ok") {
+        html += '<div class="tools" data-id="' + it.id + '"><div class="rate">' + (it.url ? '<button type="button" data-a="play">▶︎</button>' : "") +
+          [["ok", "Juste"], ["mid", "Approx."], ["ko", "Faux"]].map(([k, l]) => '<button type="button" class="' + k + '" data-r="' + k + '" aria-pressed="' + (lg.rating === k) + '">' + l + '</button>').join("") +
+          (it.spk ? '<button type="button" class="ok" data-w="ok" aria-pressed="' + (lg.who === "ok") + '">Locuteur ✓</button><button type="button" class="ko" data-w="ko" aria-pressed="' + (lg.who === "ko") + '">Locuteur ✗</button>' : "") +
+          '</div><div class="muted" style="margin-top:4px">préparation ' + (it.prepMs ?? "–") + ' ms · ' + (it.clean ? "nettoyé" : "brut") + (it.ns ? " · réduc. iPhone" : "") +
+          it.repliques.filter(r => r.voix).map(r => ' · ' + esc(r.personne) + ' : ' + esc(r.voix)).join("") + '</div></div>';
+      }
+    }
+    feed.innerHTML = html || '<div class="empty">' + (cfg.key ? "Démarre l'écoute continue : la conversation s'affichera ici, les messages les plus récents en bas." : "Ajoute ta clé Gemini dans les réglages (roue crantée) pour commencer.") + '</div>';
     if (atBottom) se.scrollTop = se.scrollHeight;
   }
   $("feed").onclick = e => {
     const line = e.target.closest("[data-id]"); if (!line) return;
+    if (e.target.closest("[data-a=tools]")) { const id = Number(line.dataset.id); openTools = openTools === id ? 0 : id; renderFeed(); return; }
     const it = items.find(x => x.id === Number(line.dataset.id)); if (!it) return;
     const lg = cfg.log.find(l => l.id === it.id && l.at === it.at); if (!lg && !e.target.closest("[data-a]")) return;
     if (e.target.closest("[data-a=play]") && it.url) { try { new Audio(it.url).play(); } catch {} return; }
