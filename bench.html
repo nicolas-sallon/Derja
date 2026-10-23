@@ -137,6 +137,16 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 .csw i{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:var(--surface);border:2px solid var(--fg)}
 .csw.plus{display:grid;place-items:center;background:var(--surface-2);color:var(--fg);font:600 18px var(--sans);border:1px dashed var(--muted);overflow:hidden}
 .csw.plus input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;text-align:left;font-family:var(--sans);align-self:flex-start}
+.bub[data-a=who]{cursor:pointer}
+.rmenu{align-self:flex-start;max-width:92%;margin:6px 0 4px 8px;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.rmenu p{margin:0;font-size:12px;color:var(--muted)}
+.rmenu .row input{border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:7px 10px;font:15px var(--sans);min-width:0;flex:1}
+.mlist{display:flex;flex-wrap:wrap;gap:6px}
+.mdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.btn:disabled{opacity:.45}
+.gmain small[data-g=genre]{cursor:pointer}
+.gsel{margin:4px 0 0 4px}
 .addp{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
 .muted{color:var(--muted);font-size:13px}
 @media (prefers-reduced-motion:reduce){.meter .fill,.mic{transition:none}.dot{animation:none}}
@@ -202,6 +212,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <div id="gallery"></div>
       <button class="btn" id="addOpen" type="button">+ Ajouter une voix</button>
       <div class="addp" id="addPanel" hidden>
+        <b id="addTitle" style="font-size:14px">Nouvelle voix</b>
         <div class="row"><button class="btn" id="addRec" type="button">● Maintenir pour enregistrer</button><label class="btn">Importer un fichier<input type="file" id="addFile" hidden></label></div>
         <p class="muted" id="addInfo" style="margin:0;font-size:13px"></p>
         <div id="addTools" hidden style="display:flex;flex-direction:column;gap:8px">
@@ -247,7 +258,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v33 · 23/10 17:54";
+  const VERSION = "banc v34 · 23/10 21:13";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -462,7 +473,10 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   async function process(it, pcm, rate) {
     const tp = performance.now();
     let wav, x16;
-    try { x16 = await resample16(pcm, rate, it.clean); wav = toWav(x16, SR_OUT); }
+    try {
+      x16 = await resample16(pcm, rate, it.clean); wav = toWav(x16, SR_OUT);
+      if (it.spk) { it.x16 = x16; items.filter(x => x.x16 && x.id < it.id - 60).forEach(x => { delete x.x16; }); } // gardé pour les 60 derniers extraits
+    }
     catch (e) { it.status = "err"; it.err = "Préparation du son impossible"; renderFeed(); return; }
     it.prepMs = Math.round(performance.now() - tp);
     it.url = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
@@ -638,12 +652,13 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     return pal.slice().sort((a, b) => used(a) - used(b))[0];
   }
   // Genre annoncé incohérent avec la hauteur mesurée ? (signalé « à vérifier » dans la galerie)
+  const doubtOf = (v, f0) => !v.genreOk && genreDoubt(v.genre, f0);
   const genreDoubt = (g, f0) => !!f0 && ((g === "homme" && f0 > 185) || (g === "femme" && f0 < 140) || (g === "enfant" && f0 < 190));
   const labelOf = v => v ? (v.name || (v.suggest ? v.id + " · " + v.suggest + " ?" : v.id)) : "";
   const refWav = v => toWav(toF32(v.ref), 16000);
 
   // Crée une voix à partir d'un passage d'une seule voix (x : 16 kHz)
-  function createVoice({ x, a, genre, name = "", suggest = "", provisoire = false, importee = false, userNamed = false, start }) {
+  function createVoice({ x, a, genre, name = "", suggest = "", provisoire = false, importee = false, userNamed = false, genreOk = false, start }) {
     let temp = false;
     const kept = gallery.filter(v => !v.temp);
     if (kept.length >= GALLERY_MAX) { // galerie pleine : la voix sans nom entendue il y a le plus longtemps sort
@@ -653,7 +668,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     const win = cut5(x, start != null ? start : bestWindows(x, a)[0]), aw = analyze(win);
     const g = genreOf(genre) || (aw.f0Med && aw.f0Med < 165 ? "homme" : "femme");
     const v = { id: "V" + meta.nextN, n: meta.nextN, name, userNamed, suggest, genre: g, color: nextColor(g), ref: toI16(win),
-      f0: aw.f0Med, mfcc: aw.mfcc, voicedSec: aw.voicedSec, snr: aw.snr, provisoire, importee, doubt: genreDoubt(g, aw.f0Med),
+      f0: aw.f0Med, mfcc: aw.mfcc, voicedSec: aw.voicedSec, snr: aw.snr, provisoire, importee, genreOk, doubt: !genreOk && genreDoubt(g, aw.f0Med),
       created: Date.now(), lastHeard: Date.now(), refVer: 1, file: null, temp };
     meta.nextN++; storeMeta();
     gallery.push(v); storeVoice(v); ensureFile(v);
@@ -674,7 +689,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     if (!to.suggest && from.suggest) to.suggest = from.suggest;
     const fromBetter = manual && !from.provisoire && (to.provisoire || to.importee && !from.importee || (from.snr >= to.snr + 3) || (from.voicedSec >= to.voicedSec + 1 && from.snr >= to.snr - 1));
     if ((to.provisoire && !from.provisoire) || fromBetter) { // garder la meilleure référence
-      const old = to.file; Object.assign(to, { ref: from.ref, f0: from.f0, mfcc: from.mfcc, voicedSec: from.voicedSec, snr: from.snr, file: from.file, provisoire: false, importee: from.importee, refVer: to.refVer + 1 });
+      const old = to.file; Object.assign(to, { ref: from.ref, f0: from.f0, mfcc: from.mfcc, voicedSec: from.voicedSec, snr: from.snr, file: from.file, provisoire: false, importee: from.importee, refVer: to.refVer + 1 }); to.doubt = doubtOf(to, to.f0);
       if (old) deleteFileLater(old); from.file = null;
     }
     if (present.has(from.id)) present.add(to.id);
@@ -749,6 +764,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   // ---------- Attribution des répliques (au retour de Gemini) ----------
   async function attribute(it, x16, sent) {
     const single = it.repliques.length === 1, whole = single ? analyze(x16) : null, now = Date.now();
+    it.repliques.forEach(r => { r.single = single; });
     for (const r of it.repliques) {
       let seg = null, a = null;
       if (single) { seg = x16; a = whole; }
@@ -832,19 +848,36 @@ th{color:var(--muted);font-weight:600;font-size:12px}
         const o = await askJson([{ text: "Voix A :" }, refPart(v), { text: "Voix B :" }, { inline_data: { mime_type: "audio/wav", data: b64(toWav(win, 16000)) } },
           { text: 'Ces deux enregistrements sont-ils la même personne ? Juge uniquement sur le timbre de la voix. Réponds uniquement avec ce JSON : {"meme":true} ou {"meme":false}' }]);
         if (o.meme !== true || !gallery.includes(v)) return;
-        const nv = { ref: toI16(win), refVer: v.refVer + 1 };
-        let file = null;
-        if (filesMode === "files") { try { file = await uploadWav(toWav(win, 16000), "derja-" + v.id + "-" + nv.refVer); } catch { return; } } // la nouvelle version doit être prête avant de basculer
-        const old = v.file;
-        Object.assign(v, nv, { file, f0: aw.f0Med, mfcc: aw.mfcc, voicedSec: aw.voicedSec, snr: aw.snr, provisoire: false, importee: false, replacedAt: Date.now(), doubt: genreDoubt(v.genre, aw.f0Med) });
-        if (old) deleteFileLater(old);
-        storeVoice(v); stats.replaced++; renderGallery();
+        await replaceRef(v, win, aw);
       } finally { v.pending = false; }
     });
   }
+  // Remplacement de la référence d'une voix : nouvelle version envoyée chez Google AVANT le basculement (instantané),
+  // ancienne version effacée 5 min après. Le code de la voix ne change pas.
+  async function replaceRef(v, win, aw, extra = {}) {
+    const ver = v.refVer + 1; let file = null;
+    if (filesMode === "files") { try { file = await uploadWav(toWav(win, 16000), "derja-" + v.id + "-" + ver); } catch (e) { filesMode = "inline"; filesErr = e.message || String(e); } }
+    if (!gallery.includes(v)) { if (file) deleteFileLater(file, 0); return; }
+    const old = v.file;
+    Object.assign(v, { ref: toI16(win), refVer: ver, file, f0: aw.f0Med, mfcc: aw.mfcc, voicedSec: aw.voicedSec, snr: aw.snr, provisoire: false, importee: false, replacedAt: Date.now() }, extra);
+    v.doubt = doubtOf(v, v.f0);
+    if (old) deleteFileLater(old);
+    storeVoice(v); stats.replaced++; renderGallery();
+  }
+  // Correction par l'utilisateur (« c'est Mamie ») : elle vaut confirmation ; la référence est améliorée
+  // si le morceau ne contient qu'une voix, assez de voix, et qu'il est meilleur (ou que la référence est provisoire/importée)
+  function improveFromCorrection(v, x) {
+    if (!x || !v) return;
+    const a = analyze(x); if (!a.single) return;
+    const win = cut5(x, bestWindows(x, a)[0]), aw = analyze(win);
+    if (!aw.single || aw.voicedSec < 3) return;
+    const easy = v.provisoire || v.importee;
+    const better = easy ? aw.snr >= v.snr - 3 : (aw.snr >= v.snr + 3 && aw.voicedSec >= v.voicedSec - 0.5) || (aw.voicedSec >= v.voicedSec + 1 && aw.snr >= v.snr - 1);
+    if (better) replaceRef(v, win, aw);
+  }
 
   // ---------- Galerie dans les réglages ----------
-  let galPlaying = null, openColor = null;
+  let galPlaying = null, openColor = null, genreOpen = null;
   // Panneau de couleurs : hommes, femmes, enfants, puis couleurs personnalisées déjà utilisées et « + » (roue de l'iPhone)
   function colorPanel(v) {
     const custom = [...new Set(gallery.map(o => o.color).filter(c => c && !ALL_COLORS.includes(c)))];
@@ -859,10 +892,11 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     el.innerHTML = list.length ? list.map(v => '<div class="gw" data-v="' + v.id + '"><div class="gv">' +
       '<button type="button" class="gdot" data-g="color" style="background:' + v.color + '" aria-label="Changer la couleur"></button>' +
       '<div class="gmain"><input type="text" data-g="name" value="' + esc(v.name) + '" placeholder="' + esc(v.suggest ? v.suggest + " ?" : "Nom") + '" autocomplete="off">' +
-      '<small>' + v.id + ' · ' + v.genre + (v.f0 ? ' · ' + v.f0 + ' Hz' : "") + (v.provisoire ? ' · provisoire' : "") + (v.importee ? ' · importée' : "") + (v.temp ? ' · temporaire' : "") + (v.doubt ? ' · <b>genre à vérifier</b>' : "") + '</small></div>' +
+      '<small data-g="genre">' + v.id + ' · <u>' + v.genre + '</u>' + (v.f0 ? ' · ' + v.f0 + ' Hz' : "") + (v.provisoire ? ' · provisoire' : "") + (v.importee ? ' · importée' : "") + (v.temp ? ' · temporaire' : "") + (v.doubt ? ' · <b>genre à vérifier</b>' : "") + '</small>' +
+      (genreOpen === v.id ? '<span class="seg2 gsel">' + ["homme", "femme", "enfant"].map(g => '<button type="button" data-g="setGenre" data-ge="' + g + '" aria-pressed="' + (v.genre === g) + '">' + g[0].toUpperCase() + g.slice(1) + '</button>').join("") + '</span>' : "") + '</div>' +
       '<label class="gchk" title="Présente"><input type="checkbox" data-g="present"' + (present.has(v.id) ? " checked" : "") + '></label>' +
       '<button type="button" class="btn sm" data-g="play">' + (galPlaying === v.id ? "■" : "▶︎") + '</button>' +
-      '<select data-g="merge" aria-label="Fusionner avec"><option value="">⋯</option>' + gallery.filter(o => o !== v).map(o => '<option value="' + o.id + '">= ' + esc(labelOf(o)) + '</option>').join("") + '<option value="__del">Supprimer</option></select>' +
+      '<select data-g="merge" aria-label="Fusionner avec"><option value="">⋯</option>' + gallery.filter(o => o !== v).map(o => '<option value="' + o.id + '">= ' + esc(labelOf(o)) + '</option>').join("") + '<option value="__new">Nouvel extrait…</option><option value="__del">Supprimer</option></select>' +
       '</div>' + (v.checking ? '<div class="gnote">Vérification : cette voix existe-t-elle déjà ?</div>' : "") +
       (v.dupOf && voiceOf(v.dupOf) ? '<div class="gnote">Ressemble à <b>' + esc(labelOf(voiceOf(v.dupOf))) + '</b> : <button type="button" class="btn sm" data-g="dupMerge">Fusionner</button> <button type="button" class="btn sm" data-g="dupKeep">Garder les deux</button></div>' : "") +
       (openColor === v.id ? colorPanel(v) : "") + '</div>').join("") : '<p class="muted">Aucune voix pour l\'instant : elles s\'ajoutent toutes seules au fil des conversations, ou avec « + Ajouter une voix ».</p>';
@@ -871,6 +905,12 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   $("gallery").addEventListener("click", e => {
     const row = e.target.closest("[data-v]"), b = e.target.closest("[data-g]"); if (!row || !b) return;
     const v = gallery.find(x => x.id === row.dataset.v); if (!v) return;
+    if (b.dataset.g === "genre") { genreOpen = genreOpen === v.id ? null : v.id; renderGallery(); return; }
+    if (b.dataset.g === "setGenre") {
+      const g = b.dataset.ge;
+      if (genreDoubt(g, v.f0) && !confirm("La voix mesurée est à " + v.f0 + " Hz, inhabituel pour « " + g + " ». Confirmer ?")) return;
+      v.genre = g; v.genreOk = true; v.doubt = false; genreOpen = null; storeVoice(v); renderGallery(); return;
+    }
     if (b.dataset.g === "color") { openColor = openColor === v.id ? null : v.id; renderGallery(); }
     if (b.dataset.g === "pick") { v.color = b.dataset.c; openColor = null; storeVoice(v); renderGallery(); renderFeed(); }
     if (b.dataset.g === "dupMerge") { const to = voiceOf(v.dupOf); v.dupOf = null; if (to) mergeVoice(v, to, true); else renderGallery(); }
@@ -889,6 +929,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     if (b.dataset.g === "custom") { v.color = b.value; openColor = null; storeVoice(v); renderGallery(); renderFeed(); }
     if (b.dataset.g === "merge") {
       const to = b.value; b.value = "";
+      if (to === "__new") { addShow(true, v); return; }
       if (to === "__del") { if (confirm("Supprimer " + labelOf(v) + " de la galerie ?")) { removeVoice(v); renderGallery(); renderFeed(); } return; }
       const t = gallery.find(x => x.id === to);
       if (t && confirm(labelOf(v) + " est la même personne que " + labelOf(t) + " : fusionner ?")) mergeVoice(v, t);
@@ -915,7 +956,16 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 
   // ---------- Ajouter une voix à la main : enregistrer ou importer un fichier ----------
   let addRec = false, addBuf = [], addLen = 0, addX = null, addA = null, addWins = [], addIdx = 0, addImported = false, addGenre = "";
-  const addShow = on => { $("addPanel").hidden = !on; $("addOpen").hidden = on; if (!on) { addX = null; $("addInfo").textContent = ""; $("addName").value = ""; $("addTools").hidden = true; } };
+  let addTarget = null; // voix existante dont on remplace l'extrait (« Nouvel extrait… »), sinon null
+  const addShow = (on, target = null) => {
+    $("addPanel").hidden = !on; $("addOpen").hidden = on;
+    addTarget = on ? target : null;
+    $("addTitle").textContent = addTarget ? "Nouvel extrait pour " + labelOf(addTarget) : "Nouvelle voix";
+    $("addSave").textContent = addTarget ? "Remplacer l'extrait" : "Ajouter";
+    if (on && addTarget) { $("addName").value = addTarget.name || ""; addGenre = addTarget.genre; }
+    if (on) $("addPanel").scrollIntoView({ block: "nearest" });
+    if (!on) { addX = null; addGenre = ""; $("addInfo").textContent = ""; $("addName").value = ""; $("addTools").hidden = true; }
+  };
   $("addOpen").onclick = () => addShow(true);
   $("addCancel").onclick = () => addShow(false);
   async function addLoad(x16, imported) {
@@ -938,7 +988,14 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     const name = $("addName").value.trim();
     if (!addX) { $("addInfo").textContent = "Enregistre ou importe d'abord un extrait."; return; }
     if (!name) { $("addName").focus(); $("addInfo").textContent = "Indique un nom."; return; }
-    const v = createVoice({ x: addX, a: addA, genre: addGenre, name, userNamed: true, importee: addImported, start: addWins[addIdx] || 0 });
+    if (addTarget) { // nouvel extrait pour une voix existante : ton choix, sans avis de Gemini
+      const v = addTarget, win = cut5(addX, addWins[addIdx] || 0), aw = analyze(win);
+      if (aw.f0Med && v.f0 && Math.abs(st(aw.f0Med) - st(v.f0)) > 5 && !confirm("Hauteur très différente de l'ancienne référence (" + aw.f0Med + " Hz contre " + v.f0 + " Hz) : c'est bien la même personne ?")) return;
+      v.name = name; v.userNamed = true; if (addGenre && addGenre !== v.genre) { v.genre = addGenre; v.genreOk = true; }
+      replaceRef(v, win, aw, { importee: addImported });
+      addShow(false); renderGallery(); renderFeed(); return;
+    }
+    const v = createVoice({ x: addX, a: addA, genre: addGenre, name, userNamed: true, genreOk: true, importee: addImported, start: addWins[addIdx] || 0 });
     if (listening) present.add(v.id);
     addGenre = ""; addShow(false); renderGallery();
     checkManualDup(v);
@@ -1226,6 +1283,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
   const hm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   let openTools = 0; // extrait dont la ligne de notes est dépliée
   function renderFeed() {
+    const mn = $("mName"), keepName = mn ? { v: mn.value, f: document.activeElement === mn } : null; // saisie en cours dans le menu, gardée si le fil se met à jour
     const feed = $("feed"), se = document.scrollingElement, atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
     let last = null, html = "";
     for (const it of items) {
@@ -1251,9 +1309,11 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
         // Voix de la galerie (nom et couleur à jour, même après un renommage ou une fusion), sinon nom proposé ou « ? »
         const v = it.spk && r.vid ? voiceOf(r.vid) : null, c = v ? v.color : GREY;
         const key = !it.spk ? "" : v ? v.id : "?" + (r.nom || "");
-        if (it.spk && key !== last) html += '<div class="who" style="color:' + readable(c) + '">' + esc(v ? labelOf(v) : r.nom ? r.nom + " ?" : "?") + '</div>';
+        const ri = it.repliques.indexOf(r), tap = it.spk ? ' data-id="' + it.id + '" data-ri="' + ri + '" data-a="who"' : "";
+        if (it.spk && key !== last) html += '<button type="button" class="who"' + tap + ' style="color:' + readable(c) + '">' + esc(v ? labelOf(v) : r.nom ? r.nom + " ?" : "?") + '</button>';
         last = key;
-        html += '<div class="bub" style="--c:' + c + '"><div class="fr">' + esc(r.francais) + '</div><div class="tn">' + esc(r.entendu) + '</div></div>';
+        html += '<div class="bub"' + tap + ' style="--c:' + c + '"><div class="fr">' + esc(r.francais) + '</div><div class="tn">' + esc(r.entendu) + '</div></div>';
+        if (whoMenu && whoMenu.id === it.id && whoMenu.ri === ri) { html += menuHtml(it, r, v); last = null; }
       }
       // Infos du banc, discrètes ; toucher pour déplier les notes
       html += '<button type="button" class="meta" data-id="' + it.id + '" data-a="tools">' + hm(it.at) + ' · ' + it.dur.toFixed(1) + ' s' + (it.delay != null ? ' · délai ' + sec(it.delay) : "") +
@@ -1267,8 +1327,63 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
       }
     }
     feed.innerHTML = html || '<div class="empty">' + (cfg.key ? "Touche J'écoute pour suivre la conversation, et maintiens Je parle pour répondre en français. Les messages les plus récents s'affichent en bas." : "Ajoute ta clé Gemini dans les réglages (roue crantée) pour commencer.") + '</div>';
-    if (atBottom) se.scrollTop = se.scrollHeight;
+    if (keepName && $("mName")) { $("mName").value = keepName.v; if (keepName.f) $("mName").focus(); }
+    if (atBottom && !whoMenu) se.scrollTop = se.scrollHeight;
   }
+  // ---------- Menu sur le nom (ou la bulle) d'une réplique : accepter, renommer, fusionner, corriger, créer ----------
+  let whoMenu = null; // { id, ri, step } ; step : "" | "rename" | "merge" | "is" | "create"
+  const voiceList = (excl, act) => gallery.filter(o => o !== excl).sort((a, b) => (present.has(b.id) - present.has(a.id)) || (b.lastHeard || 0) - (a.lastHeard || 0))
+    .map(o => '<button type="button" class="btn sm" data-m="' + act + '" data-v="' + o.id + '"><span class="mdot" style="background:' + o.color + '"></span>' + esc(labelOf(o)) + '</button>').join("");
+  // Morceau audio d'une réplique (extrait entier si une seule réplique, sinon d'après les temps de Gemini, 0,5 s retirée de chaque côté)
+  function segOf(it, r) {
+    if (!it.x16) return null;
+    if (r.single) return it.x16;
+    const s = Math.max(0, Math.round((r.debut + 0.5) * 16000)), e = Math.min(it.x16.length, Math.round((r.fin - 0.5) * 16000));
+    return e - s >= 1.5 * 16000 ? it.x16.slice(s, e) : null;
+  }
+  function menuHtml(it, r, v) {
+    const st = whoMenu.step, b = (m, l, dis) => '<button type="button" class="btn sm" data-m="' + m + '"' + (dis ? " disabled" : "") + '>' + l + '</button>';
+    let h = '<div class="rmenu">';
+    if (st === "rename") h += '<div class="row"><input id="mName" type="text" value="' + esc(v ? v.name || v.suggest || "" : r.nom || "") + '" placeholder="Nom" autocomplete="off">' + b("renameOk", "OK") + b("back", "Annuler") + '</div>';
+    else if (st === "create") h += '<div class="row"><input id="mName" type="text" value="' + esc(r.nom || "") + '" placeholder="Nom de la voix" autocomplete="off">' + b("createOk", "Créer") + b("back", "Annuler") + '</div>';
+    else if (st === "merge") h += '<p>' + esc(v ? labelOf(v) : "") + ' est en fait :</p><div class="mlist">' + voiceList(v, "mergeTo") + '</div>' + b("back", "Annuler");
+    else if (st === "is") h += '<p>Cette réplique est de :</p><div class="mlist">' + voiceList(v, "isTo") + b("isUnknown", "Inconnu") + '</div>' + b("back", "Annuler");
+    else if (v) {
+      if (!v.userNamed && v.suggest) h += b("accept", "Accepter « " + esc(v.suggest) + " »");
+      h += b("rename", "Renommer…") + b("merge", "C'est en fait…") + b("is", "Ce n'est pas " + esc(v.name || v.suggest || v.id) + ", c'est…");
+    } else {
+      const seg = segOf(it, r);
+      h += b("is", "C'est…") + b("create", r.nom ? "Créer la voix « " + esc(r.nom) + " »" : "Créer une voix", !seg) + (!seg ? '<p>Morceau trop court ou plus disponible pour créer une voix.</p>' : "");
+    }
+    return h + '</div>';
+  }
+  function menuAction(m) {
+    const it = items.find(x => x.id === whoMenu.id), r = it && it.repliques[whoMenu.ri]; if (!r) { whoMenu = null; renderFeed(); return; }
+    const v = r.vid ? voiceOf(r.vid) : null, act = m.dataset.m, target = m.dataset.v ? gallery.find(o => o.id === m.dataset.v) : null;
+    const done = () => { whoMenu = null; renderFeed(); renderGallery(); };
+    if (["rename", "merge", "is", "create"].includes(act)) { whoMenu.step = act; renderFeed(); const n = $("mName"); if (n) n.focus(); return; }
+    if (act === "back") { whoMenu.step = ""; renderFeed(); return; }
+    if (act === "accept" && v) { v.name = v.suggest; v.userNamed = true; storeVoice(v); return done(); }
+    if (act === "renameOk") {
+      const n = $("mName").value.trim(); if (!n) return;
+      if (v) { v.name = n; v.userNamed = true; storeVoice(v); } else r.nom = n;
+      return done();
+    }
+    if (act === "mergeTo" && v && target) { mergeVoice(v, target); return done(); }
+    if (act === "isTo" && target) { // correction de cette seule réplique ; elle sert aussi à améliorer la référence
+      r.vid = target.id; r.manual = true; r.guard = ""; present.add(target.id); target.lastHeard = Date.now(); storeVoice(target);
+      improveFromCorrection(target, segOf(it, r)); return done();
+    }
+    if (act === "isUnknown") { r.vid = ""; r.manual = true; return done(); }
+    if (act === "createOk") {
+      const n = $("mName").value.trim(), seg = segOf(it, r); if (!n || !seg) return;
+      const a = analyze(seg);
+      const nv = createVoice({ x: seg, a, genre: r.genre, name: n, userNamed: true, provisoire: !r.single || a.voicedSec < 3 || !a.single });
+      r.vid = nv.id; r.manual = true; present.add(nv.id);
+      return done();
+    }
+  }
+
   // Réécoute : un seul extrait à la fois ; toucher de nouveau l'extrait en cours l'arrête
   // playingId : extrait en cours ("12") ou, pour mes réponses, "12:fr" (mon français) / "12:tn" (voix tunisienne)
   let player = null, playingId = 0;
@@ -1283,6 +1398,11 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     renderFeed();
   }
   $("feed").onclick = e => {
+    const m = e.target.closest("[data-m]");
+    if (m) { menuAction(m); return; }
+    if (e.target.closest(".rmenu")) return;
+    const w = e.target.closest("[data-a=who]");
+    if (w) { const id = Number(w.dataset.id), ri = Number(w.dataset.ri); whoMenu = whoMenu && whoMenu.id === id && whoMenu.ri === ri ? null : { id, ri, step: "" }; renderFeed(); return; }
     const line = e.target.closest("[data-id]"); if (!line) return;
     if (e.target.closest("[data-a=tools]")) { const id = Number(line.dataset.id); openTools = openTools === id ? 0 : id; renderFeed(); return; }
     const it = items.find(x => x.id === Number(line.dataset.id)); if (!it) return;

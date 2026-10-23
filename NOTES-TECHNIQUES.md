@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v33).
+Mise à jour : 23/10/2026 (app v2.5, banc v34).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -171,6 +171,15 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
     - Confirmation par Gemini : {"meme":true/false}.
     - La nouvelle version est envoyée chez Google **avant** le basculement, qui est instantané. Le code de la voix ne change pas, donc aucun appel en cours ne peut voir apparaître une voix « nouvelle ».
 - **Galerie dans les réglages :** écouter, renommer, cocher « présente », changer la couleur, fusionner (⋯ → « = autre voix »), supprimer.
+  - **Genre (v34)** : un toucher sur la petite ligne sous le nom ouvre Homme / Femme / Enfant.
+    - Le genre choisi est marqué confirmé (`genreOk`), et « genre à vérifier » ne s'affiche plus.
+    - S'il contredit la hauteur mesurée, une confirmation est demandée une seule fois.
+    - La couleur ne change pas.
+    - Le genre choisi lors d'un ajout manuel compte aussi comme confirmé.
+  - **« Nouvel extrait… » (v34, menu ⋯)** : même panneau que l'ajout, titré « Nouvel extrait pour X », avec le nom et le genre préremplis.
+    - La référence est remplacée sans avis de Gemini, puisque c'est le choix de l'utilisateur (`replaceRef`).
+    - Confirmation si la hauteur est à plus de 5 demi-tons de l'ancienne référence.
+    - L'extrait est marqué « importée » s'il vient d'un fichier.
 - **Couleurs (v31).** Un toucher sur le rond ouvre un nuancier sous la ligne, sans titres de catégories, dans cet ordre :
   - hommes : bleu ciel, vert menthe, pervenche, turquoise, vert d'eau ;
   - femmes : rose poudré, pêche, jaune doré, corail, lilas ;
@@ -188,6 +197,18 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
     - Fusionner : le **nom de la voix existante** est gardé, puisque c'est celui que l'utilisateur connaît déjà (choix du 23/10). Le nouveau nom ne sert que si la voix existante n'en avait pas. La meilleure des deux références est gardée.
     - Garder les deux : la paire est mémorisée (`notDup`), et la question n'est plus posée.
     - Pendant la conversation, rien ne change. Une voix nouvelle n'a jamais de nom donné par l'utilisateur, donc la fusion y reste automatique et garde le nom déjà donné.
+- **Menu sur le nom ou la bulle d'une réplique (v34)** : un toucher sur le nom au-dessus des bulles ou sur une bulle ouvre un menu sous la bulle.
+  - **Voix de la galerie :**
+    - « Accepter « nom proposé » » ;
+    - « Renommer… » ;
+    - « C'est en fait… » : fusion, la voix choisie garde son nom ;
+    - « Ce n'est pas X, c'est… » : correction de cette seule réplique, vers une autre voix ou « Inconnu ».
+  - **Réplique sans voix (nom en gris) :**
+    - « C'est… » ;
+    - « Créer la voix « nom » » : seulement si le morceau dure au moins 1,5 s. Référence provisoire si l'extrait contient plusieurs répliques, ou si le morceau a peu de voix ou plusieurs voix.
+  - **Une correction vaut confirmation** (`improveFromCorrection`) : si le morceau ne contient qu'une voix, avec au moins 3 s de voix, et qu'il est meilleur que la référence actuelle (ou que celle-ci est provisoire ou importée), il la remplace, sans demander à Gemini.
+  - **Audio conservé :** celui des 60 derniers extraits (`it.x16`), pour ces corrections et créations.
+  - **Saisie protégée :** le texte tapé dans le menu est conservé quand le fil se met à jour, et le fil ne défile pas tant que le menu est ouvert.
 - **Mesures :** la ligne « Voix (session) » donne la moyenne des références jointes par appel, les voix nouvelles, les fusions, les remplacements, les « ? », les refus par la hauteur, et le nombre et le coût des appels de fond.
 
 ## Tarifs (pour estimer)
