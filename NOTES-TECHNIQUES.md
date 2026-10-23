@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v21).
+Mise à jour : 23/10/2026 (app v2.5, banc v22).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -73,13 +73,17 @@ Mise à jour : 23/10/2026 (app v2.5, banc v21).
   - Texture et débit sont seulement affichés, car ils varient trop pour une même personne.
   - Pourquoi : quand Gemini choisissait lui-même l'identifiant, il réutilisait P1 pour des voix différentes. L'analyse du signal côté app a été jugée trop complexe.
   - Limites : deux personnes au trio identique sont fusionnées, et une hésitation de Gemini sur l'âge coupe une personne en deux.
+- **Orientation : toujours verticale, à l'endroit ou à l'envers.**
+  - Une web app ne peut pas verrouiller l'orientation sur iOS. Quand iOS fait pivoter la page en paysage (iPhone sur le côté), on la fait pivoter en sens inverse (`--rot = -window.orientation`), en inversant largeur et hauteur (`--w`, `--h`). La page reste ainsi dans l'axe de l'iPhone.
+  - Les marges d'écran (`--st`, `--sb`) suivent le bord qui se trouve en haut de la page après rotation.
+  - Pas d'animation quand c'est iOS qui fait tourner l'écran, pour éviter un double pivot.
 - **Affichage retourné (iPhone tête en bas, micro vers les personnes en face).**
-  - L'iPhone ne pivote jamais l'écran tête en bas tout seul. On lit donc l'inclinaison avec `deviceorientation` (beta) et on retourne la page en CSS (`html.flipped` : `rotate(180deg)` sur `.stage` et sur la feuille de réglages).
+  - L'iPhone ne pivote jamais l'écran tête en bas tout seul. On lit donc l'inclinaison avec `deviceorientation` (beta) et on ajoute 180° à `--rot` (appliqué à `.stage` et à la feuille de réglages).
   - beta inférieur à -20° : retourné ; supérieur à +20° : normal ; entre les deux (posé à plat), l'état précédent est gardé. On peut donc retourner l'iPhone puis le poser sur la table.
-  - iOS demande l'autorisation des capteurs de mouvement pendant un geste. Elle est donc demandée au premier appui sur Démarrer.
+  - iOS demande l'autorisation des capteurs de mouvement pendant un geste. Elle est donc demandée au premier appui sur Démarrer. Le code ne peut pas la donner d'avance : iOS la redemande à chaque ouverture de la page. Il en va de même pour le micro dans une web app.
   - Pour pouvoir retourner la page d'un bloc, elle défile dans `.stage` (position fixe) et non dans le document. Le défilement automatique du fil vise donc `#stage`.
   - Les marges de l'encoche et de la barre d'accueil (`--st`, `--sb`) sont inversées quand l'affichage est retourné.
-  - Sur la jauge retournée, le glisser du doigt est inversé (le bas de l'échelle est à droite de l'écran).
+  - Jauge : la position du doigt est projetée sur l'axe de la jauge selon `--rot`, donc le glisser fonctionne dans tous les sens.
   - Réglage « Retourner l'affichage », activé par défaut.
 - **Affichage façon messagerie.**
   - Les bulles sont à gauche, teintées à 34 % de la couleur de la personne.

@@ -21,12 +21,13 @@
 html,body{height:100%;margin:0}
 /* Marges des bords de l'écran (encoche en haut, barre d'accueil en bas), inversées quand l'affichage est retourné */
 :root{--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
-html.flipped{--st:env(safe-area-inset-bottom,0px);--sb:env(safe-area-inset-top,0px)}
 body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
-/* La page défile dans .stage (et non dans le document) pour pouvoir la retourner d'un bloc */
-.stage{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;transition:transform .35s ease}
-html.flipped .stage,html.flipped .sheet{transform:rotate(180deg)}
-@media (prefers-reduced-motion:reduce){.stage{transition:none}}
+/* La page défile dans .stage (et non dans le document) pour pouvoir la tourner d'un bloc.
+   Toujours verticale, à l'endroit ou à l'envers : --rot, --w et --h sont calculés en JS (voir « Orientation »). */
+.stage,.sheet{position:fixed;top:50%;left:50%;width:var(--w,100vw);height:var(--h,100vh);transform:translate(-50%,-50%) rotate(var(--rot,0deg))}
+.stage{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+html.anim .stage,html.anim .sheet{transition:transform .35s ease}
+@media (prefers-reduced-motion:reduce){html.anim .stage,html.anim .sheet{transition:none}}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 [hidden]{display:none!important}
 .app{display:flex;flex-direction:column;min-height:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:640px;margin:0 auto}
@@ -84,7 +85,7 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .state b{color:var(--fg);font-weight:600}
 .state b.voice{color:var(--good)} .state b.warn{color:var(--mid)} .state b.clip{color:var(--bad)}
 /* Feuille de réglages */
-.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet{z-index:20;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
 .sheet-in{background:var(--surface);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + var(--sb)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px;max-height:90%;overflow:auto}
 .sheet h2{margin:0;font-size:20px}
 .sheet h3{margin:6px 0 0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
@@ -184,7 +185,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v21 · 23/10 02:46";
+  const VERSION = "banc v22 · 23/10 02:55";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -279,14 +280,31 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   }
   $("toggle").onclick = () => { askMotion(); listening ? stop() : start(); };
 
-  // ---------- Affichage retourné (iPhone tête en bas, micro vers les personnes en face) ----------
-  // L'iPhone ne pivote jamais l'écran tête en bas tout seul : on lit l'inclinaison (beta) et on retourne la page en CSS.
-  // beta ≈ +90° tenu droit, ≈ -90° tête en bas. Entre -20° et +20° (posé à plat), on garde l'état précédent.
-  let flipped = false, motionAsked = false;
+  // ---------- Orientation : toujours verticale, à l'endroit ou à l'envers ----------
+  // 1) Paysage : quand iOS fait pivoter la page (iPhone sur le côté), on la fait pivoter en sens inverse
+  //    pour qu'elle reste dans l'axe de l'iPhone (une web app ne peut pas verrouiller l'orientation).
+  // 2) Tête en bas : l'iPhone ne pivote jamais l'écran tête en bas tout seul ; on lit l'inclinaison (beta)
+  //    et on ajoute 180°. beta ≈ +90° tenu droit, ≈ -90° tête en bas. Entre -20° et +20° (posé à plat
+  //    ou sur le côté), on garde l'état précédent.
+  let flipped = false, motionAsked = false, rot = 0, lastOs = null;
+  const osAngle = () => { // rotation appliquée par iOS : 0, 90 (tourné vers la gauche), -90 (vers la droite), 180
+    if (typeof window.orientation === "number") return window.orientation;
+    const a = screen.orientation ? screen.orientation.angle : 0; return a === 270 ? -90 : a;
+  };
+  const EDGE = { 0: "top", 90: "right", 180: "bottom", "-90": "left" }, OPP = { top: "bottom", bottom: "top", left: "right", right: "left" };
   function applyFlip() {
-    const on = cfg.flip && flipped && !(screen.orientation && screen.orientation.angle === 180); // si le système a déjà pivoté, ne rien faire
-    document.documentElement.classList.toggle("flipped", on);
+    const os = osAngle();
+    let r = -os + (cfg.flip && flipped ? 180 : 0); r = ((r % 360) + 540) % 360 - 180; if (r === -180) r = 180;
+    const side = Math.abs(os) === 90, W = innerWidth, H = innerHeight, de = document.documentElement;
+    de.classList.toggle("anim", lastOs === os); // pas d'animation quand iOS fait déjà tourner l'écran
+    lastOs = os; rot = r;
+    const s = de.style, top = EDGE[r];
+    s.setProperty("--rot", r + "deg");
+    s.setProperty("--w", (side ? H : W) + "px"); s.setProperty("--h", (side ? W : H) + "px");
+    s.setProperty("--st", "env(safe-area-inset-" + top + ",0px)"); s.setProperty("--sb", "env(safe-area-inset-" + OPP[top] + ",0px)");
   }
+  addEventListener("resize", applyFlip); addEventListener("orientationchange", () => setTimeout(applyFlip, 50));
+  applyFlip();
   function onTilt(e) {
     if (e.beta == null) return;
     const was = flipped;
@@ -308,10 +326,11 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   // Seuil réglé au doigt sur la jauge : il reste fixe (le bruit de fond peut monter d'un coup) jusqu'à « Auto ».
   // Gardé pour la session seulement : le bruit change d'une pièce à l'autre.
   let thMan = null;
-  function setManual(clientX) {
-    const r = $("meterTouch").getBoundingClientRect();
-    let f = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-    if (document.documentElement.classList.contains("flipped")) f = 1 - f; // jauge retournée : le bas de l'échelle est à droite
+  function setManual(clientX, clientY) {
+    const el = $("meterTouch"), r = el.getBoundingClientRect(), a = rot * Math.PI / 180;
+    // Position du doigt projetée sur l'axe de la jauge, quelle que soit la rotation de la page
+    const along = (clientX - r.left - r.width / 2) * Math.cos(a) + (clientY - r.top - r.height / 2) * Math.sin(a);
+    const f = Math.max(0, Math.min(1, 0.5 + along / el.offsetWidth));
     const d = DB_MIN + f * (DB_MAX - DB_MIN);
     thMan = Math.round(Math.max(-65, Math.min(-10, d))); thr = thMan; showTh();
   }
@@ -320,8 +339,8 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     $("meterTouch").classList.toggle("manual", thMan != null); $("thAuto").hidden = thMan == null;
     if (!listening) $("stateR").textContent = thMan != null ? "seuil manuel " + thMan + " dB" : "";
   }
-  $("meterTouch").addEventListener("pointerdown", e => { e.preventDefault(); $("meterTouch").setPointerCapture(e.pointerId); setManual(e.clientX); });
-  $("meterTouch").addEventListener("pointermove", e => { if ($("meterTouch").hasPointerCapture(e.pointerId)) setManual(e.clientX); });
+  $("meterTouch").addEventListener("pointerdown", e => { e.preventDefault(); $("meterTouch").setPointerCapture(e.pointerId); setManual(e.clientX, e.clientY); });
+  $("meterTouch").addEventListener("pointermove", e => { if ($("meterTouch").hasPointerCapture(e.pointerId)) setManual(e.clientX, e.clientY); });
   $("thAuto").onclick = () => { thMan = null; thr = Math.max(noise + 8, -60); showTh(); };
   let seg = null, pre = [], preLen = 0, silence = 0, t0Listen = 0, listenedMs = 0, lastVoiceAt = 0;
   const frameSec = () => 2048 / (ctx ? ctx.sampleRate : 48000);
