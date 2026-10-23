@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover,shrink-to-fit=no">
 <meta name="robots" content="noindex">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,7 +18,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0}
+html,body{height:100%;margin:0;overflow:hidden}
 /* Marges des bords de l'écran (encoche en haut, barre d'accueil en bas), inversées quand l'affichage est retourné */
 :root{--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
 body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
@@ -185,7 +185,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v22 · 23/10 02:55";
+  const VERSION = "banc v23 · 23/10 03:00";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -286,16 +286,21 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   // 2) Tête en bas : l'iPhone ne pivote jamais l'écran tête en bas tout seul ; on lit l'inclinaison (beta)
   //    et on ajoute 180°. beta ≈ +90° tenu droit, ≈ -90° tête en bas. Entre -20° et +20° (posé à plat
   //    ou sur le côté), on garde l'état précédent.
-  let flipped = false, motionAsked = false, rot = 0, lastOs = null;
+  let flipped = false, motionAsked = false, rot = 0, lastOs = null, lastSide = 0;
   const osAngle = () => { // rotation appliquée par iOS : 0, 90 (tourné vers la gauche), -90 (vers la droite), 180
     if (typeof window.orientation === "number") return window.orientation;
     const a = screen.orientation ? screen.orientation.angle : 0; return a === 270 ? -90 : a;
   };
   const EDGE = { 0: "top", 90: "right", 180: "bottom", "-90": "left" }, OPP = { top: "bottom", bottom: "top", left: "right", right: "left" };
   function applyFlip() {
-    const os = osAngle();
+    // Dimensions de la zone d'affichage (non faussées par un zoom) ; « sur le côté » se déduit des dimensions,
+    // car iOS met parfois à jour l'angle et les dimensions à des moments différents pendant la rotation.
+    const de = document.documentElement, W = de.clientWidth, H = de.clientHeight, side = W > H;
+    let os = osAngle();
+    if (side && Math.abs(os) !== 90) os = lastSide || 90; // angle pas encore à jour : on reprend le dernier sens connu
+    if (!side && Math.abs(os) === 90) os = 0;
+    if (side) lastSide = os;
     let r = -os + (cfg.flip && flipped ? 180 : 0); r = ((r % 360) + 540) % 360 - 180; if (r === -180) r = 180;
-    const side = Math.abs(os) === 90, W = innerWidth, H = innerHeight, de = document.documentElement;
     de.classList.toggle("anim", lastOs === os); // pas d'animation quand iOS fait déjà tourner l'écran
     lastOs = os; rot = r;
     const s = de.style, top = EDGE[r];
@@ -303,7 +308,10 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     s.setProperty("--w", (side ? H : W) + "px"); s.setProperty("--h", (side ? W : H) + "px");
     s.setProperty("--st", "env(safe-area-inset-" + top + ",0px)"); s.setProperty("--sb", "env(safe-area-inset-" + OPP[top] + ",0px)");
   }
-  addEventListener("resize", applyFlip); addEventListener("orientationchange", () => setTimeout(applyFlip, 50));
+  // iOS envoie « resize » et « orientationchange » dans un ordre variable : on recalcule plusieurs fois après une rotation
+  const relayout = () => { applyFlip(); [100, 300, 700].forEach(ms => setTimeout(applyFlip, ms)); };
+  addEventListener("resize", relayout); addEventListener("orientationchange", relayout);
+  if (window.visualViewport) visualViewport.addEventListener("resize", relayout);
   applyFlip();
   function onTilt(e) {
     if (e.beta == null) return;

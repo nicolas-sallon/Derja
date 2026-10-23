@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v22).
+Mise à jour : 23/10/2026 (app v2.5, banc v23).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -77,6 +77,10 @@ Mise à jour : 23/10/2026 (app v2.5, banc v22).
   - Une web app ne peut pas verrouiller l'orientation sur iOS. Quand iOS fait pivoter la page en paysage (iPhone sur le côté), on la fait pivoter en sens inverse (`--rot = -window.orientation`), en inversant largeur et hauteur (`--w`, `--h`). La page reste ainsi dans l'axe de l'iPhone.
   - Les marges d'écran (`--st`, `--sb`) suivent le bord qui se trouve en haut de la page après rotation.
   - Pas d'animation quand c'est iOS qui fait tourner l'écran, pour éviter un double pivot.
+  - « Sur le côté » se déduit des dimensions (`clientWidth > clientHeight`), et pas seulement de l'angle. En effet, iOS met à jour l'angle et les dimensions à des moments différents, ce qui donnait en v22 une page verticale mise en page en paysage (« réduite »).
+  - Le calcul est refait 0, 100, 300 et 700 ms après chaque `resize` ou `orientationchange`.
+  - `clientWidth`/`clientHeight` sont préférés à `innerWidth`/`innerHeight`, qui sont faussés par un éventuel zoom.
+  - `overflow:hidden` est mis sur `html` et `minimum-scale=1, shrink-to-fit=no` dans la balise viewport, pour empêcher Safari de dézoomer la page.
 - **Affichage retourné (iPhone tête en bas, micro vers les personnes en face).**
   - L'iPhone ne pivote jamais l'écran tête en bas tout seul. On lit donc l'inclinaison avec `deviceorientation` (beta) et on ajoute 180° à `--rot` (appliqué à `.stage` et à la feuille de réglages).
   - beta inférieur à -20° : retourné ; supérieur à +20° : normal ; entre les deux (posé à plat), l'état précédent est gardé. On peut donc retourner l'iPhone puis le poser sur la table.
