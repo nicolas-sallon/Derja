@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 24/10/2026 (app v2.5, banc v40).
+Mise à jour : 24/10/2026 (app v2.5, banc v41).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -280,6 +280,7 @@ Choix validés avec Nicolas le 24/10.
   - Le message principal, du texte seul, est **en dessous** et descend dans la zone réservée.
   - Marge du bas : `max(10px, calc(var(--sb) - 18px))`, soit 16 pt sur un iPhone avec Face ID au lieu de 44 pt, d'où environ 28 pt gagnés pour le fil.
   - Mesuré avec la zone réservée simulée à 34 pt : le bas de « Auto » est à 39 pt du bord, donc hors de la zone, et le bas du message à 17 pt, au-dessus du trait blanc (environ 8 à 13 pt).
+- **Accueil (v41) :** le bouton « Démarrer une nouvelle discussion » est un bouton, il garde donc toute la marge (`10px + var(--sb)`). Avec la zone réservée à 34 pt, son bas est à 44 pt du bord ; en v40, il empiétait sur la zone.
 - **Messages raccourcis :** « Voix faible : rapproche le téléphone », « Trop près : saturation », « Voix tunisienne en cours », « Trop court : maintiens Je parle », « Rien entendu : parle plus près », « Arrête l'écoute pour relancer », « Ajoute ta clé Gemini (réglages) », « Micro refusé : autorise-le dans Réglages ».
 - **Vérifié à 390 et 375 px de large,** sur un parcours complet : écoute, seuil manuel, voix faible, Je parle, traduction, voix, appui trop court, arrêt. Une seule géométrie de la zone a été mesurée du début à la fin. Avec les textes les plus longs injectés, la hauteur ne change pas et les boutons restent à 72 px.
 

@@ -48,6 +48,8 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 #newBtn{display:none}
 .home #newBtn{display:flex}
 .home .duo,.home .meter-touch,.home .state{display:none}
+/* Accueil : le bouton « Démarrer » est un bouton, il reste au-dessus de la zone de la barre d'accueil d'iOS */
+.home .composer{padding-bottom:calc(10px + var(--sb))}
 .bub.int{--c:var(--mid);display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--muted)}
 .bub.int.mine{align-self:flex-end}
 h1{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
@@ -321,7 +323,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v40 · 24/10 12:53";
+  const VERSION = "banc v41 · 24/10 12:57";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
