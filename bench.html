@@ -80,7 +80,10 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .rate{display:flex;gap:6px;flex-wrap:wrap}
 .rate button{appearance:none;border:1px solid var(--line);background:none;color:var(--muted);border-radius:8px;padding:4px 8px;font:600 12px var(--sans);cursor:pointer}
 /* Barre du bas : mode, bouton, jauge */
-.composer{position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line)}
+/* Bas de page : la dernière ligne (texte seul) descend dans la zone réservée à la barre d'accueil d'iOS (34 pt) ;
+   la ligne au-dessus, qui porte le bouton « Auto », reste hors de cette zone (au moins 34 pt du bord), comme le demande Apple. */
+:root{--sb:env(safe-area-inset-bottom,0px)}
+.composer{position:sticky;bottom:0;background:var(--bg);padding-block:10px max(10px, calc(var(--sb) - 18px));display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line)}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);border-radius:10px;padding:2px}
 .seg button{appearance:none;border:0;background:none;color:var(--muted);font:600 13px var(--sans);padding:8px 2px;border-radius:8px;cursor:pointer;line-height:1.2}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.4)}
@@ -232,8 +235,8 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
     <div class="meter-touch" id="meterTouch" role="slider" aria-label="Seuil de parole : fais glisser le trait"><div class="meter"><div class="fill" id="fill"></div><div class="nf" id="nf"></div><div class="th" id="th"></div></div></div>
     <!-- Zone d'état à hauteur fixe : deux lignes qui ne se replient jamais (texte trop long coupé par « … ») -->
     <div class="state">
-      <div class="sl"><b id="state">Arrêté</b><span id="pending"></span></div>
       <div class="sl sub"><span id="stateR"></span><button type="button" class="thauto off" id="thAuto">Auto</button></div>
+      <div class="sl"><b id="state">Arrêté</b><span id="pending"></span></div>
     </div>
   </div>
 </div>
@@ -318,7 +321,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v39 · 24/10 12:39";
+  const VERSION = "banc v40 · 24/10 12:53";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";

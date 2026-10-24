@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 24/10/2026 (app v2.5, banc v39).
+Mise à jour : 24/10/2026 (app v2.5, banc v40).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -275,6 +275,11 @@ Choix validés avec Nicolas le 24/10.
 - **Zone d'état à hauteur fixe,** pour que l'écran ne bouge plus quand un message s'allonge : deux lignes de 20 et 24 px qui ne se replient jamais, un texte trop long étant coupé par « … ».
   - Ligne 1 : le message principal en couleur et, à droite, « N en traduction » (`showPending`).
   - Ligne 2 : « seuil auto/manuel X dB · nom du micro ». Le micro passe en orange s'il ne s'agit pas de celui de l'iPhone. Le bouton « Auto » a sa place toujours réservée (`visibility:hidden` hors seuil manuel).
+- **Ordre des lignes et barre d'accueil d'iOS (v40).** iOS réserve 34 pt en bas de l'écran pour la barre d'accueil ; Apple autorise du contenu dans cette zone, mais pas de boutons.
+  - La ligne du seuil et du micro, avec « Auto », est passée **au-dessus**.
+  - Le message principal, du texte seul, est **en dessous** et descend dans la zone réservée.
+  - Marge du bas : `max(10px, calc(var(--sb) - 18px))`, soit 16 pt sur un iPhone avec Face ID au lieu de 44 pt, d'où environ 28 pt gagnés pour le fil.
+  - Mesuré avec la zone réservée simulée à 34 pt : le bas de « Auto » est à 39 pt du bord, donc hors de la zone, et le bas du message à 17 pt, au-dessus du trait blanc (environ 8 à 13 pt).
 - **Messages raccourcis :** « Voix faible : rapproche le téléphone », « Trop près : saturation », « Voix tunisienne en cours », « Trop court : maintiens Je parle », « Rien entendu : parle plus près », « Arrête l'écoute pour relancer », « Ajoute ta clé Gemini (réglages) », « Micro refusé : autorise-le dans Réglages ».
 - **Vérifié à 390 et 375 px de large,** sur un parcours complet : écoute, seuil manuel, voix faible, Je parle, traduction, voix, appui trop court, arrêt. Une seule géométrie de la zone a été mesurée du début à la fin. Avec les textes les plus longs injectés, la hauteur ne change pas et les boutons restent à 72 px.
 
