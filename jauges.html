@@ -61,7 +61,7 @@ header a{color:var(--muted);font-size:13px;text-decoration:none}
 const $ = id => document.getElementById(id);
 const VARIANTS = [
   ["actuelle", "Actuelle (v45) · décorative", "Seule la longueur suit le volume ; la forme est calculée."],
-  ["osc", "1 · Oscilloscope", "La forme brute du son des 20 dernières millisecondes."],
+  ["osc", "1 · Oscilloscope amplifié", "La forme réelle du son des 20 dernières millisecondes, agrandie ; sa hauteur suit le volume."],
   ["mem", "2 · Mémoire du volume", "Hauteur des vagues = volume réel ; au point : maintenant, vers la gauche : la dernière seconde et demie."],
   ["freq", "3 · Par fréquences", "Graves à gauche, aigus à droite ; hauteur = énergie de chaque bande."],
 ];
@@ -100,13 +100,19 @@ document.querySelectorAll(".meter-touch").forEach(el => {
 $("auto").onclick = () => { thMan = null; };
 
 // ---------- Dessins ----------
+let oscGain = 30;
 const H = 24, MID = 12, taper = (x, end) => Math.min(1, (end - x) / 10);
 const line = pts => pts.length < 2 ? "" : "M" + pts.map(p => p[0].toFixed(1) + " " + Math.max(1, Math.min(H - 1, p[1])).toFixed(2)).join(" L");
 const ampDb = d => Math.pow(Math.max(0, Math.min(1, (d + 62) / 50)), 1.3) * 11; // dB → hauteur de vague (0 à 11 px)
 const DRAW = {
   actuelle(w, end, t) { const pts = [], ph = t * 0.006; for (let x = 0; x <= end; x += 1.5) pts.push([x, MID + Math.sin(x * .55 - ph) * Math.min(11, 2 + x / w * 14) * (0.55 + 0.45 * Math.sin(x * .09)) * taper(x, end)]); return line(pts); },
+  // Oscilloscope amplifié : la forme réelle est ramenée à sa crête (gain automatique),
+  // puis sa hauteur suit le volume (même échelle que la mémoire du volume) : une voix faible reste petite, une voix normale remplit la jauge.
+  // Coût : une recherche de crête sur ~960 échantillons par image.
   osc(w, end) { const n = Math.min(td.length, Math.round(ctx.sampleRate * 0.02)), o = td.length - n, pts = [];
-    for (let x = 0; x <= end; x += 1) pts.push([x, MID - td[o + Math.round(x / Math.max(1, end) * (n - 1))] * 11 / 0.35 * taper(x, end)]); return line(pts); },
+    let pk = 1e-4; for (let i = o; i < td.length; i++) { const a = Math.abs(td[i]); if (a > pk) pk = a; }
+    const target = Math.max(1.5, Math.min(11, ampDb(level) * 1.4)) / pk; // voix normale (−30 à −20 dB) : presque toute la hauteur oscGain += (target - oscGain) * 0.3; // gain lissé : pas de saut d'une image à l'autre
+    for (let x = 0; x <= end; x += 1) pts.push([x, MID - td[o + Math.round(x / Math.max(1, end) * (n - 1))] * oscGain * taper(x, end)]); return line(pts); },
   mem(w, end, t) { const pts = [], span = 1500;
     for (let x = 0; x <= end; x += 1.5) { const at = t - (1 - x / Math.max(1, end)) * span; pts.push([x, MID + Math.sin(x * .55) * ampDb(histAt(at)) * taper(x, end)]); } return line(pts); },
   freq(w, end) { const pts = [], binHz = ctx.sampleRate / an.fftSize;
