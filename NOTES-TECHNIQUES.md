@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 24/10/2026 (app v2.5, banc v37).
+Mise à jour : 24/10/2026 (app v2.5, banc v38).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -277,6 +277,9 @@ Choix validés avec Nicolas le 24/10.
   - `gesturestart` et `gesturechange` bloqués contre le pincement ;
   - champs de saisie à 16 px au moins, car iOS zoome automatiquement sur un champ plus petit quand on le touche.
 - **Orientation :** iOS ignore le champ `orientation` du manifeste. `screen.orientation.lock("portrait")` n'est que partiellement pris en charge (16.4+) : il est tenté au premier toucher, sans effet si iOS refuse. La rotation par CSS a été abandonnée (v21 à v25).
+- **iPhone sur le côté (v38) :** un écran plein « Remets ton iPhone en vertical » s'affiche par-dessus la page (`#rotate`).
+  - Il est déclenché en CSS seul (`orientation: landscape` et hauteur de 500 px au plus), donc sans effet sur un iPad ou un écran large.
+  - L'écoute et les traductions continuent dessous.
 
 ## Essais abandonnés
 - **Affichage retourné / toujours vertical (banc v21 à v25, retiré en v26 = v20).**

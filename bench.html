@@ -179,6 +179,13 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
 /* Pas de zoom : iOS zoome sur un champ dont le texte fait moins de 16 px, et au double toucher */
 input,textarea,select{font-size:16px!important}
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+/* iPhone sur le côté : un écran demande de le remettre en vertical (l'écoute et les traductions continuent dessous) */
+#rotate{display:none}
+@media (orientation:landscape) and (max-height:500px){
+  #rotate{display:flex;position:fixed;inset:0;z-index:100;background:var(--bg);color:var(--fg);flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px;font:600 18px var(--sans)}
+  #rotate small{font:400 14px var(--sans);color:var(--muted)}
+  body{overflow:hidden}
+}
 </style>
 </head>
 <body>
@@ -289,6 +296,12 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   </div>
 </div>
 
+<div id="rotate" role="alert">
+  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/><path d="M20 8a7 7 0 0 1 0 8M22 10l-2-2-2 2"/></svg>
+  Remets ton iPhone en vertical
+  <small>L'écoute et les traductions continuent pendant ce temps.</small>
+</div>
+
 <div class="sheet" id="newSheet" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="newTitle">
     <h2 id="newTitle">De quoi va-t-on parler ?</h2>
@@ -302,7 +315,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v37 · 24/10 12:05";
+  const VERSION = "banc v38 · 24/10 12:17";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
