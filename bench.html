@@ -23,7 +23,33 @@ body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--sans);-webkit-font
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 [hidden]{display:none!important}
 .app{display:flex;flex-direction:column;min-height:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:640px;margin:0 auto}
-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding-block:12px 8px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:block;padding-block:12px 8px}
+.hrow{display:flex;align-items:center;justify-content:space-between}
+/* Barre de la discussion ouverte : retour, titre modifiable, contexte dépliable */
+.convbar{display:flex;flex-direction:column;gap:4px;padding-top:8px;margin-top:8px;border-top:1px solid var(--line)}
+.convbar[hidden]{display:none}
+.crow{display:flex;align-items:center;gap:10px;min-width:0}
+.back{appearance:none;border:0;background:none;color:var(--accent);font:600 15px var(--sans);padding:4px 0;cursor:pointer;flex:none}
+.ctitle{appearance:none;border:0;background:none;color:var(--fg);font:700 17px var(--sans);text-align:left;padding:2px 0;cursor:pointer;min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#titleEdit{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:6px 10px;font:700 16px var(--sans)}
+.ctx{appearance:none;border:0;background:none;color:var(--fg);font:13px/1.35 var(--sans);text-align:left;padding:0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctx.muted{color:var(--muted)}
+#ctxEdit{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:12px;padding:8px 10px;font:14px/1.4 var(--sans);resize:vertical}
+/* Accueil : cartes des discussions (glisser vers la gauche = poubelle) */
+.cwrap{position:relative;border-radius:16px;overflow:hidden;margin-bottom:10px}
+.cdel{position:absolute;right:0;top:0;bottom:0;width:88px;appearance:none;border:0;background:var(--bad);color:#fff;display:grid;place-items:center;cursor:pointer;opacity:0}
+.cwrap.open .cdel,.cwrap.drag .cdel{opacity:1}
+.ccard{position:relative;z-index:1;width:100%;appearance:none;border:0;background:var(--surface);color:var(--fg);text-align:left;padding:14px 16px;border-radius:16px;display:flex;flex-direction:column;gap:4px;transition:transform .2s;touch-action:pan-y;cursor:pointer;font-family:var(--sans)}
+.ccard b{font-size:16px}
+.ccard small{font-size:12px;color:var(--muted)}
+.welcome{background:var(--surface);border-radius:16px;padding:16px;font-size:14px;color:var(--muted);margin-bottom:4px}
+.welcome b{color:var(--fg)}
+.welcome p{margin:6px 0 0}
+#newBtn{display:none}
+.home #newBtn{display:flex}
+.home .composer .seg,.home .duo,.home .meter-touch,.home .state,.home .hint{display:none}
+.bub.int{--c:var(--mid);display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--muted)}
+.bub.int.mine{align-self:flex-end}
 h1{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
 h1 small{display:block;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0}
 .ver{font-size:11px;opacity:.7;font-variant-numeric:tabular-nums;margin-left:4px;cursor:pointer}
@@ -155,10 +181,17 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
 <body>
 <div class="app">
   <header>
+    <div class="hrow">
     <h1>Derja Express<small>Banc d'essai <span id="ver" class="ver"></span></small></h1>
     <button class="icon-btn" id="openSettings" aria-label="Réglages">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button>
+    </div>
+    <div class="convbar" id="convBar" hidden>
+      <div class="crow"><button type="button" class="back" id="back">‹ Discussions</button><button type="button" class="ctitle" id="convTitle"></button><input id="titleEdit" type="text" hidden autocomplete="off"></div>
+      <button type="button" class="ctx" id="ctxLine"></button>
+      <textarea id="ctxEdit" rows="3" hidden placeholder="Lieu, personnes présentes, sujet…"></textarea>
+    </div>
   </header>
 
   <main>
@@ -170,6 +203,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
   </main>
 
   <div class="composer">
+    <button type="button" class="mic" id="newBtn">Démarrer une nouvelle discussion</button>
     <div class="seg" role="group" aria-label="Mode">
       <button type="button" disabled>Je parle<br>FR → TN</button>
       <button type="button" disabled>J'écoute<br>TN → FR</button>
@@ -201,14 +235,9 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
     <h3>Clé Gemini</h3>
     <div class="row"><input type="password" id="key" placeholder="Clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="saveKey" type="button">Enregistrer</button></div>
 
-    <h3>Contexte de la conversation</h3>
-    <div class="field">
-      <textarea id="ctxText" rows="3" placeholder="Ex. : déjeuner chez mes parents à Tunis : mon père (65 ans), ma grand-mère (85 ans), ma nièce (8 ans). On parle du mariage de ma cousine."></textarea>
-      <p>Envoyé à Gemini avec chaque extrait et chaque réponse : il aide à traduire et à nommer les voix.</p>
-    </div>
-
     <h3>Voix reconnues</h3>
     <div class="field">
+      <p id="galPres"></p>
       <div id="gallery"></div>
       <button class="btn" id="addOpen" type="button">+ Ajouter une voix</button>
       <div class="addp" id="addPanel" hidden>
@@ -222,7 +251,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
         <div class="row"><button class="btn primary" id="addSave" type="button">Ajouter</button><button class="btn" id="addCancel" type="button">Annuler</button></div>
       </div>
       <p id="galleryMode"></p>
-      <p>La coche indique les voix présentes : elle se met toute seule quand une voix est reconnue, et tu peux cocher une personne qui n'a pas encore parlé. Tout est décoché à l'arrêt de l'écoute. ⋯ : fusionner avec une autre voix, ou supprimer.</p>
+      <p>La coche indique les voix présentes dans la discussion ouverte : elle se met toute seule quand une voix est reconnue, et tu peux cocher une personne qui n'a pas encore parlé. Elle est enregistrée avec la discussion. Touche la petite ligne sous un nom pour changer le genre ; ⋯ : nouvel extrait, fusionner, supprimer.</p>
     </div>
 
     <h3>La jauge sonore</h3>
@@ -247,10 +276,22 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
       <p>Seuil automatique : bruit de fond + 8 dB, ajustable du doigt sur la jauge. Un passage de moins de 2 s attend la suite ; après 2,5 s de silence, il part quand même s'il dure au moins 0,6 s. Maximum 20 s par passage.</p>
     </div>
 
-    <h3>Mesures</h3>
-    <div class="scroll"><table id="stats"></table></div>
-    <div class="row"><button class="btn" id="copy" type="button">Copier le bilan</button><button class="btn" id="clear" type="button">Effacer</button></div>
-    <p class="muted" id="copyMsg"></p>
+    <h3>Statistiques d'utilisation</h3>
+    <div class="field">
+      <div class="row"><span class="muted" style="min-width:150px">Solde relevé dans AI Studio</span><input id="balEur" type="text" inputmode="decimal" placeholder="ex. 21,40" style="width:90px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:8px 10px;font:15px var(--sans)"> €</div>
+      <p id="balInfo"></p>
+      <div class="scroll"><table id="stats"></table></div>
+      <p>Estimation à partir des jetons comptés par Gemini pour cette app, au tarif en vigueur, à 0,92 € le dollar, hors taxes.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="newSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="newTitle">
+    <h2 id="newTitle">De quoi va-t-on parler ?</h2>
+    <textarea id="newCtx" rows="4" placeholder="Ex. : déjeuner chez mes parents à Tunis : mon père (65 ans), ma grand-mère (85 ans), ma nièce (8 ans). On parle du mariage de ma cousine."></textarea>
+    <p class="muted" style="margin:0;font-size:13px">Lieu, personnes présentes, sujet : ce contexte aide Gemini à transcrire, traduire et reconnaître les voix. Tu pourras le modifier pendant la discussion.</p>
+    <button class="btn primary" id="newGo" type="button">Commencer</button>
   </div>
 </div>
 
@@ -258,27 +299,28 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v35 · 23/10 21:37";
+  const VERSION = "banc v36 · 24/10 11:52";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
 
   // ---------- Réglages ----------
-  let cfg = { key: "", ctxText: "", clean: true, ns: false, spk: false, pause: 0.8, th: 0, log: [] };
+  let cfg = { key: "", clean: true, ns: false, spk: false, pause: 0.8, th: 0, balance: null };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG) || "{}")); } catch {}
   if (!cfg.key) for (const k of ["derja-bench-chain", "derja-express-v1"]) {
     try { const o = JSON.parse(localStorage.getItem(k) || "{}"); cfg.key = o.key || o.geminiKey || ""; } catch {}
     if (cfg.key) break;
   }
+  // Compteurs permanents de consommation (statistiques d'utilisation)
+  cfg.usage = Object.assign({ tnIn: 0, tnOut: 0, repIn: 0, repOut: 0, tts: 0, bgIn: 0, bgOut: 0, usd: 0, since: Date.now() }, cfg.usage || {});
+  delete cfg.log; delete cfg.ctxText; // anciennes mesures et ancien contexte global
   if (!cfg.p08) { cfg.pause = 0.8; cfg.p08 = true; } // pause portée de 0,5 à 0,8 s : des phrases étaient coupées
   try { localStorage.removeItem("derja-bench-chain"); } catch {} // ancien banc français -> tunisien
   const save = () => { try { localStorage.setItem(CFG, JSON.stringify(cfg)); } catch {} };
   save();
   $("key").value = cfg.key;
-  $("ctxText").value = cfg.ctxText || "";
-  $("ctxText").addEventListener("input", e => { cfg.ctxText = e.target.value; save(); });
   $("saveKey").onclick = () => { cfg.key = $("key").value.trim(); save(); $("saveKey").textContent = "Enregistrée"; renderFeed(); };
-  $("openSettings").onclick = () => { $("copyMsg").textContent = ""; renderStats(); renderGallery(); $("sheet").hidden = false; };
+  $("openSettings").onclick = () => { renderStats(); renderGallery(); $("sheet").hidden = false; };
   $("closeSettings").onclick = () => { $("sheet").hidden = true; };
   $("sheet").onclick = e => { if (e.target.id === "sheet") $("sheet").hidden = true; };
   const bindBox = (id, k) => { $(id).checked = !!cfg[k]; $(id).onchange = e => { cfg[k] = e.target.checked; save(); if (k === "clean") applyFilter(); }; };
@@ -370,7 +412,6 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
     if (listening && seg && speechDur() >= 0.6) emit(); // envoie le dernier passage en cours
     if (listening) listenedMs += performance.now() - t0Listen;
     listening = false; resetVad();
-    present.clear(); renderGallery(); // fin de conversation : toutes les voix sont décochées
     if (!talk) closeMic();
     releaseWake(); renderButtons();
     if (!talk) setState("Arrêté", "");
@@ -440,8 +481,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
   let clipped = false;
 
   // ---------- Envoi d'un passage ----------
-  let segId = 0;
-  const items = []; // sous-titres de la session
+  let items = []; // messages de la discussion ouverte
   function emit() {
     const s = seg, trailingSec = silence; resetVad();
     const rate = s.rate, keepTail = Math.round(rate * 0.2);
@@ -449,8 +489,8 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
     const total = s.len, end = Math.max(1, total - Math.max(0, trailing - keepTail)); // blancs de fin coupés (0,2 s gardées)
     const pcm = new Float32Array(end); let o = 0;
     for (const c of s.chunks) { if (o >= end) break; const n = Math.min(c.length, end - o); pcm.set(c.subarray(0, n), o); o += n; }
-    const it = { id: ++segId, at: Date.now(), speechEnd: lastVoiceAt, dur: end / rate, clean: cfg.clean, ns: cfg.ns, spk: cfg.spk, pause: cfg.pause, status: "run" };
-    items.push(it); renderFeed();
+    const it = { id: newId(), cid: conv && conv.id, at: Date.now(), speechEnd: lastVoiceAt, dur: end / rate, clean: cfg.clean, ns: cfg.ns, spk: cfg.spk, pause: cfg.pause, status: "run" };
+    items.push(it); saveMsg(it); renderFeed(); // enregistré dès l'envoi
     process(it, pcm, rate);
   }
 
@@ -471,15 +511,16 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
       return out;
   }
   async function process(it, pcm, rate) {
-    const tp = performance.now();
-    let wav, x16;
+    let x16, wav;
     try {
       x16 = await resample16(pcm, rate, it.clean); wav = toWav(x16, SR_OUT);
-      if (it.spk) { it.x16 = x16; items.filter(x => x.x16 && x.id < it.id - 60).forEach(x => { delete x.x16; }); } // gardé pour les 60 derniers extraits
-    }
-    catch (e) { it.status = "err"; it.err = "Préparation du son impossible"; renderFeed(); return; }
-    it.prepMs = Math.round(performance.now() - tp);
-    it.url = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
+      if (it.spk) { it.x16 = x16; items.filter(x => x.x16 && x !== it && x.id < it.id).slice(0, -60).forEach(x => { delete x.x16; }); } // gardé en mémoire pour les 60 derniers extraits
+      it.blobX = new Blob([wav], { type: "audio/wav" }); it.url = URL.createObjectURL(it.blobX);
+      saveAudio(it, "x", it.blobX); // l'audio est enregistré avant l'appel : une fermeture de l'app ne le perd pas
+    } catch (e) { it.status = "err"; it.err = "Préparation du son impossible"; saveMsg(it); renderFeed(); return; }
+    await translate(it, x16, wav);
+  }
+  async function translate(it, x16, wav) {
     inflight++; // les traitements de fond attendent la fin des traductions en cours
     try {
       // Voix de référence choisies pour cet appel (recalculé à chaque appel), disponibles chez Google
@@ -487,15 +528,22 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
       if (refs.length) await Promise.all(refs.map(ensureFile));
       it.nRefs = refs.length; if (it.spk) { stats.calls++; stats.refsSent += refs.length; }
       const res = await gemini(wav, it, refs);
-      if (it.spk) await attribute({ repliques: res.repliques }, x16, refs);
-      Object.assign(it, res, { status: "ok", shownAt: performance.now() });
-      it.delay = it.shownAt - it.speechEnd;
+      addUsage("tn", res.tin, res.tout);
+      if (it.spk) await attribute({ repliques: res.repliques }, x16, refs, it.cid);
+      Object.assign(it, res, { status: "ok", err: "", shownAt: performance.now() });
+      it.delay = it.speechEnd ? it.shownAt - it.speechEnd : null;
     } catch (e) { it.status = "err"; it.err = e.message || String(e); }
     finally { inflight--; }
-    cfg.log.push(logOf(it)); cfg.log = cfg.log.slice(-400); save();
-    renderFeed(); renderStats();
+    saveMsg(it); renderFeed();
   }
-  const logOf = it => ({ type: it.me ? "rep" : "tn", tts: it.ttsOut || 0, id: it.id, at: it.at, dur: it.dur, prepMs: it.prepMs, delay: it.delay, tin: it.tin || 0, tout: it.tout || 0, clean: it.clean, ns: it.ns, spk: it.spk, pause: it.pause, ok: it.status === "ok", refs: it.nRefs || 0 });
+  // Traduction interrompue (app fermée pendant l'appel) : relancée depuis l'audio enregistré
+  async function retryItem(it) {
+    if (it.me) return retryMe(it);
+    const x16 = await x16Of(it);
+    if (!x16) { it.status = "err"; it.err = "Audio introuvable"; saveMsg(it); renderFeed(); return; }
+    it.status = "run"; it.speechEnd = 0; renderFeed();
+    await translate(it, x16, toWav(x16, SR_OUT));
+  }
 
   function toWav(f, rate) {
     const v = new DataView(new ArrayBuffer(44 + f.length * 2));
@@ -608,7 +656,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
   // hauteur et empreinte mesurées, référence chez Google (API Files, 48 h, renvoyée si expirée).
   const GALLERY_MAX = 20, REFS_MAX = 6;
   let gallery = [], meta = { id: "_meta", nextN: 1, aliases: {} }; // aliases : V8 -> V3 après une fusion
-  const present = new Set();                                          // voix cochées « présentes » (conversation en cours)
+  let present = new Set();                                            // voix cochées « présentes » dans la discussion ouverte
   const idb = (() => {
     let p = null;
     const open = () => p || (p = new Promise((res, rej) => { const r = indexedDB.open("derja-voices", 1); r.onupgradeneeded = () => r.result.createObjectStore("v", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
@@ -622,18 +670,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
       const all = await idb.all();
       meta = all.find(x => x.id === "_meta") || meta;
       gallery = all.filter(x => x.id !== "_meta").sort((a, b) => a.n - b.n);
-      // Renumérotation à l'ouverture (V1, V2… dans l'ordre de création, sans trous) : sans risque à ce moment,
-      // aucun appel n'est en cours et le fil est vide. Les correspondances de fusion de la session précédente ne servent plus.
-      const map = {}; gallery.forEach((v, i) => { map[v.id] = "V" + (i + 1); });
-      const changed = gallery.filter(v => map[v.id] !== v.id);
-      if (changed.length) await Promise.all(changed.map(v => idb.del(v.id)));
-      gallery.forEach((v, i) => {
-        const old = v.id; v.id = map[old]; v.n = i + 1;
-        if (v.dupOf) v.dupOf = map[v.dupOf] || null;
-        if (v.notDup) v.notDup = v.notDup.map(k => map[k]).filter(Boolean);
-        if (old !== v.id || v.dupOf === null) storeVoice(v);
-      });
-      meta.aliases = {}; meta.nextN = gallery.length + 1; storeMeta();
+      // Numéros uniques pour toujours (V1, V2…) et correspondances de fusion permanentes : les anciennes discussions y font référence.
     } catch { gallery = []; }
     renderGallery(); renderFeed();
   }
@@ -669,7 +706,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
     const g = genreOf(genre) || (aw.f0Med && aw.f0Med < 165 ? "homme" : "femme");
     const v = { id: "V" + meta.nextN, n: meta.nextN, name, userNamed, suggest, genre: g, color: nextColor(g), ref: toI16(win),
       f0: aw.f0Med, mfcc: aw.mfcc, voicedSec: aw.voicedSec, snr: aw.snr, provisoire, importee, genreOk, doubt: !genreOk && genreDoubt(g, aw.f0Med),
-      created: Date.now(), lastHeard: Date.now(), refVer: 1, file: null, temp };
+      created: Date.now(), lastHeard: Date.now(), refAt: Date.now(), refVer: 1, file: null, temp };
     meta.nextN++; storeMeta();
     gallery.push(v); storeVoice(v); ensureFile(v);
     stats.newVoices++;
@@ -689,7 +726,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
     if (!to.suggest && from.suggest) to.suggest = from.suggest;
     const fromBetter = manual && !from.provisoire && (to.provisoire || to.importee && !from.importee || (from.snr >= to.snr + 3) || (from.voicedSec >= to.voicedSec + 1 && from.snr >= to.snr - 1));
     if ((to.provisoire && !from.provisoire) || fromBetter) { // garder la meilleure référence
-      const old = to.file; Object.assign(to, { ref: from.ref, f0: from.f0, mfcc: from.mfcc, voicedSec: from.voicedSec, snr: from.snr, file: from.file, provisoire: false, importee: from.importee, refVer: to.refVer + 1 }); to.doubt = doubtOf(to, to.f0);
+      const old = to.file; Object.assign(to, { ref: from.ref, f0: from.f0, mfcc: from.mfcc, voicedSec: from.voicedSec, snr: from.snr, file: from.file, provisoire: false, importee: from.importee, refAt: from.refAt || from.created, refVer: to.refVer + 1 }); to.doubt = doubtOf(to, to.f0);
       if (old) deleteFileLater(old); from.file = null;
     }
     if (present.has(from.id)) present.add(to.id);
@@ -753,7 +790,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
   // tant qu'aucune voix n'est présente -> voix nommées dans le contexte, puis les plus récentes ;
   // ensuite -> seulement les voix présentes et celles du contexte.
   function selectRefs() {
-    const ctxL = (cfg.ctxText || "").toLowerCase();
+    const ctxL = ((conv && conv.context) || "").toLowerCase();
     const named = gallery.filter(v => v.name && ctxL.includes(v.name.toLowerCase()));
     const pres = gallery.filter(v => present.has(v.id));
     const recent = gallery.slice().sort((a, b) => (b.lastHeard || 0) - (a.lastHeard || 0));
@@ -762,7 +799,8 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
   }
 
   // ---------- Attribution des répliques (au retour de Gemini) ----------
-  async function attribute(it, x16, sent) {
+  async function attribute(it, x16, sent, cid) {
+    const pres = conv && conv.id === cid ? present : new Set(); // coches de la discussion de cet extrait seulement
     const single = it.repliques.length === 1, whole = single ? analyze(x16) : null, now = Date.now();
     it.repliques.forEach(r => { r.single = single; });
     for (const r of it.repliques) {
@@ -779,13 +817,13 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
         r.td = a && timbreDist(a.mfcc, v.mfcc);
         // Garde-fou : hauteur mesurée trop éloignée de celle de la voix annoncée (plus de 5 demi-tons)
         if (r.f0 && v.f0 && a.single && Math.abs(st(r.f0) - st(v.f0)) > 5) { r.vid = ""; r.guard = "hauteur " + r.f0 + " Hz, " + v.id + " " + v.f0 + " Hz"; stats.guards++; continue; }
-        r.vid = v.id; present.add(v.id); v.lastHeard = now;
+        r.vid = v.id; pres.add(v.id); v.lastHeard = now;
         if (!v.userNamed && r.nom && !v.suggest) v.suggest = r.nom;
         storeVoice(v);
         if (single && a && a.single) considerReplace(v, seg, a);
       } else if (a && a.single && a.voicedSec >= 2) { // voix nouvelle, isolable : elle entre dans la galerie
         v = createVoice({ x: seg, a, genre: r.genre, suggest: r.nom, provisoire: !single || a.voicedSec < 3 });
-        r.vid = v.id; present.add(v.id);
+        r.vid = v.id; pres.add(v.id);
         queueDedupe(v);
       } else { r.vid = ""; stats.unknown++; } // pas isolable (trop court, voix mêlées) : nom proposé ou « ? »
     }
@@ -807,8 +845,8 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
     const r = await fetch(API + "/v1beta/models/" + MODEL + ":generateContent", { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cfg.key },
       body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "low" } } }) });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const u = j.usageMetadata || {}; stats.bgTin += u.promptTokenCount || 0; stats.bgTout += (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0); stats.bgCalls++;
+    if (!r.ok) throw apiErr(r, j);
+    const u = j.usageMetadata || {}; addUsage("bg", u.promptTokenCount || 0, (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0)); stats.bgTin += u.promptTokenCount || 0; stats.bgTout += (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0); stats.bgCalls++;
     const txt = (((j.candidates || [])[0] || {}).content || { parts: [] }).parts.map(p => p.text || "").join("");
     try { return JSON.parse(txt); } catch { const a = txt.indexOf("{"), b = txt.lastIndexOf("}"); return JSON.parse(txt.slice(a, b + 1)); }
   }
@@ -859,7 +897,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
     if (filesMode === "files") { try { file = await uploadWav(toWav(win, 16000), "derja-" + v.id + "-" + ver); } catch (e) { filesMode = "inline"; filesErr = e.message || String(e); } }
     if (!gallery.includes(v)) { if (file) deleteFileLater(file, 0); return; }
     const old = v.file;
-    Object.assign(v, { ref: toI16(win), refVer: ver, file, f0: aw.f0Med, mfcc: aw.mfcc, voicedSec: aw.voicedSec, snr: aw.snr, provisoire: false, importee: false, replacedAt: Date.now() }, extra);
+    Object.assign(v, { ref: toI16(win), refVer: ver, file, f0: aw.f0Med, mfcc: aw.mfcc, voicedSec: aw.voicedSec, snr: aw.snr, provisoire: false, importee: false, replacedAt: Date.now(), refAt: Date.now() }, extra);
     v.doubt = doubtOf(v, v.f0);
     if (old) deleteFileLater(old);
     storeVoice(v); stats.replaced++; renderGallery();
@@ -892,14 +930,16 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
     el.innerHTML = list.length ? list.map(v => '<div class="gw" data-v="' + v.id + '"><div class="gv">' +
       '<button type="button" class="gdot" data-g="color" style="background:' + v.color + '" aria-label="Changer la couleur"></button>' +
       '<div class="gmain"><input type="text" data-g="name" value="' + esc(v.name) + '" placeholder="' + esc(v.suggest ? v.suggest + " ?" : "Nom") + '" autocomplete="off">' +
-      '<small data-g="genre">' + v.id + ' · <u>' + v.genre + '</u>' + (v.f0 ? ' · ' + v.f0 + ' Hz' : "") + (v.provisoire ? ' · provisoire' : "") + (v.importee ? ' · importée' : "") + (v.temp ? ' · temporaire' : "") + (v.doubt ? ' · <b>genre à vérifier</b>' : "") + '</small>' +
+      '<small data-g="genre">' + v.id + ' · <u>' + v.genre + '</u>' + (v.f0 ? ' · ' + v.f0 + ' Hz' : "") + (v.provisoire ? ' · provisoire' : "") + (v.importee ? ' · importée' : "") + (v.temp ? ' · temporaire' : "") + (v.doubt ? ' · <b>genre à vérifier</b>' : "") +
+      '<br>entendue ' + when(v.lastHeard || v.created) + ' · extrait du ' + ddmm(v.refAt || v.replacedAt || v.created) + '</small>' +
       (genreOpen === v.id ? '<span class="seg2 gsel">' + ["homme", "femme", "enfant"].map(g => '<button type="button" data-g="setGenre" data-ge="' + g + '" aria-pressed="' + (v.genre === g) + '">' + g[0].toUpperCase() + g.slice(1) + '</button>').join("") + '</span>' : "") + '</div>' +
-      '<label class="gchk" title="Présente"><input type="checkbox" data-g="present"' + (present.has(v.id) ? " checked" : "") + '></label>' +
+      (conv ? '<label class="gchk" title="Présente dans cette discussion"><input type="checkbox" data-g="present"' + (present.has(v.id) ? " checked" : "") + '></label>' : "") +
       '<button type="button" class="btn sm" data-g="play">' + (galPlaying === v.id ? "■" : "▶︎") + '</button>' +
       '<select data-g="merge" aria-label="Fusionner avec"><option value="">⋯</option>' + gallery.filter(o => o !== v).map(o => '<option value="' + o.id + '">= ' + esc(labelOf(o)) + '</option>').join("") + '<option value="__new">Nouvel extrait…</option><option value="__del">Supprimer</option></select>' +
       '</div>' + (v.checking ? '<div class="gnote">Vérification : cette voix existe-t-elle déjà ?</div>' : "") +
       (v.dupOf && voiceOf(v.dupOf) ? '<div class="gnote">Ressemble à <b>' + esc(labelOf(voiceOf(v.dupOf))) + '</b> : <button type="button" class="btn sm" data-g="dupMerge">Fusionner</button> <button type="button" class="btn sm" data-g="dupKeep">Garder les deux</button></div>' : "") +
       (openColor === v.id ? colorPanel(v) : "") + '</div>').join("") : '<p class="muted">Aucune voix pour l\'instant : elles s\'ajoutent toutes seules au fil des conversations, ou avec « + Ajouter une voix ».</p>';
+    $("galPres").textContent = conv ? "Coche = voix présente dans « " + conv.title + " »." : "Ouvre une discussion pour indiquer les voix présentes.";
     $("galleryMode").textContent = filesMode === "files" ? "Références envoyées une fois chez Google (API Files), renvoyées après 48 h." : "API Files indisponible : références jointes à chaque appel (plus lourd). " + filesErr;
   }
   $("gallery").addEventListener("click", e => {
@@ -1030,14 +1070,15 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
 
   // ---------- Gemini : contexte écrit (3 derniers sous-titres), personnes optionnelles ----------
   const ARABIZI = "arabizi (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ)";
-  const whoOf = r => { const v = r.vid && voiceOf(r.vid); return v ? (v.name || v.suggest || v.id) : (r.nom || ""); };
-  const ctxBlock = () => cfg.ctxText && cfg.ctxText.trim() ? "\nContexte de la conversation (donné par l'utilisateur) : " + cfg.ctxText.trim() + "\n" : "";
+  const whoOf = r => { const v = r.vid && voiceOf(r.vid); return v ? (v.name || v.suggest || v.id) : (r.snap ? r.snap.label : r.nom || ""); };
+  // Contexte de la discussion à laquelle appartient le message
+  const ctxBlock = cid => { const c = convOf(cid), x = c && c.context && c.context.trim(); return x ? "\nContexte de la conversation (donné par l'utilisateur) : " + x + "\n" : ""; };
   // Contexte écrit : les 3 derniers échanges réussis (extraits entendus et mes réponses), du plus ancien au plus récent
-  const contextLines = beforeId => items.filter(x => x.status === "ok" && x.id < beforeId).slice(-3)
+  const contextLines = (beforeId, list = items) => list.filter(x => x.status === "ok" && x.id < beforeId).slice(-3)
     .flatMap(x => x.me ? [{ who: "Moi", tn: x.arabizi, fr: x.francais }] : (x.repliques || []).map(r => ({ who: whoOf(r), tn: r.entendu, fr: r.francais })))
     .map(r => "- " + (r.who ? r.who + " : " : "") + r.tn + " (= " + r.fr + ")").join("\n");
   function prompt(it, refs) {
-    const prev = contextLines(it.id);
+    const prev = contextLines(it.id, convItems.get(it.cid) || items);
     const spk = !it.spk ? "" : (refs.length
       ? `
 Avant l'extrait, tu as reçu ${refs.length} voix de référence déjà entendues, chacune précédée de son code (et de son nom s'il est connu).`
@@ -1051,7 +1092,7 @@ Aucune voix de référence pour l'instant : "voix" vaut "nouvelle".`) + `
 Plusieurs personnes peuvent parler dans l'extrait : découpe-le en répliques, une par changement de personne, dans l'ordre. Une seule personne = une seule réplique.
 "entendu" : transcription fidèle et phonétique de la réplique, mot pour mot, en ${ARABIZI}, sans corriger ni passer à l'arabe standard ; mots français en français ; [inaudible] si besoin.
 "francais" : traduction de la réplique en français naturel et courant, fidèle au sens et au ton.${spk}
-${ctxBlock()}${prev ? "\nPassages précédents :\n" + prev + "\n" : ""}
+${ctxBlock(it.cid)}${prev ? "\nPassages précédents :\n" + prev + "\n" : ""}
 Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"voix":"V… ou nouvelle","nom":"","genre":"…","debut":0,"fin":0,' : ""}"entendu":"...","francais":"..."}]}`;
   }
   async function gemini(wav, it, refs = []) {
@@ -1065,7 +1106,7 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"voix":"V… ou no
       const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent", { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cfg.key }, body });
       const j = await r.json().catch(() => ({}));
       if (r.status === 503 || r.status === 500) continue;
-      if (!r.ok) throw new Error("Erreur " + r.status + (j.error && j.error.message ? " · " + String(j.error.message).slice(0, 100) : ""));
+      if (!r.ok) throw apiErr(r, j);
       const c = (j.candidates || [])[0], txt = ((c && c.content && c.content.parts) || []).map(p => p.text || "").join("");
       let o; try { o = JSON.parse(txt); } catch { const a = txt.indexOf("{"), b = txt.lastIndexOf("}"); o = JSON.parse(txt.slice(a, b + 1)); }
       const u = j.usageMetadata || {};
@@ -1087,7 +1128,7 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"voix":"V… ou no
   let talkBuf = [], talkLen = 0, talkRate = 48000, talkVoiced = 0, talkItem = null, talkHeld = false, opening = false;
 
   function replyPrompt(it) {
-    const a = appState(), prev = contextLines(it.id);
+    const a = appState(), prev = contextLines(it.id, convItems.get(it.cid) || items);
     return `Tu es un traducteur expert du dialecte tunisien (Derja), tel qu'on le parle à Tunis aujourd'hui. Écoute l'extrait audio joint : un francophone répond en français, au cours d'une conversation familiale en tunisien. Transcris ce qu'il dit, puis traduis-le en tunisien parlé, pour une conversation en face à face.
 - Registre : ${a.registre === "pur"
     ? "tunisien « pur » : remplace les mots français par leur équivalent tunisien quand il existe."
@@ -1096,7 +1137,7 @@ Réponds uniquement avec ce JSON : {"repliques":[{${it.spk ? '"voix":"V… ou no
 - "francais" : ce qu'il a dit, en français correct.
 - "arabizi" : la phrase tunisienne en ${ARABIZI}.
 - "arabe" : exactement la même phrase, ENTIÈREMENT en lettres arabes, y compris les mots d'origine française (bureau → بيرو). Aucune lettre latine ni chiffre : ce champ est lu par une voix de synthèse.
-${ctxBlock()}${prev ? "\nContexte, derniers échanges (« Moi » = celui qui parle) :\n" + prev + "\n" : ""}
+${ctxBlock(it.cid)}${prev ? "\nContexte, derniers échanges (« Moi » = celui qui parle) :\n" + prev + "\n" : ""}
 Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..."}`;
   }
   async function geminiReply(wav, it) {
@@ -1107,7 +1148,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
       const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent", { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cfg.key }, body });
       const j = await r.json().catch(() => ({}));
       if (r.status === 503 || r.status === 500) continue;
-      if (!r.ok) throw new Error("Erreur " + r.status + (j.error && j.error.message ? " · " + String(j.error.message).slice(0, 100) : ""));
+      if (!r.ok) throw apiErr(r, j);
       const c = (j.candidates || [])[0], txt = ((c && c.content && c.content.parts) || []).map(p => p.text || "").join("");
       let o; try { o = JSON.parse(txt); } catch { const a = txt.indexOf("{"), b = txt.lastIndexOf("}"); o = JSON.parse(txt.slice(a, b + 1)); }
       if (Array.isArray(o)) o = o[0] || {};
@@ -1185,8 +1226,26 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     if (kept.length) { // son gardé pour la réécoute
       const len = kept.reduce((s, c) => s + c.length, 0), all = new Float32Array(len); let o = 0;
       kept.forEach(c => { all.set(c, o); o += c.length; });
-      it.url = URL.createObjectURL(new Blob([toWav(all, rate)], { type: "audio/wav" }));
+      it.blobTn = new Blob([toWav(all, rate)], { type: "audio/wav" }); it.url = URL.createObjectURL(it.blobTn);
+      saveAudio(it, "tn", it.blobTn);
     }
+    if (it.ttsOut) addUsage("tts", 0, it.ttsOut);
+  }
+  // Réponse interrompue (app fermée pendant la traduction) : relancée depuis mon français enregistré, puis dite
+  async function retryMe(it) {
+    if (talk || !it.blobFr) return;
+    if (listening) { setState("Arrête l'écoute pour relancer ta réponse", "warn"); return; }
+    ensureCtx();
+    it.status = "run"; it.err = ""; renderFeed(); talk = "wait"; renderButtons();
+    inflight++;
+    try {
+      const wav = new Uint8Array(await it.blobFr.arrayBuffer());
+      Object.assign(it, await geminiReply(wav, it), { status: "ok" }); addUsage("rep", it.tin, it.tout);
+    } catch (e) { it.status = "err"; it.err = e.message || String(e); }
+    finally { inflight--; }
+    saveMsg(it); renderFeed();
+    if (it.status === "ok") { talk = "speak"; renderButtons(); await speakReply(it); saveMsg(it); }
+    talk = null; renderButtons(); renderFeed(); setState("Arrêté", "");
   }
 
   // Bouton Je parle : maintenir pendant la phrase
@@ -1199,13 +1258,14 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     if (talk === "speak") { stopVoice(); return; } // toucher pendant la voix : l'arrête, puis l'écoute reprend
     if (talk) return;                               // traduction en cours : on attend
     if (!cfg.key) { setState("Ajoute ta clé Gemini dans les réglages", "warn"); $("sheet").hidden = false; return; }
+    if (!conv) return;
     resumeAfter = listening;
     if (listening) { // l'écoute continue s'interrompt ; le passage déjà capté part quand même
       if (seg && speechDur() >= 0.6) emit();
       resetVad(); listenedMs += performance.now() - t0Listen; listening = false;
     }
     talk = "rec"; talkHeld = true; talkBuf = []; talkLen = 0; talkVoiced = 0;
-    talkItem = { id: ++segId, me: true, at: Date.now(), status: "rec", dur: 0, clean: cfg.clean };
+    talkItem = { id: newId(), cid: conv.id, me: true, at: Date.now(), status: "rec", dur: 0, clean: cfg.clean };
     items.push(talkItem); renderFeed(); renderButtons(); setState("Ta réponse…", "voice");
     opening = true; const ok = await openMic(); opening = false;
     if (!ok) { items.splice(items.indexOf(talkItem), 1); renderFeed(); talk = null; talkItem = null; resumeAfter = false; renderButtons(); return; }
@@ -1224,21 +1284,23 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
       items.splice(items.indexOf(it), 1); renderFeed();
       return endTalk(durS < 0.5 ? "Trop court : maintiens Je parle pendant ta phrase" : "Rien entendu : parle plus près du téléphone");
     }
-    it.status = "run"; it.dur = durS; renderFeed(); renderButtons(); setState("Traduction de ta réponse…", "");
+    it.status = "run"; it.dur = durS; saveMsg(it); renderFeed(); renderButtons(); setState("Traduction de ta réponse…", "");
     inflight++;
     try {
       const wav = await prepWav(pcm, talkRate, it.clean);
-      it.urlFr = URL.createObjectURL(new Blob([wav], { type: "audio/wav" })); // mon français, tel qu'envoyé à Gemini
-      Object.assign(it, await geminiReply(wav, it), { status: "ok" });
+      it.blobFr = new Blob([wav], { type: "audio/wav" }); it.urlFr = URL.createObjectURL(it.blobFr); // mon français, tel qu'envoyé à Gemini
+      saveAudio(it, "fr", it.blobFr);
+      Object.assign(it, await geminiReply(wav, it), { status: "ok", err: "" });
+      addUsage("rep", it.tin, it.tout);
     } catch (e) { it.status = "err"; it.err = e.message || String(e); }
     finally { inflight--; }
-    renderFeed();
+    saveMsg(it); renderFeed();
     if (it.status === "ok") {
       talk = "speak"; renderButtons(); setState("Voix tunisienne · touche Je parle pour l'arrêter", "voice");
       await speakReply(it, () => { it.delay = performance.now() - releasedAt; renderFeed(); });
+      saveMsg(it);
     }
-    cfg.log.push(logOf(it)); cfg.log = cfg.log.slice(-400); save();
-    renderFeed(); renderStats();
+    renderFeed();
     endTalk();
   }
   // Fin de la réponse : l'écoute continue reprend 0,3 s après la voix si elle était active
@@ -1284,11 +1346,13 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
   let openTools = 0; // extrait dont la ligne de notes est dépliée
   function renderFeed() {
     const mn = $("mName"), keepName = mn ? { v: mn.value, f: document.activeElement === mn } : null; // saisie en cours dans le menu, gardée si le fil se met à jour
+    if (!conv) { renderHome(); return; }
     const feed = $("feed"), se = document.scrollingElement, atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
     let last = null, html = "";
     for (const it of items) {
       if (it.me) { // mes réponses (Je parle) : à droite, en bleu
         last = null;
+        if (it.status === "int") { html += '<div class="bub int mine">Traduction de ta réponse interrompue<button type="button" class="btn sm" data-a="retry" data-id="' + it.id + '">Traduire</button></div>'; continue; }
         if (it.status === "rec") html += '<div class="bub me wait"><div class="fr">Je t\'écoute…</div></div>';
         else if (it.status === "run") html += '<div class="bub me typing"><i></i><i></i><i></i></div>';
         else if (it.status === "err") html += '<div class="bub err" style="align-self:flex-end">' + esc(it.err) + '</div>';
@@ -1304,13 +1368,14 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
         continue;
       }
       if (it.status === "run") { html += '<div class="bub typing" style="--c:' + GREY + '"><i></i><i></i><i></i></div>'; last = null; continue; }
+      if (it.status === "int") { html += '<div class="bub int">Traduction interrompue<button type="button" class="btn sm" data-a="retry" data-id="' + it.id + '">Traduire</button></div>'; last = null; continue; }
       if (it.status === "err") { html += '<div class="bub err">' + esc(it.err) + '</div>'; last = null; }
       else for (const r of it.repliques) {
         // Voix de la galerie (nom et couleur à jour, même après un renommage ou une fusion), sinon nom proposé ou « ? »
         const v = it.spk && r.vid ? voiceOf(r.vid) : null, c = v ? v.color : GREY;
-        const key = !it.spk ? "" : v ? v.id : "?" + (r.nom || "");
+        const key = !it.spk ? "" : v ? v.id : "?" + (r.snap ? r.snap.label : r.nom || "");
         const ri = it.repliques.indexOf(r), tap = it.spk ? ' data-id="' + it.id + '" data-ri="' + ri + '" data-a="who"' : "";
-        if (it.spk && key !== last) html += '<button type="button" class="who"' + tap + ' style="color:' + readable(c) + '">' + esc(v ? labelOf(v) : r.nom ? r.nom + " ?" : "?") + '</button>';
+        if (it.spk && key !== last) html += '<button type="button" class="who"' + tap + ' style="color:' + readable(c) + '">' + esc(v ? labelOf(v) : r.snap ? r.snap.label : r.nom ? r.nom + " ?" : "?") + '</button>';
         last = key;
         html += '<div class="bub"' + tap + ' style="--c:' + c + '"><div class="fr">' + esc(r.francais) + '</div><div class="tn">' + esc(r.entendu) + '</div></div>';
         if (whoMenu && whoMenu.id === it.id && whoMenu.ri === ri) { html += menuHtml(it, r, v); last = null; }
@@ -1364,7 +1429,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
   function menuAction(m) {
     const it = items.find(x => x.id === whoMenu.id), r = it && it.repliques[whoMenu.ri]; if (!r) { whoMenu = null; renderFeed(); return; }
     const v = r.vid ? voiceOf(r.vid) : null, act = m.dataset.m, target = m.dataset.v ? gallery.find(o => o.id === m.dataset.v) : null;
-    const done = () => { whoMenu = null; renderFeed(); renderGallery(); };
+    const done = () => { whoMenu = null; saveMsg(it); renderFeed(); renderGallery(); }; // correction enregistrée avec la discussion
     if (["rename", "is", "create"].includes(act)) { whoMenu.step = act; renderFeed(); const n = $("mName"); if (n) n.focus(); return; }
     if (act === "back") { whoMenu.step = ""; renderFeed(); return; }
     if (act === "accept" && v) { v.name = v.suggest; v.userNamed = true; storeVoice(v); return done(); }
@@ -1382,7 +1447,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
       r.vid = target.id; r.manual = true; r.guard = ""; present.add(target.id); target.lastHeard = Date.now(); storeVoice(target);
       improveFromCorrection(target, segOf(it, r)); return done();
     }
-    if (act === "isUnknown") { r.vid = ""; r.manual = true; return done(); }
+    if (act === "isUnknown") { r.vid = ""; r.manual = true; delete r.snap; r.nom = ""; return done(); }
     if (act === "createOk") {
       const n = $("mName").value.trim(), seg = segOf(it, r); if (!n || !seg) return;
       const a = analyze(seg);
@@ -1406,11 +1471,22 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     renderFeed();
   }
   $("feed").onclick = e => {
+    if (!conv) { // accueil : ouvrir une discussion, ou la supprimer (poubelle)
+      const w = e.target.closest(".cwrap"), c = w && convOf(w.dataset.c); if (!c) return;
+      if (e.target.closest("[data-a=cdel]")) { if (confirm("Supprimer « " + c.title + " » : ses messages, ses enregistrements et toutes ses informations ? Les voix de la galerie sont conservées.")) deleteConv(c); return; }
+      const card = e.target.closest(".ccard"); if (!card || card.dataset.dragged) return;
+      if (w.classList.contains("open")) { w.classList.remove("open"); card.style.transform = ""; return; }
+      openConv(c); return;
+    }
+    const rb = e.target.closest("[data-a=retry]");
+    if (rb) { const it = items.find(x => x.id === Number(rb.dataset.id)); if (it) retryItem(it); return; }
     const m = e.target.closest("[data-m]");
     if (m) { menuAction(m); return; }
     if (e.target.closest(".rmenu")) return;
     const w = e.target.closest("[data-a=who]");
-    if (w) { const id = Number(w.dataset.id), ri = Number(w.dataset.ri); whoMenu = whoMenu && whoMenu.id === id && whoMenu.ri === ri ? null : { id, ri, step: "" }; renderFeed(); return; }
+    if (w) { const id = Number(w.dataset.id), ri = Number(w.dataset.ri), it0 = items.find(x => x.id === id);
+      if (it0 && !it0.x16 && it0.blobX) x16Of(it0).then(() => renderFeed()); // audio relu pour les corrections et créations
+      whoMenu = whoMenu && whoMenu.id === id && whoMenu.ri === ri ? null : { id, ri, step: "" }; renderFeed(); return; }
     const line = e.target.closest("[data-id]"); if (!line) return;
     if (e.target.closest("[data-a=tools]")) { const id = Number(line.dataset.id); openTools = openTools === id ? 0 : id; renderFeed(); return; }
     const it = items.find(x => x.id === Number(line.dataset.id)); if (!it) return;
@@ -1418,41 +1494,250 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     if (pb && pb.dataset.k) togglePlay(it, pb.dataset.k); else if (pb && it.url) togglePlay(it);
   };
 
-  // ---------- Mesures ----------
-  const cfgName = l => (l.clean ? "Nettoyé" : "Brut") + (l.ns ? " + réduc. iPhone" : "") + (l.spk ? " + voix" : "");
-  function renderStats() {
-    const L = cfg.log.filter(l => l.ok && l.type !== "rep"), R = cfg.log.filter(l => l.ok && l.type === "rep");
-    const groups = {}; L.forEach(l => (groups[cfgName(l)] = groups[cfgName(l)] || []).push(l));
-    const avg = (a, k) => { const v = a.map(x => x[k]).filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
-    const cost = a => a.reduce((s, l) => s + l.tin * PRICE_IN / 1e6 + l.tout * PRICE_OUT / 1e6, 0);
-    const hours = (listenedMs + (listening ? performance.now() - t0Listen : 0)) / 3600000;
-    const costR = R.reduce((s, l) => s + l.tin * PRICE_IN / 1e6 + l.tout * PRICE_OUT / 1e6 + (l.tts || 0) * PRICE_TTS_OUT / 1e6, 0);
-    const costBg = stats.bgTin * PRICE_IN / 1e6 + stats.bgTout * PRICE_OUT / 1e6;
-    const voix = stats.calls ? (stats.refsSent / stats.calls).toFixed(1) + " réf. jointes par appel en moyenne · " + stats.newVoices + " voix nouvelles · " + stats.merges + " fusions · " + stats.replaced + " références remplacées · " +
-      stats.unknown + " répliques « ? » · " + stats.guards + " refus par la hauteur · " + stats.bgCalls + " appels de fond (" + (costBg * 100).toFixed(2) + " centimes $)" : "";
-    const all = cost(L) + costR + costBg, audio = L.reduce((s, l) => s + l.dur, 0) + R.reduce((s, l) => s + l.dur, 0);
-    const repRow = R.length ? '<tr><td>Réponses (Je parle)</td><td>' + R.length + '</td><td>' + sec(avg(R, "delay")) + ' avant la voix</td></tr>' : "";
-    const rows = Object.entries(groups).map(([n, a]) => {
-      return '<tr><td>' + esc(n) + '</td><td>' + a.length + '</td><td>' + sec(avg(a, "delay")) + '</td></tr>';
-    }).join("");
-    $("stats").innerHTML = '<tr><th>Réglage</th><th>Passages</th><th>Délai moyen</th></tr>' +
-      (rows || '<tr><td colspan="3" class="muted">Aucun passage traduit pour l\'instant.</td></tr>') + repRow +
-      '<tr><td colspan="3"></td></tr>' +
-      '<tr><td>Écoute (session)</td><td colspan="2">' + (hours * 60).toFixed(1) + ' min · ' + audio.toFixed(0) + ' s d\'audio envoyé · coût ' + (all * 100).toFixed(2) + ' centimes $' +
-      (hours > 0.01 ? ' · soit ≈ ' + (all / hours).toFixed(2) + ' $ par heure' : "") + '</td></tr>' +
-      (voix ? '<tr><td>Voix (session)</td><td colspan="2">' + voix + '</td></tr>' : "");
-    $("stats").dataset.text = Object.entries(groups).map(([n, a]) =>
-      n + " : " + a.length + " passages, délai moyen " + sec(avg(a, "delay"))).join("\n") +
-      (R.length ? "\nRéponses (Je parle) : " + R.length + ", voix après " + sec(avg(R, "delay")) + " en moyenne, coût " + (costR * 100).toFixed(2) + " centimes $" : "") +
-      (voix ? "\nVoix : " + voix : "") + "\nCoût : " + (all * 100).toFixed(2) + " centimes $ pour " + audio.toFixed(0) + " s d'audio" + (hours > 0.01 ? ", ≈ " + (all / hours).toFixed(2) + " $ par heure d'écoute" : "");
+  // ---------- Discussions (IndexedDB « derja-convs ») ----------
+  // c : une fiche par discussion (titre, contexte, voix présentes, durée, poids) ; m : un enregistrement par message (texte) ;
+  // a : l'audio (x = extrait entendu, fr = mon français, tn = voix tunisienne).
+  // Tout est enregistré au fil de l'eau : iOS peut fermer l'app à tout moment sans laisser le temps de sauvegarder.
+  const cdb = (() => {
+    let p = null;
+    const open = () => p || (p = new Promise((res, rej) => {
+      const r = indexedDB.open("derja-convs", 1);
+      r.onupgradeneeded = () => { const d = r.result; d.createObjectStore("c", { keyPath: "id" }); d.createObjectStore("m", { keyPath: "k" }).createIndex("cid", "cid"); d.createObjectStore("a", { keyPath: "k" }).createIndex("cid", "cid"); };
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = async (st, mode, fn) => { const d = await open(); return new Promise((res, rej) => { const t = d.transaction(st, mode), out = fn(t.objectStore(st)); t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); }); };
+    const byConv = (st, cid) => tx(st, "readonly", s => s.index("cid").getAll(cid));
+    async function delConv(cid) {
+      const d = await open();
+      await new Promise((res, rej) => {
+        const t = d.transaction(["c", "m", "a"], "readwrite"); t.objectStore("c").delete(cid);
+        ["m", "a"].forEach(n => { const s = t.objectStore(n), rq = s.index("cid").openKeyCursor(IDBKeyRange.only(cid)); rq.onsuccess = () => { const cu = rq.result; if (cu) { s.delete(cu.primaryKey); cu.continue(); } }; });
+        t.oncomplete = res; t.onerror = () => rej(t.error);
+      });
+    }
+    return { convs: () => tx("c", "readonly", s => s.getAll()), putConv: c => tx("c", "readwrite", s => s.put(c)), putMsg: m => tx("m", "readwrite", s => s.put(m)),
+      putAudio: x => tx("a", "readwrite", s => s.put(x)), msgs: cid => byConv("m", cid), audios: cid => byConv("a", cid), delConv };
+  })();
+  let convs = [];                  // fiches des discussions
+  let conv = null;                 // discussion ouverte (null = accueil)
+  const convItems = new Map();     // cid -> messages chargés, gardés pour la session (une traduction en cours se termine même si on quitte)
+  let lastId = 0;
+  const newId = () => (lastId = Math.max(Date.now() * 100, lastId + 1)); // identifiant unique et croissant
+  const convOf = cid => convs.find(c => c.id === cid) || null;
+  const saveConv = c => { if (c) cdb.putConv(c).catch(() => {}); };
+  const hhmm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const ddmm = t => new Date(t).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  function when(t) {
+    const d = new Date(t), now = new Date(), y = new Date(now); y.setDate(now.getDate() - 1);
+    if (d.toDateString() === now.toDateString()) return "aujourd'hui à " + hhmm(t);
+    if (d.toDateString() === y.toDateString()) return "hier à " + hhmm(t);
+    return "le " + ddmm(t) + " à " + hhmm(t);
   }
-  $("copy").onclick = async () => {
-    const txt = "Bilan écoute continue TN → FR\n" + $("stats").dataset.text;
-    try { await navigator.clipboard.writeText(txt); $("copyMsg").textContent = "Copié : colle-le dans la conversation."; } catch { $("copyMsg").textContent = txt; }
+  // Titre local : début du contexte (jusqu'au premier « : . ; , » ou retour à la ligne), 6 mots au plus
+  function titleFrom(ctx, at) {
+    const w = String(ctx || "").split(/[:.;,\n]/)[0].trim().split(/\s+/).filter(Boolean);
+    if (!w.length) return "Discussion du " + ddmm(at) + " à " + hhmm(at);
+    const s = w.slice(0, 6).join(" ") + (w.length > 6 ? "…" : "");
+    return s[0].toUpperCase() + s.slice(1);
+  }
+  const durFmt = s => s < 60 ? Math.round(s) + " s" : Math.round(s / 60) + " min";
+  const sizeFmt = b => b < 1e6 ? Math.max(1, Math.round(b / 1e3)) + " Ko" : (b / 1e6).toFixed(b < 1e7 ? 1 : 0).replace(".", ",") + " Mo";
+
+  // Voix présentes : propres à chaque discussion, enregistrées avec elle à chaque changement
+  class PresentSet extends Set {
+    constructor(c, init) { super(init); this.c = c; }
+    add(x) { const n = !this.has(x); super.add(x); if (n) this.sync(); return this; }
+    delete(x) { const r = super.delete(x); if (r) this.sync(); return r; }
+    clear() { super.clear(); this.sync(); }
+    sync() { if (this.c) { this.c.present = [...this]; saveConv(this.c); } }
+  }
+
+  // Enregistrement d'un message (texte seulement ; l'audio à part). Chaque réplique garde un instantané du nom et de la couleur.
+  const SKIP = new Set(["x16", "url", "urlFr", "blobX", "blobFr", "blobTn", "_sz", "_saved", "speechEnd", "shownAt"]);
+  function saveMsg(it) {
+    const c = convOf(it.cid); if (!c) return;
+    if (it.repliques) it.repliques.forEach(r => { const v = r.vid && voiceOf(r.vid); if (v) r.snap = { label: v.name || v.suggest || v.id, color: v.color }; });
+    const o = {}; for (const k in it) if (!SKIP.has(k)) o[k] = it[k];
+    const json = JSON.stringify(o);
+    c.bytes = (c.bytes || 0) + json.length - (it._sz || 0); it._sz = json.length;
+    if (!it._saved) { it._saved = true; c.nMsg = (c.nMsg || 0) + 1; }
+    c.lastAt = Math.max(c.lastAt || 0, it.at || 0);
+    saveConv(c);
+    cdb.putMsg({ k: it.cid + ":" + it.id, cid: it.cid, id: it.id, json }).catch(() => {});
+  }
+  function saveAudio(it, kind, blob) {
+    const c = convOf(it.cid); if (!c || !blob) return;
+    c.bytes = (c.bytes || 0) + blob.size;
+    if (kind !== "tn") c.audioSec = (c.audioSec || 0) + (it.dur || 0); // durée = audio envoyé à Gemini
+    saveConv(c);
+    cdb.putAudio({ k: it.cid + ":" + it.id + ":" + kind, cid: it.cid, id: it.id, kind, blob }).catch(() => {});
+  }
+  // Audio 16 kHz d'un extrait (pour les corrections et créations de voix), relu depuis l'enregistrement si besoin
+  async function x16Of(it) {
+    if (it.x16) return it.x16;
+    if (!it.blobX) return null;
+    const u8 = new Uint8Array(await it.blobX.arrayBuffer()), n = (u8.length - 44) >> 1, dv = new DataView(u8.buffer, 44), f = new Float32Array(n);
+    for (let i = 0; i < n; i++) f[i] = dv.getInt16(i * 2, true) / 32768;
+    return (it.x16 = f);
+  }
+
+  async function loadConvs() {
+    try { convs = await cdb.convs(); } catch { convs = []; }
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch {} // demander à iOS de garder les données
+    renderAll();
+  }
+  async function openConv(c) {
+    let list = convItems.get(c.id);
+    if (!list) {
+      list = [];
+      try {
+        const [ms, as] = await Promise.all([cdb.msgs(c.id), cdb.audios(c.id)]);
+        const au = {}; as.forEach(a => { au[a.id + ":" + a.kind] = a.blob; });
+        ms.sort((a, b) => a.id - b.id).forEach(m => {
+          const it = JSON.parse(m.json); it._sz = m.json.length; it._saved = true;
+          if (it.status === "run" || it.status === "rec") it.status = "int"; // traduction interrompue par une fermeture de l'app
+          const bx = au[it.id + ":x"], bf = au[it.id + ":fr"], bt = au[it.id + ":tn"];
+          if (it.me) { if (bf) { it.blobFr = bf; it.urlFr = URL.createObjectURL(bf); } if (bt) { it.blobTn = bt; it.url = URL.createObjectURL(bt); } }
+          else if (bx) { it.blobX = bx; it.url = URL.createObjectURL(bx); }
+          lastId = Math.max(lastId, it.id); list.push(it);
+        });
+      } catch {}
+      convItems.set(c.id, list);
+    }
+    conv = c; items = list; whoMenu = null; openTools = 0;
+    // Voix présentes de cette discussion : fusions suivies, voix supprimées retirées
+    present = new PresentSet(c, (c.present || []).map(resolve).filter(id => gallery.some(v => v.id === id)));
+    renderAll();
+    const se = document.scrollingElement; se.scrollTop = se.scrollHeight;
+  }
+  function leaveConv() {
+    if (listening) stop();
+    if (talk === "speak") stopVoice();
+    stopPlay(); conv = null; items = []; whoMenu = null; openTools = 0; present = new PresentSet(null);
+    setState("Arrêté", ""); renderAll();
+  }
+  function newConv(context) {
+    const at = Date.now(), ctx = String(context || "").trim();
+    const c = { id: "c" + at, created: at, lastAt: 0, context: ctx, title: titleFrom(ctx, at), titleUser: false, present: [], audioSec: 0, bytes: 0, nMsg: 0 };
+    convs.push(c); saveConv(c); convItems.set(c.id, []);
+    openConv(c);
+  }
+  async function deleteConv(c) {
+    if (conv === c) leaveConv();
+    convs = convs.filter(x => x !== c);
+    (convItems.get(c.id) || []).forEach(it => { [it.url, it.urlFr].forEach(u => { try { u && URL.revokeObjectURL(u); } catch {} }); });
+    convItems.delete(c.id);
+    try { await cdb.delConv(c.id); } catch {}
+    renderAll();
+  }
+
+  // ---------- Accueil, barre de discussion ----------
+  function renderAll() {
+    document.body.classList.toggle("home", !conv);
+    $("convBar").hidden = !conv;
+    if (conv) renderConvBar();
+    renderFeed(); renderButtons(); renderGallery();
+  }
+  const convLine = c => "Créée " + when(c.created) + " · " + (c.nMsg ? durFmt(c.audioSec || 0) + " d'audio · " + sizeFmt(c.bytes || 0) + " · dernier message " + when(c.lastAt) : "aucun message");
+  function renderHome() {
+    const list = convs.slice().sort((a, b) => (b.lastAt || b.created) - (a.lastAt || a.created));
+    $("feed").innerHTML = list.length ? list.map(c => '<div class="cwrap" data-c="' + c.id + '">' +
+      '<button type="button" class="cdel" data-a="cdel" aria-label="Supprimer la discussion"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>' +
+      '<button type="button" class="ccard" data-a="copen"><b>' + esc(c.title) + '</b><small>' + esc(convLine(c)) + '</small></button></div>').join("")
+      : '<div class="welcome"><b>Bienvenue</b><p>Touche « Démarrer une nouvelle discussion » et décris en quelques mots le contexte : le lieu, les personnes présentes, le sujet. ' +
+        'Touche ensuite <b>J\'écoute</b> pour suivre la conversation en tunisien, et maintiens <b>Je parle</b> pour répondre en français.</p>' +
+        '<p>Les voix sont reconnues au fil des discussions ; tu peux les nommer et les corriger en touchant leur nom.</p></div>' +
+        '<div class="empty">L\'historique de tes discussions apparaîtra ici.</div>';
+  }
+  function renderConvBar() {
+    $("convTitle").textContent = conv.title;
+    $("ctxLine").textContent = conv.context || "Ajouter un contexte (lieu, personnes, sujet)…";
+    $("ctxLine").classList.toggle("muted", !conv.context);
+  }
+  $("back").onclick = () => leaveConv();
+  $("convTitle").onclick = () => { $("convTitle").hidden = true; $("titleEdit").hidden = false; $("titleEdit").value = conv.title; $("titleEdit").focus(); };
+  const titleDone = () => {
+    if ($("titleEdit").hidden || !conv) return;
+    const v = $("titleEdit").value.trim();
+    if (v) { conv.title = v; conv.titleUser = true; } else { conv.titleUser = false; conv.title = titleFrom(conv.context, conv.created); }
+    saveConv(conv); $("titleEdit").hidden = true; $("convTitle").hidden = false; renderConvBar();
   };
-  let armed = false;
-  $("clear").onclick = () => { if (!armed) { armed = true; $("clear").textContent = "Confirmer"; return; } armed = false; $("clear").textContent = "Effacer"; cfg.log = []; items.length = 0; listenedMs = 0; if (listening) t0Listen = performance.now(); save(); renderFeed(); renderStats(); };
-  renderStats(); renderFeed(); loadGallery();
+  $("titleEdit").addEventListener("blur", titleDone);
+  $("titleEdit").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("titleEdit").blur(); } });
+  $("ctxLine").onclick = () => { $("ctxLine").hidden = true; $("ctxEdit").hidden = false; $("ctxEdit").value = conv.context || ""; $("ctxEdit").focus(); };
+  $("ctxEdit").addEventListener("input", () => {
+    if (!conv) return;
+    conv.context = $("ctxEdit").value; if (!conv.titleUser) conv.title = titleFrom(conv.context, conv.created);
+    saveConv(conv); $("convTitle").textContent = conv.title;
+  });
+  $("ctxEdit").addEventListener("blur", () => { if (conv) { conv.context = conv.context.trim(); saveConv(conv); } $("ctxEdit").hidden = true; $("ctxLine").hidden = false; if (conv) renderConvBar(); });
+  // Nouvelle discussion : le contexte d'abord, un seul bouton « Commencer »
+  $("newBtn").onclick = () => { if (!cfg.key) { $("sheet").hidden = false; return; } $("newCtx").value = ""; $("newSheet").hidden = false; setTimeout(() => $("newCtx").focus(), 50); };
+  $("newGo").onclick = () => { $("newSheet").hidden = true; newConv($("newCtx").value); };
+  $("newSheet").onclick = e => { if (e.target.id === "newSheet") $("newSheet").hidden = true; };
+  // Cartes : toucher pour ouvrir ; glisser vers la gauche pour faire apparaître la poubelle
+  let swipe = null;
+  $("feed").addEventListener("pointerdown", e => {
+    const card = !conv && e.target.closest(".ccard"); if (!card) return;
+    document.querySelectorAll(".cwrap.open").forEach(w => { if (w !== card.parentNode) { w.classList.remove("open"); w.querySelector(".ccard").style.transform = ""; } });
+    swipe = { card, x: e.clientX, y: e.clientY, dx: 0, base: card.parentNode.classList.contains("open") ? -88 : 0, moved: false };
+  });
+  $("feed").addEventListener("pointermove", e => {
+    if (!swipe) return;
+    const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+    if (!swipe.moved && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) swipe.moved = true;
+    if (!swipe.moved) return;
+    swipe.dx = dx; swipe.card.style.transition = "none"; swipe.card.parentNode.classList.add("drag");
+    swipe.card.style.transform = "translateX(" + Math.max(-110, Math.min(0, swipe.base + dx)) + "px)";
+  });
+  const swipeEnd = () => {
+    if (!swipe) return;
+    const s = swipe; swipe = null; s.card.style.transition = ""; s.card.parentNode.classList.remove("drag");
+    if (!s.moved) return;
+    s.card.dataset.dragged = "1"; setTimeout(() => { delete s.card.dataset.dragged; }, 50);
+    const open = s.base + s.dx < -44;
+    s.card.parentNode.classList.toggle("open", open); s.card.style.transform = open ? "translateX(-88px)" : "";
+  };
+  $("feed").addEventListener("pointerup", swipeEnd); $("feed").addEventListener("pointercancel", swipeEnd);
+
+  // ---------- Statistiques d'utilisation et solde estimé ----------
+  // Jetons comptés par Gemini à chaque appel ; coût au tarif du moment (doublé à partir du 01/01/2027), converti à 0,92 € le dollar.
+  const EUR = 0.92, priceMul = () => Date.now() >= Date.UTC(2027, 0, 1) ? 2 : 1;
+  function addUsage(kind, tin = 0, tout = 0) {
+    const u = cfg.usage, m = priceMul();
+    if (kind === "tts") { u.tts += tout; u.usd += tout * PRICE_TTS_OUT * m / 1e6; }
+    else { u[kind + "In"] += tin; u[kind + "Out"] += tout; u.usd += (tin * PRICE_IN + tout * PRICE_OUT) * m / 1e6; }
+    save();
+    if (!$("sheet").hidden) renderStats();
+  }
+  // Crédit épuisé : message clair au lieu d'une erreur technique
+  const apiErr = (r, j) => {
+    const msg = String((j && j.error && j.error.message) || "");
+    if ((r.status === 429 || r.status === 402) && /prepay|credit|billing|depleted|balance/i.test(msg)) return new Error("Crédit Gemini épuisé : recharge dans AI Studio");
+    return new Error("Erreur " + r.status + (msg ? " · " + msg.slice(0, 100) : ""));
+  };
+  const euro = x => (x > 0 && x < 0.01 ? "< 0,01" : x.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + " €";
+  async function renderStats() {
+    const u = cfg.usage, b = cfg.balance;
+    $("balEur").value = b ? String(b.eur).replace(".", ",") : "";
+    $("balInfo").innerHTML = b ? "Saisi " + when(b.at) + " · <b>Solde estimé aujourd'hui : " + euro(b.eur - (u.usd - b.usdAt) * EUR) + "</b> (" + euro((u.usd - b.usdAt) * EUR) + " consommés depuis)"
+      : "Recopie ici le solde affiché dans Google AI Studio : l'app déduira ensuite elle-même sa consommation.";
+    const nMsg = convs.reduce((s, c) => s + (c.nMsg || 0), 0), aud = convs.reduce((s, c) => s + (c.audioSec || 0), 0), bytes = convs.reduce((s, c) => s + (c.bytes || 0), 0);
+    let used = null; try { used = navigator.storage && navigator.storage.estimate ? (await navigator.storage.estimate()).usage : null; } catch {}
+    const row = (a, v) => '<tr><td>' + a + '</td><td>' + v + '</td></tr>', tk = n => n.toLocaleString("fr-FR");
+    $("stats").innerHTML =
+      row("Discussions", convs.length) + row("Messages", nMsg) + row("Audio envoyé à Gemini", durFmt(aud)) +
+      row("Poids des discussions", sizeFmt(bytes)) + row("Place occupée dans l'iPhone", used != null ? sizeFmt(used) : "–") + row("Voix dans la galerie", gallery.filter(v => !v.temp).length) +
+      row("Jetons : écoute", tk(u.tnIn) + " entrée · " + tk(u.tnOut) + " sortie") + row("Jetons : réponses", tk(u.repIn) + " entrée · " + tk(u.repOut) + " sortie") +
+      row("Jetons : voix tunisienne", tk(u.tts)) + row("Jetons : appels de fond", tk(u.bgIn) + " entrée · " + tk(u.bgOut) + " sortie") +
+      row("Coût estimé", euro(u.usd * EUR) + " depuis le " + ddmm(u.since));
+  }
+  $("balEur").addEventListener("change", e => {
+    const x = parseFloat(String(e.target.value).replace(",", ".").replace(/[^\d.]/g, ""));
+    cfg.balance = isFinite(x) ? { eur: x, at: Date.now(), usdAt: cfg.usage.usd } : null; save(); renderStats();
+  });
+
+  loadGallery().then(loadConvs);
 
   // ---------- Mise à jour ----------
   $("ver").textContent = VERSION;

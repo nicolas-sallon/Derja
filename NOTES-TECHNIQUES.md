@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 23/10/2026 (app v2.5, banc v35).
+Mise à jour : 24/10/2026 (app v2.5, banc v36).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -77,9 +77,8 @@ Mise à jour : 23/10/2026 (app v2.5, banc v35).
   - Plus de boutons d'appréciation (Juste/Approx./Faux, Locuteur ✓/✗) : le test porte maintenant sur la tenue dans la durée. Le bouton ▶︎ de réécoute de chaque extrait est conservé.
   - Le volet sous chaque extrait ne montre que le bouton de réécoute et, pour chaque réplique, la voix retenue, le code renvoyé par Gemini, la hauteur mesurée, l'écart de timbre et un éventuel refus du garde-fou. La durée de préparation (20 ms au plus, tout activé) n'est plus affichée ni mesurée dans le tableau.
   - Réécoute : un seul extrait à la fois. En lancer un autre arrête le premier, et toucher « ■ Arrêter » coupe la lecture.
-  - Le coût est calculé à partir de `usageMetadata`.
-  - Les statistiques sont regroupées par configuration : nettoyé ou brut, réduction iPhone, personnes.
-  - Stockage : `localStorage["derja-bench-listen"]`.
+  - v36 : le tableau des mesures est retiré, remplacé par les « Statistiques d'utilisation » (section Discussions).
+  - Réglages : `localStorage["derja-bench-listen"]`.
 
 ## Deux boutons et réponse « Je parle » (banc v27)
 - **Disposition.** Deux boutons de même taille sous le sélecteur à 3 cases, qui reste en place pour l'instant.
@@ -119,7 +118,7 @@ Mise à jour : 23/10/2026 (app v2.5, banc v35).
 
 ## Contexte et galerie des voix (banc v29)
 Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
-- **Contexte libre** (`cfg.ctxText`, réglages) : décrit la conversation (lieu, personnes, sujet). Il est envoyé avec chaque extrait et chaque réponse « Je parle » (`ctxBlock`).
+- **Contexte libre** (v29 : `cfg.ctxText` dans les réglages ; v36 : propre à chaque discussion, en haut de la page) : décrit la conversation (lieu, personnes, sujet). Il est envoyé avec chaque extrait et chaque réponse « Je parle » (`ctxBlock`).
 - **Galerie permanente**, dans l'iPhone (IndexedDB `derja-voices`), 20 voix au plus.
   - **Contenu d'une voix :**
     - un code fixe (`V3`) ;
@@ -129,9 +128,10 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
     - la hauteur médiane (`f0`) et l'empreinte de timbre (`mfcc`) ;
     - un score de qualité (`voicedSec`, `snr`) et des marqueurs (`provisoire`, `importee`, `doubt`) ;
     - la référence Google (`file`) et sa version (`refVer`).
-  - **Numéros des voix (v33).**
-    - Pendant une session, un numéro libéré par une fusion ou une suppression n'est jamais réutilisé. Un appel en cours ou une bulle affichée peuvent encore porter ce code, rattaché via `meta.aliases`.
-    - À l'ouverture du banc, les voix sont renumérotées V1, V2… dans l'ordre de création, sans trous, et les correspondances sont effacées. C'est sans risque : aucun appel n'est en cours et le fil est vide.
+  - **Numéros des voix (v36).**
+    - Ils sont **uniques pour toujours** : V1, V2… ne sont jamais réutilisés, et les correspondances de fusion (`meta.aliases`) sont permanentes.
+    - Pourquoi : les discussions archivées font référence aux codes des voix. La renumérotation à l'ouverture (v33) a été retirée, car elle aurait rattaché d'anciennes répliques à la mauvaise personne.
+    - Chaque réplique garde un instantané (`snap` : nom et couleur), affiché en gris si la voix a été supprimée ou n'a jamais été gardée.
     - Les références chez Google ne dépendent pas du numéro.
   - **Galerie pleine :** la voix sans nom entendue il y a le plus longtemps sort. Si toutes ont un nom, la voix nouvelle reste temporaire.
   - **Ouverture depuis l'écran d'accueil impérative :** Safari peut effacer les données d'un site non visité pendant 7 jours, et le stockage d'un onglet est séparé de celui de l'app de l'écran d'accueil.
@@ -144,7 +144,7 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
   - tant qu'aucune voix n'est présente : les voix nommées dans le contexte, puis les plus récentes ;
   - ensuite : seulement les voix présentes et celles du contexte. C'est moins cher, et Gemini a moins de voix à départager.
   - Un nouveau venu est rattrapé par la vérification des doublons.
-- **Coche « présente » :** mise automatiquement à la reconnaissance, ou à la main. Tout est décoché à l'arrêt de l'écoute continue, pas pendant « Je parle ».
+- **Coche « présente » (v36 : propre à chaque discussion, voir plus bas) :** mise automatiquement à la reconnaissance, ou à la main. Avant la v36, tout était décoché à l'arrêt de l'écoute continue, pas pendant « Je parle ».
 - **Appel d'un extrait.**
   - Contenu : chaque référence précédée de « Voix de référence V3 (« Mamie ») : », puis « Extrait à traduire : » et l'audio.
   - Gemini renvoie pour chaque réplique : `voix` (code ou « nouvelle », jugé sur le timbre), `nom`, `genre`, `debut`/`fin` (en secondes), `entendu`, `francais`.
@@ -214,6 +214,57 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
   - **Saisie protégée :** le texte tapé dans le menu est conservé quand le fil se met à jour, et le fil ne défile pas tant que le menu est ouvert.
 - **Mesures :** la ligne « Voix (session) » donne la moyenne des références jointes par appel, les voix nouvelles, les fusions, les remplacements, les « ? », les refus par la hauteur, et le nombre et le coût des appels de fond.
 
+## Discussions (banc v36)
+Choix validés avec Nicolas le 24/10.
+- **Accueil (`conv = null`).**
+  - La liste des discussions, la plus récente en haut (selon le dernier message, sinon la création).
+  - Une carte : titre, « Créée … · durée d'audio · poids · dernier message … », ou « aucun message ».
+  - Liste vide : un mot d'accueil et « L'historique de tes discussions apparaîtra ici. »
+  - En bas, à la place des boutons J'écoute et Je parle : « Démarrer une nouvelle discussion ».
+- **Nouvelle discussion.**
+  - Un panneau « De quoi va-t-on parler ? », avec le contexte et un seul bouton, « Commencer ».
+  - La discussion est **archivée même vide**, pour qu'on la retrouve avec son contexte. La date affichée est celle de la création.
+- **Titre local uniquement** (`titleFrom`) : le début du contexte, jusqu'au premier « : . ; , », 6 mots au plus. Sans contexte : « Discussion du jj/mm à hh:mm ».
+  - Il est modifiable en le touchant (`titleUser`). Sinon, il suit le contexte.
+  - Il n'est jamais envoyé à Gemini : le contexte suffit.
+- **Page de discussion.**
+  - En haut : « ‹ Discussions », le titre et le contexte sur une ligne. Un toucher sur le contexte le déplie pour le modifier ; le nouveau contexte s'applique aux appels suivants.
+  - Le contexte n'est plus dans les réglages. `ctxBlock(cid)` et `contextLines(id, liste)` utilisent la discussion du message.
+- **Stockage (IndexedDB `derja-convs`)** :
+  - `c` : une fiche par discussion (contexte, titre, voix présentes, `audioSec`, `bytes`, `nMsg`, `lastAt`) ;
+  - `m` : un enregistrement par message (texte JSON, sans audio) ;
+  - `a` : l'audio — `x` l'extrait, `fr` mon français, `tn` la voix tunisienne.
+  - On demande à iOS de garder les données de façon persistante (`navigator.storage.persist`).
+- **Sauvegarde au fil de l'eau**, car iOS peut fermer l'app sans prévenir :
+  - un extrait est enregistré dès son envoi, son audio avant l'appel à Gemini, puis le texte au retour ;
+  - ma réponse est enregistrée au relâchement, avec mon français, puis la traduction, puis la voix tunisienne ;
+  - le contexte, le titre, les coches et les corrections du menu sont enregistrés à chaque changement.
+- **Traduction interrompue :** un message resté « en cours » est affiché « Traduction interrompue » à la réouverture, avec un bouton « Traduire ».
+  - Pour un extrait : relancé depuis l'audio enregistré (`retryItem`).
+  - Pour ma réponse : relancée depuis mon français enregistré, puis dite (`retryMe`), seulement écoute arrêtée.
+- **Reprise d'une discussion :** le fil et l'audio sont rechargés, donc la réécoute et les menus fonctionnent. On peut continuer la discussion.
+  - Les messages chargés restent en mémoire pour la session (`convItems`) : une traduction en cours se termine et s'enregistre même si on quitte la discussion.
+  - Les identifiants de messages sont uniques et croissants (`newId`).
+- **Voix présentes par discussion** (`PresentSet`, enregistrées dans la fiche) :
+  - aucune coche dans une nouvelle discussion, donc sélection de départ (contexte, puis voix récentes) ;
+  - cochées automatiquement à la reconnaissance, ou à la main ;
+  - **arrêter l'écoute ne décoche plus rien** ;
+  - quitter la discussion arrête l'écoute et garde les coches dans la discussion ;
+  - à la réouverture, les coches sont restaurées, avec les fusions suivies et les voix supprimées retirées ;
+  - hors discussion, les coches sont masquées dans la galerie.
+- **Dates dans la galerie :**
+  - « entendue » = dernière réplique attribuée (`lastHeard`). C'est elle qui sert aux « voix récentes » ;
+  - « extrait du » = date de la référence (`refAt`).
+- **Supprimer une discussion :** glisser la carte vers la gauche, toucher la poubelle rouge, confirmer. Les messages, l'audio et la fiche sont effacés ; la galerie n'est pas touchée.
+- **Poids :** environ 1,9 Mo par minute d'audio envoyé, et 2,9 Mo par minute de voix tunisienne. Une discussion d'une heure fait environ 40 à 50 Mo.
+- **Statistiques d'utilisation** (réglages, compteurs permanents `cfg.usage`) :
+  - discussions, messages, audio envoyé, poids, place occupée (`navigator.storage.estimate`), voix ;
+  - jetons par type : écoute, réponses, voix tunisienne, appels de fond ;
+  - coût estimé au tarif du moment (doublé à partir du 01/01/2027), à 0,92 € le dollar.
+- **Solde estimé :** l'utilisateur recopie le solde affiché dans AI Studio. L'app retient la date et déduit sa propre consommation depuis (`cfg.balance`).
+  - Aucune API ne permet de lire le solde avec une clé Gemini.
+- **Crédit épuisé :** une erreur 429 ou 402 qui mentionne prepay, credit, billing ou depleted affiche « Crédit Gemini épuisé : recharge dans AI Studio » (`apiErr`).
+
 ## Tarifs (pour estimer)
 - Gemini 3.8 Flash : 0,75 $ par million de jetons en entrée, 3,75 $ par million en sortie.
 - Synthèse vocale : Flash 9 $, Lite 6 $ par million de jetons en sortie.
@@ -228,5 +279,5 @@ Choix validés avec Nicolas le 23/10 après plusieurs itérations écrites.
   - Décision : abandonné. À reconsidérer seulement dans une app native.
 
 ## À venir
+- Fusion du banc et de l'app : une seule page de discussion, plus un mode « apprendre » relié aux discussions (mot à mot, variantes, notes culturelles, fiches, exercices).
 - Écoute continue portée dans l'app comme 3ᵉ mode, une fois validée au banc.
-- Renommer ou corriger une personne à la main.
