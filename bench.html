@@ -68,6 +68,7 @@ body:not(.home) .blogo{width:28px;height:28px;border-radius:8px}
 h1{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
 h1 small{display:block;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0}
 .ver{font-size:11px;opacity:.75;font-variant-numeric:tabular-nums;cursor:pointer}
+.offtag{font-size:11px;font-weight:700;color:var(--mid);margin-left:6px}
 /* Logo de l'app (bulle, D et د reliés par l'onde) en haut à gauche */
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .blogo{width:40px;height:40px;border-radius:11px;overflow:hidden;flex:none;box-shadow:0 1px 6px rgba(0,0,0,.5)}
@@ -224,7 +225,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   <header>
     <div class="hrow">
     <div class="hleft"><button type="button" class="back" id="back">‹ Discussions</button></div>
-    <div class="brand"><span class="blogo" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="dgh" gradientUnits="userSpaceOnUse" x1="14" y1="0" x2="86" y2="0"><stop offset="0" stop-color="#3d8bff"/><stop offset="1" stop-color="#ff9fc4"/></linearGradient></defs><rect width="100" height="100" fill="#0f1320"/><path d="M22 24h56a12 12 0 0 1 12 12v24a12 12 0 0 1-12 12H48l-14 12V72H22a12 12 0 0 1-12-12V36a12 12 0 0 1 12-12z" fill="none" stroke="url(#dgh)" stroke-width="5"/><path d="M664 0H268V302H649Q777 302 865.5 345.0Q954 388 999.0 486.0Q1044 584 1044 745Q1044 906 998.0 1003.5Q952 1101 863.5 1144.5Q775 1188 644 1188H261V1490H664Q891 1490 1055.0 1400.5Q1219 1311 1308.0 1144.0Q1397 977 1397 745Q1397 513 1308.5 345.5Q1220 178 1055.5 89.0Q891 0 664 0ZM469 1490V0H116V1490Z" fill="#3d8bff" transform="translate(17.13 57) scale(0.01172 -0.01172)"/><path d="M36 48c3 0 3-9 6-9s3 18 6 18 3-18 6-18 3 18 6 18 3-9 6-9" fill="none" stroke="url(#dgh)" stroke-width="3.5" stroke-linecap="round"/><path d="M45 120H379Q369 166 356.5 203.5Q344 241 329 269Q299 326 253.5 367.5Q208 409 142 436L198 576Q288 540 353.5 478.5Q419 417 462.5 327.5Q506 238 530 116V0H45Z" fill="#ff9fc4" transform="translate(66.44 58.5) scale(0.03500 -0.03500)"/></svg></span><h1><span class="wm">Derja</span><small><span id="ver" class="ver"></span></small></h1></div>
+    <div class="brand"><span class="blogo" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="dgh" gradientUnits="userSpaceOnUse" x1="14" y1="0" x2="86" y2="0"><stop offset="0" stop-color="#3d8bff"/><stop offset="1" stop-color="#ff9fc4"/></linearGradient></defs><rect width="100" height="100" fill="#0f1320"/><path d="M22 24h56a12 12 0 0 1 12 12v24a12 12 0 0 1-12 12H48l-14 12V72H22a12 12 0 0 1-12-12V36a12 12 0 0 1 12-12z" fill="none" stroke="url(#dgh)" stroke-width="5"/><path d="M664 0H268V302H649Q777 302 865.5 345.0Q954 388 999.0 486.0Q1044 584 1044 745Q1044 906 998.0 1003.5Q952 1101 863.5 1144.5Q775 1188 644 1188H261V1490H664Q891 1490 1055.0 1400.5Q1219 1311 1308.0 1144.0Q1397 977 1397 745Q1397 513 1308.5 345.5Q1220 178 1055.5 89.0Q891 0 664 0ZM469 1490V0H116V1490Z" fill="#3d8bff" transform="translate(17.13 57) scale(0.01172 -0.01172)"/><path d="M36 48c3 0 3-9 6-9s3 18 6 18 3-18 6-18 3 18 6 18 3-9 6-9" fill="none" stroke="url(#dgh)" stroke-width="3.5" stroke-linecap="round"/><path d="M45 120H379Q369 166 356.5 203.5Q344 241 329 269Q299 326 253.5 367.5Q208 409 142 436L198 576Q288 540 353.5 478.5Q419 417 462.5 327.5Q506 238 530 116V0H45Z" fill="#ff9fc4" transform="translate(66.44 58.5) scale(0.03500 -0.03500)"/></svg></span><h1><span class="wm">Derja</span><small><span id="ver" class="ver"></span><span id="offTag" class="offtag" hidden>Gemini coupé</span></small></h1></div>
     <div class="hright"><button class="icon-btn" id="openSettings" aria-label="Réglages">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button></div>
@@ -274,6 +275,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 
     <h3>Clé Gemini</h3>
     <div class="row"><input type="password" id="key" placeholder="Clé Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="saveKey" type="button">Enregistrer</button></div>
+    <label class="tog" style="margin-top:10px"><span>Connexion à Gemini<small id="liveHint">Les répliques sont envoyées pour être traduites</small></span><input type="checkbox" id="optLive"></label>
 
     <h3>Voix reconnues</h3>
     <div class="field">
@@ -347,13 +349,13 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "v44 · 24/10 18:45";
+  const VERSION = "v45 · 24/10 20:30";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
 
   // ---------- Réglages ----------
-  let cfg = { key: "", clean: true, ns: false, spk: false, pause: 0.8, th: 0, balance: null };
+  let cfg = { key: "", off: false, clean: true, ns: false, spk: false, pause: 0.8, th: 0, balance: null };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG) || "{}")); } catch {}
   if (!cfg.key) for (const k of ["derja-bench-chain", "derja-express-v1"]) {
     try { const o = JSON.parse(localStorage.getItem(k) || "{}"); cfg.key = o.key || o.geminiKey || ""; } catch {}
@@ -372,6 +374,18 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   $("closeSettings").onclick = () => { $("sheet").hidden = true; };
   $("sheet").onclick = e => { if (e.target.id === "sheet") $("sheet").hidden = true; };
   const bindBox = (id, k) => { $(id).checked = !!cfg[k]; $(id).onchange = e => { cfg[k] = e.target.checked; save(); if (k === "clean") applyFilter(); }; };
+  // Connexion à Gemini (v45) : coupée = mode test, rien ne part chez Google, aucun jeton consommé.
+  // Mémorisée (cfg.off) pour ne jamais consommer par surprise à la réouverture.
+  const live = () => !!cfg.key && !cfg.off;
+  function showLive() {
+    $("optLive").checked = !cfg.off; $("offTag").hidden = !cfg.off;
+    $("liveHint").textContent = cfg.off ? "Coupée : rien n'est envoyé, aucun jeton consommé" : "Les répliques sont envoyées pour être traduites";
+  }
+  $("optLive").onchange = e => { cfg.off = !e.target.checked; save(); showLive(); renderFeed(); if (!cfg.off) bgTick(); };
+  showLive();
+  // Filet de sécurité : tout appel à l'API Gemini est refusé quand la connexion est coupée
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (u, o) => cfg.off && String(u && u.url || u).includes("generativelanguage.googleapis.com") ? Promise.reject(new Error("Gemini coupé")) : realFetch(u, o);
   bindBox("optClean", "clean"); bindBox("optNs", "ns"); bindBox("optSpk", "spk");
   const showRanges = () => { $("pauseVal").textContent = cfg.pause.toFixed(1) + " s"; };
   $("optPause").value = cfg.pause;
@@ -450,7 +464,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   function releaseWake() { if (!listening && !talk) { try { wake && wake.release(); } catch {} wake = null; } }
 
   async function start() {
-    if (!cfg.key) { setState("Ajoute ta clé Gemini (réglages)", "warn"); $("sheet").hidden = false; return; }
+    if (!cfg.key && !cfg.off) { setState("Ajoute ta clé Gemini (réglages)", "warn"); $("sheet").hidden = false; return; }
     ensureCtx(); // pendant le geste (exigence d'iOS)
     if (!(await openMic())) return;
     resetVad(); listening = true; t0Listen = performance.now();
@@ -532,6 +546,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   let items = []; // messages de la discussion ouverte
   function emit() {
     const s = seg, trailingSec = silence; resetVad();
+    if (cfg.off) return; // Gemini coupé : la réplique est ignorée, rien n'est ajouté à la discussion
     const rate = s.rate, keepTail = Math.round(rate * 0.2);
     const trailing = Math.round(trailingSec * rate);
     const total = s.len, end = Math.max(1, total - Math.max(0, trailing - keepTail)); // blancs de fin coupés (0,2 s gardées)
@@ -883,7 +898,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   const bgQueue = []; let bgBusy = false, inflight = 0;
   const bgPush = fn => { bgQueue.push(fn); bgTick(); };
   async function bgTick() {
-    if (bgBusy || inflight > 0 || !bgQueue.length || !cfg.key) return;
+    if (bgBusy || inflight > 0 || !bgQueue.length || !live()) return;
     bgBusy = true; const fn = bgQueue.shift();
     try { await fn(); } catch {}
     bgBusy = false; setTimeout(bgTick, 50);
@@ -1029,7 +1044,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   async function checkManualDup(v) {
     const cands = gallery.filter(o => o !== v && !(v.notDup || []).includes(o.id) && o.f0 && v.f0 && Math.abs(st(o.f0) - st(v.f0)) <= 4)
       .sort((p, q) => (timbreDist(p.mfcc, v.mfcc) ?? 99) - (timbreDist(q.mfcc, v.mfcc) ?? 99)).slice(0, 12);
-    if (!cands.length || !cfg.key) return;
+    if (!cands.length || !live()) return;
     v.checking = true; renderGallery();
     try {
       await Promise.all([v, ...cands].map(ensureFile));
@@ -1305,7 +1320,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     ensureCtx(); stopPlay();
     if (talk === "speak") { stopVoice(); return; } // toucher pendant la voix : l'arrête, puis l'écoute reprend
     if (talk) return;                               // traduction en cours : on attend
-    if (!cfg.key) { setState("Ajoute ta clé Gemini (réglages)", "warn"); $("sheet").hidden = false; return; }
+    if (!cfg.key && !cfg.off) { setState("Ajoute ta clé Gemini (réglages)", "warn"); $("sheet").hidden = false; return; }
     if (!conv) return;
     resumeAfter = listening;
     if (listening) { // l'écoute continue s'interrompt ; le passage déjà capté part quand même
@@ -1332,6 +1347,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
       items.splice(items.indexOf(it), 1); renderFeed();
       return endTalk(durS < 0.5 ? "Trop court : maintiens Je parle" : "Rien entendu : parle plus près");
     }
+    if (cfg.off) { items.splice(items.indexOf(it), 1); renderFeed(); return endTalk("Gemini coupé : réponse non envoyée"); }
     it.status = "run"; it.dur = durS; saveMsg(it); renderFeed(); renderButtons(); setState("Traduction de ta réponse…", "");
     inflight++;
     try {
@@ -1352,10 +1368,11 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     endTalk();
   }
   // Fin de la réponse : l'écoute continue reprend 0,3 s après la voix si elle était active
+  let msgHold = 0;
   function endTalk(msg) {
     setTimeout(async () => {
       talk = null; talkItem = null;
-      if (resumeAfter) { await start(); resumeAfter = false; renderButtons(); if (msg) setState(msg, "warn"); }
+      if (resumeAfter) { await start(); resumeAfter = false; renderButtons(); if (msg) { setState(msg, "warn"); msgHold = performance.now() + 2500; } }
       else { renderButtons(); closeMic(); releaseWake(); setState(msg || "Arrêté", msg ? "warn" : ""); }
     }, 300);
   }
@@ -1400,8 +1417,9 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     $("nf").style.left = "calc(" + pct(noise) + "% - 1px)";
     if (talk === "rec") setState("Ta réponse · " + (talkLen / talkRate).toFixed(1) + " s", "voice");
     else if (!listening) { /* état fixé ailleurs */ }
+    else if (performance.now() < msgHold) { /* message de fin de « Je parle » laissé 2,5 s quand l'écoute reprend */ }
     else if (clipped) setState("Trop près : saturation", "clip");
-    else if (seg) setState("Parole détectée · " + (seg.len / seg.rate).toFixed(1) + " s", "voice");
+    else if (seg) setState("Parole détectée · " + (seg.len / seg.rate).toFixed(1) + " s" + (cfg.off ? " · Gemini coupé" : ""), "voice");
     else if (level > noise + 3 && !voice) setState("Voix faible : rapproche le téléphone", "warn");
     else setState("Silence", "");
     // Ligne 2 : seuil et micro (en orange si ce n'est pas celui de l'iPhone) ; nombre de traductions à droite de la ligne 1
@@ -1743,7 +1761,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
   });
   $("ctxEdit").addEventListener("blur", () => { if (conv) { conv.context = conv.context.trim(); saveConv(conv); } $("ctxEdit").hidden = true; $("ctxLine").hidden = false; if (conv) renderConvBar(); });
   // Nouvelle discussion : le contexte d'abord, un seul bouton « Commencer »
-  $("newBtn").onclick = () => { if (!cfg.key) { $("sheet").hidden = false; return; } $("newCtx").value = ""; $("newSheet").hidden = false; setTimeout(() => $("newCtx").focus(), 50); };
+  $("newBtn").onclick = () => { if (!cfg.key && !cfg.off) { $("sheet").hidden = false; return; } $("newCtx").value = ""; $("newSheet").hidden = false; setTimeout(() => $("newCtx").focus(), 50); };
   $("newGo").onclick = () => { $("newSheet").hidden = true; newConv($("newCtx").value); };
   $("newSheet").onclick = e => { if (e.target.id === "newSheet") $("newSheet").hidden = true; };
   // Cartes : toucher pour ouvrir ; glisser vers la gauche pour faire apparaître la poubelle

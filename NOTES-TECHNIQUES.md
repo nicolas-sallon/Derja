@@ -313,6 +313,17 @@ Choisie le 24/10 parmi plusieurs maquettes : barres verticales défilantes (reje
 - **Hauteur inchangée.** `.meter` garde 14 px ; le SVG (24 px) déborde de 5 px dessus et dessous, dans la marge tactile existante. Zone du bas mesurée identique (671/173/46) à 390 et 320 px.
 - À l'arrêt du micro, l'onde est effacée et le point revient à gauche. Dans les réglages, la légende montre un ruban fixe (dessiné à l'ouverture, car sa largeur n'est connue qu'à ce moment) et explique l'orange et le point.
 
+## Connexion à Gemini coupée : mode test (banc v45)
+Pour tester la jauge et la détection sans consommer de jetons.
+- **Réglage** : case « Connexion à Gemini » sous la clé, cochée par défaut. On lit dessous : « Coupée : rien n'est envoyé, aucun jeton consommé ». Le réglage est mémorisé dans `cfg.off`, pour ne jamais consommer par surprise à la réouverture. Un libellé orange « Gemini coupé » s'affiche à côté de la version dans la barre de titre (`#offTag`).
+- **Écoute** : le micro, la jauge et la détection marchent ; `emit()` ignore la réplique découpée, donc rien n'est ajouté à la discussion. Le message devient « Parole détectée · x s · Gemini coupé ».
+- **Je parle** : l'enregistrement fonctionne (la jauge passe au vert) ; à la fin, la réplique est retirée et le message dit « Gemini coupé : réponse non envoyée ».
+- **Fond** : `bgTick` et `checkManualDup` attendent `live()` (une clé et la connexion active).
+- **Filet de sécurité** : `window.fetch` est enveloppé ; tant que la connexion est coupée, tout appel à `generativelanguage.googleapis.com` est refusé (« Gemini coupé »). Cela vaut aussi pour l'envoi des voix et l'effacement des fichiers.
+- **Sans clé enregistrée**, la connexion coupée permet quand même de créer une discussion et d'écouter.
+- **Correctif annexe** : quand l'écoute reprend après « Je parle », le message de fin (« Trop court… », « Rien entendu… », « Gemini coupé… ») était effacé à l'image suivante. Il reste maintenant 2,5 s (`msgHold`).
+- **Testé** : connexion coupée sans clé, puis rechargement (réglage gardé), écoute et Je parle → 0 appel, 0 bulle. Rallumée avec une clé → 1 appel, 1 bulle.
+
 ## Zoom et orientation (banc v37)
 - **Pas de zoom :**
   - balise viewport avec `maximum-scale=1, user-scalable=no` ;
