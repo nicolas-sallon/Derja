@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 24/10/2026 (app v2.5, banc v36).
+Mise à jour : 24/10/2026 (app v2.5, banc v37).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -269,6 +269,14 @@ Choix validés avec Nicolas le 24/10.
 - Gemini 3.8 Flash : 0,75 $ par million de jetons en entrée, 3,75 $ par million en sortie.
 - Synthèse vocale : Flash 9 $, Lite 6 $ par million de jetons en sortie.
 - Les prix doublent au 01/01/2027.
+
+## Zoom et orientation (banc v37)
+- **Pas de zoom :**
+  - balise viewport avec `maximum-scale=1, user-scalable=no` ;
+  - `touch-action: manipulation` contre le zoom au double toucher ;
+  - `gesturestart` et `gesturechange` bloqués contre le pincement ;
+  - champs de saisie à 16 px au moins, car iOS zoome automatiquement sur un champ plus petit quand on le touche.
+- **Orientation :** iOS ignore le champ `orientation` du manifeste. `screen.orientation.lock("portrait")` n'est que partiellement pris en charge (16.4+) : il est tenté au premier toucher, sans effet si iOS refuse. La rotation par CSS a été abandonnée (v21 à v25).
 
 ## Essais abandonnés
 - **Affichage retourné / toujours vertical (banc v21 à v25, retiré en v26 = v20).**

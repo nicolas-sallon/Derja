@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -176,6 +176,9 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
 .addp{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
 .muted{color:var(--muted);font-size:13px}
 @media (prefers-reduced-motion:reduce){.meter .fill,.mic{transition:none}.dot{animation:none}}
+/* Pas de zoom : iOS zoome sur un champ dont le texte fait moins de 16 px, et au double toucher */
+input,textarea,select{font-size:16px!important}
+html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 </style>
 </head>
 <body>
@@ -299,7 +302,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v36 · 24/10 11:52";
+  const VERSION = "banc v37 · 24/10 12:05";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -1738,6 +1741,12 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
   });
 
   loadGallery().then(loadConvs);
+
+  // ---------- Pas de zoom, orientation verticale si iOS l'accepte ----------
+  ["gesturestart", "gesturechange"].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false })); // pincer pour zoomer
+  // Double toucher : bloqué par touch-action: manipulation (CSS), sans gêner les touchers rapides
+  // Verrouillage vertical : pris en charge partiellement par iOS (16.4+) ; tenté au premier toucher, sans effet si refusé
+  document.addEventListener("pointerdown", () => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock("portrait").catch(() => {}); } catch {} }, { once: true });
 
   // ---------- Mise à jour ----------
   $("ver").textContent = VERSION;
