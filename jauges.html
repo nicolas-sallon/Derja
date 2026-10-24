@@ -106,12 +106,13 @@ const line = pts => pts.length < 2 ? "" : "M" + pts.map(p => p[0].toFixed(1) + "
 const ampDb = d => Math.pow(Math.max(0, Math.min(1, (d + 62) / 50)), 1.3) * 11; // dB → hauteur de vague (0 à 11 px)
 const DRAW = {
   actuelle(w, end, t) { const pts = [], ph = t * 0.006; for (let x = 0; x <= end; x += 1.5) pts.push([x, MID + Math.sin(x * .55 - ph) * Math.min(11, 2 + x / w * 14) * (0.55 + 0.45 * Math.sin(x * .09)) * taper(x, end)]); return line(pts); },
-  // Oscilloscope amplifié : la forme réelle est ramenée à sa crête (gain automatique),
+  // Oscilloscope amplifié : la forme réelle est agrandie (gain automatique calé sur le volume moyen),
   // puis sa hauteur suit le volume (même échelle que la mémoire du volume) : une voix faible reste petite, une voix normale remplit la jauge.
-  // Coût : une recherche de crête sur ~960 échantillons par image.
+  // Le gain se cale sur le volume moyen (pas sur la crête, que la parole dépasse rarement mais fortement).
   osc(w, end) { const n = Math.min(td.length, Math.round(ctx.sampleRate * 0.02)), o = td.length - n, pts = [];
-    let pk = 1e-4; for (let i = o; i < td.length; i++) { const a = Math.abs(td[i]); if (a > pk) pk = a; }
-    const target = Math.max(1.5, Math.min(11, ampDb(level) * 1.4)) / pk; // voix normale (−30 à −20 dB) : presque toute la hauteur oscGain += (target - oscGain) * 0.3; // gain lissé : pas de saut d'une image à l'autre
+    const rms = Math.max(1e-4, Math.pow(10, level / 20)); // volume moyen déjà calculé : aucun calcul en plus
+    const target = Math.max(1.5, Math.min(11, ampDb(level) * 1.4)) / (rms * 2.2); // voix normale (−30 à −20 dB) : presque toute la hauteur ; les rares pics plus hauts sont écrêtés au bord
+    oscGain += (target - oscGain) * 0.3; // gain lissé : pas de saut d'une image à l'autre
     for (let x = 0; x <= end; x += 1) pts.push([x, MID - td[o + Math.round(x / Math.max(1, end) * (n - 1))] * oscGain * taper(x, end)]); return line(pts); },
   mem(w, end, t) { const pts = [], span = 1500;
     for (let x = 0; x <= end; x += 1.5) { const at = t - (1 - x / Math.max(1, end)) * span; pts.push([x, MID + Math.sin(x * .55) * ampDb(histAt(at)) * taper(x, end)]); } return line(pts); },

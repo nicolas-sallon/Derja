@@ -327,7 +327,7 @@ Pour tester la jauge et la détection sans consommer de jetons.
 ## Page de test des jauges (`jauges.html`, 24/10)
 Une page autonome, sans Gemini, qui compare en direct sur le micro l'onde actuelle (décorative) et trois ondes liées à la voix. Le seuil est commun aux quatre jauges et se règle au doigt ; les couleurs, le point de niveau et le bouton Auto sont les mêmes que dans l'app.
 - **AnalyserNode** (`fftSize 2048`). Niveau = RMS des 20 dernières ms. Bruit de fond : descend vite, remonte lentement. Saturation : crête au-dessus de 0,98, affichée 400 ms.
-- **1 · Oscilloscope** : les échantillons des 20 dernières ms, étirés jusqu'au point, à l'échelle réelle.
+- **1 · Oscilloscope amplifié** : les échantillons des 20 dernières ms, étirés jusqu'au point. Gain automatique calé sur le volume moyen (RMS déjà calculé, aucun calcul en plus) : hauteur visée = `min(11, hauteur de la mémoire du volume × 1,4)` pour un écart de `2,2 × RMS` ; lissé à 30 % par image ; les rares pics plus hauts sont écrêtés au bord. Le calage sur la crête a été essayé puis abandonné : la parole a quelques pics isolés, et la forme restait petite.
 - **2 · Mémoire du volume** : historique `[temps, dB]` sur 1,7 s. Au point x, on lit le volume à `t − (1 − x/fin) × 1,5 s`, interpolé. Hauteur de vague = `((dB + 62) / 50)^1,3 × 11 px` sur une sinusoïde fixe.
 - **3 · Par fréquences** : `getFloatFrequencyData`, de 80 Hz à 6 kHz en échelle logarithmique sur la largeur. Hauteur = `((dB + 95) / 60)^1,3 × 11 px`.
 - Maquette fixe des trois ondes : `scratchpad/ondes6.html` (voix simulée).
