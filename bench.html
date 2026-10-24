@@ -6,9 +6,12 @@
 <meta name="robots" content="noindex">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Banc d'essai Derja</title>
+<meta name="apple-mobile-web-app-title" content="Derja">
+<link rel="apple-touch-icon" href="icons/derja-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/derja-32.png">
+<title>Derja</title>
 <style>
-/* Banc d'essai à l'image de l'app : sous-titres en haut, mode et bouton en bas, réglages et mesures dans la feuille de réglages */
+/* Derja : discussion en tunisien sous-titrée en français, réponses en français dites en tunisien */
 :root{
   --bg:#0b0c0f; --surface:#17181d; --surface-2:#22242b; --line:#2e3038;
   --fg:#f4f5f7; --muted:#9a9ca6; --accent:#3d8bff; --accent-ink:#fff; --me:#3d8bff; --rec:#ff453a;
@@ -54,7 +57,12 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .bub.int.mine{align-self:flex-end}
 h1{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
 h1 small{display:block;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0}
-.ver{font-size:11px;opacity:.7;font-variant-numeric:tabular-nums;margin-left:4px;cursor:pointer}
+.ver{font-size:11px;opacity:.75;font-variant-numeric:tabular-nums;cursor:pointer}
+/* Logo de l'app (bulle, D et د reliés par l'onde) en haut à gauche */
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.blogo{width:40px;height:40px;border-radius:11px;overflow:hidden;flex:none;box-shadow:0 1px 6px rgba(0,0,0,.5)}
+.blogo svg{width:100%;height:100%;display:block}
+.brand h1{font-size:24px;line-height:1.1}
 .icon-btn{appearance:none;border:0;background:var(--surface-2);color:var(--fg);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
@@ -202,7 +210,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 <div class="app">
   <header>
     <div class="hrow">
-    <h1>Derja Express<small>Banc d'essai <span id="ver" class="ver"></span></small></h1>
+    <div class="brand"><span class="blogo" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="dgh" gradientUnits="userSpaceOnUse" x1="14" y1="0" x2="86" y2="0"><stop offset="0" stop-color="#3d8bff"/><stop offset="1" stop-color="#ff9fc4"/></linearGradient></defs><rect width="100" height="100" fill="#0f1320"/><path d="M22 24h56a12 12 0 0 1 12 12v24a12 12 0 0 1-12 12H48l-14 12V72H22a12 12 0 0 1-12-12V36a12 12 0 0 1 12-12z" fill="none" stroke="url(#dgh)" stroke-width="5"/><path d="M664 0H268V302H649Q777 302 865.5 345.0Q954 388 999.0 486.0Q1044 584 1044 745Q1044 906 998.0 1003.5Q952 1101 863.5 1144.5Q775 1188 644 1188H261V1490H664Q891 1490 1055.0 1400.5Q1219 1311 1308.0 1144.0Q1397 977 1397 745Q1397 513 1308.5 345.5Q1220 178 1055.5 89.0Q891 0 664 0ZM469 1490V0H116V1490Z" fill="#3d8bff" transform="translate(17.13 57) scale(0.01172 -0.01172)"/><path d="M36 48c3 0 3-9 6-9s3 18 6 18 3-18 6-18 3 18 6 18 3-9 6-9" fill="none" stroke="url(#dgh)" stroke-width="3.5" stroke-linecap="round"/><path d="M45 120H379Q369 166 356.5 203.5Q344 241 329 269Q299 326 253.5 367.5Q208 409 142 436L198 576Q288 540 353.5 478.5Q419 417 462.5 327.5Q506 238 530 116V0H45Z" fill="#ff9fc4" transform="translate(66.44 58.5) scale(0.03500 -0.03500)"/></svg></span><h1>Derja<small><span id="ver" class="ver"></span></small></h1></div>
     <button class="icon-btn" id="openSettings" aria-label="Réglages">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button>
@@ -323,7 +331,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v41 · 24/10 12:57";
+  const VERSION = "v42 · 24/10 16:19";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";

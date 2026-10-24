@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 24/10/2026 (app v2.5, banc v41).
+Mise à jour : 24/10/2026 (app v2.5, banc v42).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -11,6 +11,7 @@ Mise à jour : 24/10/2026 (app v2.5, banc v41).
   Les clés sont saisies dans les réglages et ne sont gardées que dans le `localStorage` de l'iPhone.
 
 ## Mise à jour et version
+- Depuis la v42 du banc, `VERSION` s'écrit « v42 · jj/mm hh:mm » (sans « banc »), à l'heure de Paris.
 - Chaque page affiche une constante `VERSION` (heure réelle de Tunis).
 - Le détecteur relit la page avec `?check=<horodatage>` et compare `VERSION`. Si elle a changé, il propose de recharger.
 - Le rechargement utilise `?v=<horodatage>` : une adresse jamais vue force GitHub Pages et iOS à contourner leur cache.
@@ -269,6 +270,14 @@ Choix validés avec Nicolas le 24/10.
 - Gemini 3.8 Flash : 0,75 $ par million de jetons en entrée, 3,75 $ par million en sortie.
 - Synthèse vocale : Flash 9 $, Lite 6 $ par million de jetons en sortie.
 - Les prix doublent au 01/01/2027.
+
+## Logo et nom (banc v42)
+- **Nom : Derja.**
+- **Logo** (choisi parmi plusieurs séries d'essais le 24/10) : une bulle de dialogue en contour, avec un dégradé du bleu (`#3d8bff`) au rose (`#ff9fc4`), sur un fond `#0f1320`. Dedans : un « D » latin bleu à gauche (Inter 800) et un « د » arabe rose à droite (Noto Kufi Arabic 700), reliés par une onde sonore arrondie.
+  - Les deux lettres sont **converties en tracés vectoriels** (fontTools) : le logo s'affiche à l'identique sans police installée.
+  - Fichiers : `icons/derja-logo.svg`, `icons/derja-180.png` (icône de l'écran d'accueil, `apple-touch-icon`), `icons/derja-512.png`, `icons/derja-32.png` (onglet).
+  - En haut à gauche de la page : le logo (40 px), « Derja », et la version en petit en dessous. « Banc d'essai » est retiré du titre.
+  - iOS garde l'icône de l'écran d'accueil telle qu'elle était au moment de l'ajout : il faut retirer puis rajouter l'app pour voir la nouvelle.
 
 ## Zone du bas (banc v39)
 - **Retirés :** le sélecteur à 3 cases (Je parle / J'écoute / Écoute continue), puisque seul le mode discussion est gardé, et la ligne d'aide sous la jauge.
