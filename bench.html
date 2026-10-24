@@ -47,7 +47,7 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .welcome p{margin:6px 0 0}
 #newBtn{display:none}
 .home #newBtn{display:flex}
-.home .composer .seg,.home .duo,.home .meter-touch,.home .state,.home .hint{display:none}
+.home .duo,.home .meter-touch,.home .state{display:none}
 .bub.int{--c:var(--mid);display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--muted)}
 .bub.int.mine{align-self:flex-end}
 h1{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
@@ -95,7 +95,6 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .mic.talk{background:color-mix(in srgb,var(--me) 38%,var(--surface));color:#fff}
 .mic.talk.hold{background:var(--me)}
 .mic.talk:disabled{opacity:.6;cursor:default}
-.hint{font-size:12px;color:var(--muted);text-align:center;margin-top:-4px}
 /* Mes répliques : à droite, bleu plein */
 .bub.me{align-self:flex-end;border-left:0;background:var(--me);border-radius:18px 18px 6px 18px;padding:8px 12px}
 .bub.me .tn{color:rgba(255,255,255,.85)}
@@ -112,9 +111,15 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .meter-touch .meter{overflow:visible}
 .meter-touch .th::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:22px;transform:translate(-50%,-50%);border-radius:6px;background:var(--fg);opacity:.9;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 .meter-touch.manual .th,.meter-touch.manual .th::after{background:var(--mid)}
-.thauto{appearance:none;border:1px solid var(--line);background:none;color:var(--fg);border-radius:8px;padding:1px 8px;font:600 12px var(--sans);cursor:pointer;margin-left:6px}
+.thauto{appearance:none;border:1px solid var(--line);background:none;color:var(--fg);border-radius:8px;padding:1px 8px;font:600 12px var(--sans);cursor:pointer;flex:none;height:22px}
 .meter .nf{position:absolute;top:0;bottom:0;width:2px;background:var(--muted);opacity:.6;left:0}
-.state{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.state{display:flex;flex-direction:column;gap:2px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.sl{display:flex;align-items:center;gap:8px;height:20px;min-width:0;overflow:hidden;white-space:nowrap}
+.sl > b,#stateR{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl.sub{height:24px;font-size:12px}
+#pending{flex:none;font-size:12px}
+#stateR .warnmic{color:var(--mid)}
+.thauto.off{visibility:hidden}
 .state b{color:var(--fg);font-weight:600}
 .state b.voice{color:var(--good)} .state b.warn{color:var(--mid)} .state b.clip{color:var(--bad)}
 /* Feuille de réglages */
@@ -214,11 +219,6 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 
   <div class="composer">
     <button type="button" class="mic" id="newBtn">Démarrer une nouvelle discussion</button>
-    <div class="seg" role="group" aria-label="Mode">
-      <button type="button" disabled>Je parle<br>FR → TN</button>
-      <button type="button" disabled>J'écoute<br>TN → FR</button>
-      <button type="button" aria-pressed="true">Écoute<br>continue</button>
-    </div>
     <div class="duo">
       <button type="button" class="mic" id="toggle">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg>
@@ -230,8 +230,11 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
       </button>
     </div>
     <div class="meter-touch" id="meterTouch" role="slider" aria-label="Seuil de parole : fais glisser le trait"><div class="meter"><div class="fill" id="fill"></div><div class="nf" id="nf"></div><div class="th" id="th"></div></div></div>
-    <div class="state"><b id="state">Arrêté</b><span><span id="stateR"></span><button type="button" class="thauto" id="thAuto" hidden>Auto</button></span></div>
-    <div class="hint">Je parle : maintiens appuyé pendant ta phrase. Désactive le mode silencieux pour entendre la voix.</div>
+    <!-- Zone d'état à hauteur fixe : deux lignes qui ne se replient jamais (texte trop long coupé par « … ») -->
+    <div class="state">
+      <div class="sl"><b id="state">Arrêté</b><span id="pending"></span></div>
+      <div class="sl sub"><span id="stateR"></span><button type="button" class="thauto off" id="thAuto">Auto</button></div>
+    </div>
   </div>
 </div>
 
@@ -315,7 +318,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "banc v38 · 24/10 12:17";
+  const VERSION = "banc v39 · 24/10 12:39";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -391,7 +394,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
         const cur = stream.getAudioTracks()[0], curId = cur && cur.getSettings ? cur.getSettings().deviceId : "";
         if (phoneMicId && phoneMicId !== curId) { try { const s2 = await gum({ ...base, deviceId: { exact: phoneMicId } }); stream.getTracks().forEach(t => t.stop()); stream = s2; } catch {} }
       }
-    } catch { stream = null; setState("Micro refusé : autorise-le dans les réglages de Safari.", "warn"); return false; }
+    } catch { stream = null; setState("Micro refusé : autorise-le dans Réglages", "warn"); return false; }
     ensureCtx();
     micLabel = (stream.getAudioTracks()[0] || {}).label || "";
     srcNode = ctx.createMediaStreamSource(stream);
@@ -418,7 +421,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   function releaseWake() { if (!listening && !talk) { try { wake && wake.release(); } catch {} wake = null; } }
 
   async function start() {
-    if (!cfg.key) { setState("Ajoute ta clé Gemini dans les réglages", "warn"); $("sheet").hidden = false; return; }
+    if (!cfg.key) { setState("Ajoute ta clé Gemini (réglages)", "warn"); $("sheet").hidden = false; return; }
     ensureCtx(); // pendant le geste (exigence d'iOS)
     if (!(await openMic())) return;
     resetVad(); listening = true; t0Listen = performance.now();
@@ -453,8 +456,8 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   }
   function showTh() {
     $("th").style.left = "calc(" + pct(thr) + "% - 1px)";
-    $("meterTouch").classList.toggle("manual", thMan != null); $("thAuto").hidden = thMan == null;
-    if (!listening) $("stateR").textContent = thMan != null ? "seuil manuel " + thMan + " dB" : "";
+    $("meterTouch").classList.toggle("manual", thMan != null); $("thAuto").classList.toggle("off", thMan == null); // place toujours réservée
+    if (!micOpen) $("stateR").textContent = thMan != null ? "seuil manuel " + thMan + " dB" : "";
   }
   $("meterTouch").addEventListener("pointerdown", e => { e.preventDefault(); $("meterTouch").setPointerCapture(e.pointerId); setManual(e.clientX); });
   $("meterTouch").addEventListener("pointermove", e => { if ($("meterTouch").hasPointerCapture(e.pointerId)) setManual(e.clientX); });
@@ -1250,7 +1253,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
   // Réponse interrompue (app fermée pendant la traduction) : relancée depuis mon français enregistré, puis dite
   async function retryMe(it) {
     if (talk || !it.blobFr) return;
-    if (listening) { setState("Arrête l'écoute pour relancer ta réponse", "warn"); return; }
+    if (listening) { setState("Arrête l'écoute pour relancer", "warn"); return; }
     ensureCtx();
     it.status = "run"; it.err = ""; renderFeed(); talk = "wait"; renderButtons();
     inflight++;
@@ -1273,7 +1276,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     ensureCtx(); stopPlay();
     if (talk === "speak") { stopVoice(); return; } // toucher pendant la voix : l'arrête, puis l'écoute reprend
     if (talk) return;                               // traduction en cours : on attend
-    if (!cfg.key) { setState("Ajoute ta clé Gemini dans les réglages", "warn"); $("sheet").hidden = false; return; }
+    if (!cfg.key) { setState("Ajoute ta clé Gemini (réglages)", "warn"); $("sheet").hidden = false; return; }
     if (!conv) return;
     resumeAfter = listening;
     if (listening) { // l'écoute continue s'interrompt ; le passage déjà capté part quand même
@@ -1298,7 +1301,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     talk = "wait"; closeMic(); // micro fermé avant la voix : sinon iOS joue le son dans l'écouteur
     if (durS < 0.5 || voiced < 0.3) { // trop court, ou rien entendu : annulé
       items.splice(items.indexOf(it), 1); renderFeed();
-      return endTalk(durS < 0.5 ? "Trop court : maintiens Je parle pendant ta phrase" : "Rien entendu : parle plus près du téléphone");
+      return endTalk(durS < 0.5 ? "Trop court : maintiens Je parle" : "Rien entendu : parle plus près");
     }
     it.status = "run"; it.dur = durS; saveMsg(it); renderFeed(); renderButtons(); setState("Traduction de ta réponse…", "");
     inflight++;
@@ -1312,7 +1315,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     finally { inflight--; }
     saveMsg(it); renderFeed();
     if (it.status === "ok") {
-      talk = "speak"; renderButtons(); setState("Voix tunisienne · touche Je parle pour l'arrêter", "voice");
+      talk = "speak"; renderButtons(); setState("Voix tunisienne en cours", "voice");
       await speakReply(it, () => { it.delay = performance.now() - releasedAt; renderFeed(); });
       saveMsg(it);
     }
@@ -1339,6 +1342,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
 
   // ---------- Affichage ----------
   function setState(t, cls) { $("state").textContent = t; $("state").className = cls || ""; }
+  function showPending() { const n = items.filter(x => x.status === "run").length; $("pending").textContent = n ? n + " en traduction" : ""; }
   function draw() {
     if (!micOpen) { drawing = false; return; }
     const p = pct(level), voice = level >= thr;
@@ -1346,14 +1350,16 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
     $("fill").className = "fill" + (clipped ? " clip" : voice ? " voice" : "");
     showTh();
     $("nf").style.left = "calc(" + pct(noise) + "% - 1px)";
-    const pending = items.filter(x => x.status === "run").length;
     if (talk === "rec") setState("Ta réponse · " + (talkLen / talkRate).toFixed(1) + " s", "voice");
     else if (!listening) { /* état fixé ailleurs */ }
-    else if (clipped) setState("Saturation : trop près du téléphone", "clip");
+    else if (clipped) setState("Trop près : saturation", "clip");
     else if (seg) setState("Parole détectée · " + (seg.len / seg.rate).toFixed(1) + " s", "voice");
-    else if (level > noise + 3 && !voice) setState("Voix trop faible ? Rapproche le téléphone", "warn");
+    else if (level > noise + 3 && !voice) setState("Voix faible : rapproche le téléphone", "warn");
     else setState("Silence", "");
-    $("stateR").textContent = (pending ? pending + " en traduction · " : "") + "seuil " + (thMan != null ? "manuel " : "") + Math.round(thr) + " dB" + (micLabel ? " · " + micLabel : "");
+    // Ligne 2 : seuil et micro (en orange si ce n'est pas celui de l'iPhone) ; nombre de traductions à droite de la ligne 1
+    const micOk = !micLabel || /iphone|intégré|built-in|internal|interne/i.test(micLabel);
+    $("stateR").innerHTML = "seuil " + (thMan != null ? "manuel " : "auto ") + Math.round(thr) + " dB" + (micLabel ? ' · <span class="' + (micOk ? "" : "warnmic") + '">' + esc(micLabel) + "</span>" : "");
+    showPending();
     requestAnimationFrame(draw);
   }
 
@@ -1363,6 +1369,7 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
   function renderFeed() {
     const mn = $("mName"), keepName = mn ? { v: mn.value, f: document.activeElement === mn } : null; // saisie en cours dans le menu, gardée si le fil se met à jour
     if (!conv) { renderHome(); return; }
+    showPending();
     const feed = $("feed"), se = document.scrollingElement, atBottom = se.scrollHeight - se.scrollTop - se.clientHeight < 120;
     let last = null, html = "";
     for (const it of items) {
