@@ -324,6 +324,14 @@ Pour tester la jauge et la détection sans consommer de jetons.
 - **Correctif annexe** : quand l'écoute reprend après « Je parle », le message de fin (« Trop court… », « Rien entendu… », « Gemini coupé… ») était effacé à l'image suivante. Il reste maintenant 2,5 s (`msgHold`).
 - **Testé** : connexion coupée sans clé, puis rechargement (réglage gardé), écoute et Je parle → 0 appel, 0 bulle. Rallumée avec une clé → 1 appel, 1 bulle.
 
+## Page de test des jauges (`jauges.html`, 24/10)
+Une page autonome, sans Gemini, qui compare en direct sur le micro l'onde actuelle (décorative) et trois ondes liées à la voix. Le seuil est commun aux quatre jauges et se règle au doigt ; les couleurs, le point de niveau et le bouton Auto sont les mêmes que dans l'app.
+- **AnalyserNode** (`fftSize 2048`). Niveau = RMS des 20 dernières ms. Bruit de fond : descend vite, remonte lentement. Saturation : crête au-dessus de 0,98, affichée 400 ms.
+- **1 · Oscilloscope** : les échantillons des 20 dernières ms, étirés jusqu'au point, à l'échelle réelle.
+- **2 · Mémoire du volume** : historique `[temps, dB]` sur 1,7 s. Au point x, on lit le volume à `t − (1 − x/fin) × 1,5 s`, interpolé. Hauteur de vague = `((dB + 62) / 50)^1,3 × 11 px` sur une sinusoïde fixe.
+- **3 · Par fréquences** : `getFloatFrequencyData`, de 80 Hz à 6 kHz en échelle logarithmique sur la largeur. Hauteur = `((dB + 95) / 60)^1,3 × 11 px`.
+- Maquette fixe des trois ondes : `scratchpad/ondes6.html` (voix simulée).
+
 ## Zoom et orientation (banc v37)
 - **Pas de zoom :**
   - balise viewport avec `maximum-scale=1, user-scalable=no` ;

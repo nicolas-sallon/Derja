@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Derja · test des jauges</title>
+<link rel="apple-touch-icon" href="icons/derja-180.png">
+<!--
+  Page de test autonome (aucun appel à Gemini) : compare en direct, sur le micro de l'iPhone,
+  l'onde actuelle de la jauge (v45, décorative) et trois façons de la lier à la voix :
+  1 oscilloscope (forme brute des 20 dernières ms), 2 mémoire du volume (1,5 s d'historique),
+  3 par fréquences (80 Hz à gauche → 6 kHz à droite).
+  Même règle de couleur, même point de niveau et même seuil réglable au doigt que dans l'app.
+-->
+<style>
+:root{--bg:#000;--surface:#17181d;--surface-2:#22242b;--line:#2e3038;--fg:#f4f5f7;--muted:#9a9ca6;--quiet:#4a4d57;--good:#30d158;--mid:#ffb340;--bad:#ff6961;--accent:#3d8bff;--sans:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 var(--sans);-webkit-text-size-adjust:100%;touch-action:manipulation}
+body{padding:calc(12px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+h1{font-size:20px;margin:0;background:linear-gradient(90deg,#3d8bff,#ff9fc4);-webkit-background-clip:text;background-clip:text;color:transparent}
+header a{color:var(--muted);font-size:13px;text-decoration:none}
+.intro{color:var(--muted);font-size:13px;margin:0 0 14px}
+.card{background:var(--surface);border-radius:16px;padding:12px 14px 14px;margin-bottom:12px}
+.card b{display:block;font-size:15px}
+.card p{margin:2px 0 10px;color:var(--muted);font-size:12.5px}
+.meter-touch{padding:12px 0;margin:-12px 0;touch-action:none;cursor:ew-resize;-webkit-user-select:none;user-select:none}
+.meter{position:relative;height:14px;--c:var(--quiet)}
+.meter::before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:linear-gradient(90deg,var(--surface-2) 85%,color-mix(in srgb,var(--bad) 30%,var(--surface-2)) 85%)}
+.meter svg{position:absolute;left:0;top:-5px;width:100%;height:24px;overflow:visible;pointer-events:none}
+.meter path{fill:none;stroke:var(--c);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.meter .nf{position:absolute;top:0;bottom:0;width:2px;background:var(--muted);opacity:.6;z-index:1}
+.meter .th{position:absolute;top:-2px;bottom:-2px;width:3px;margin-left:-1.5px;background:var(--fg);border-radius:2px;z-index:2}
+.meter .th::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:22px;transform:translate(-50%,-50%);border-radius:6px;background:inherit;opacity:.9;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.manual .meter .th{background:var(--mid)}
+.meter .lv{position:absolute;top:50%;left:0;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--c);border:1.5px solid var(--surface);box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 28%,transparent);z-index:3;pointer-events:none}
+.meter.weak{--c:var(--mid)}.meter.voice{--c:var(--good)}.meter.clip{--c:var(--bad)}
+.reco{font-size:11px;font-weight:700;color:var(--accent);margin-left:6px}
+.bar{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 18%);padding-top:14px}
+.state{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);height:22px;font-variant-numeric:tabular-nums}
+.msg{font-weight:600;font-size:14px;height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg.voice{color:var(--good)}.msg.warn{color:var(--mid)}.msg.clip{color:var(--bad)}
+.auto{appearance:none;border:1px solid var(--line);background:none;color:var(--fg);border-radius:8px;padding:1px 8px;font:600 12px var(--sans);height:22px}
+.go{width:100%;height:56px;border:0;border-radius:16px;background:var(--accent);color:#fff;font:650 17px var(--sans);margin-top:6px}
+.go.on{background:#ff453a}
+</style>
+</head><body>
+<header><h1>Test des jauges</h1><a href="bench.html">‹ Retour à Derja</a></header>
+<p class="intro">Les quatre jauges écoutent le même micro, en direct. Rien n'est envoyé à Gemini. Parle, chuchote, fais des pauses : regarde laquelle suit le mieux ta voix. Glisse le doigt sur n'importe quelle jauge pour régler le seuil (commun aux quatre).</p>
+
+<div id="cards"></div>
+
+<div class="bar">
+  <div class="state"><span id="thr">seuil auto</span><button class="auto" id="auto" type="button" style="visibility:hidden">Auto</button></div>
+  <div class="msg" id="msg">Touche « Démarrer » pour activer le micro</div>
+  <button class="go" id="go" type="button">Démarrer</button>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const VARIANTS = [
+  ["actuelle", "Actuelle (v45) · décorative", "Seule la longueur suit le volume ; la forme est calculée."],
+  ["osc", "1 · Oscilloscope", "La forme brute du son des 20 dernières millisecondes."],
+  ["mem", "2 · Mémoire du volume", "Hauteur des vagues = volume réel ; au point : maintenant, vers la gauche : la dernière seconde et demie."],
+  ["freq", "3 · Par fréquences", "Graves à gauche, aigus à droite ; hauteur = énergie de chaque bande."],
+];
+$("cards").innerHTML = VARIANTS.map(([k, t, d]) => `<div class="card"><b>${t}${k === "mem" ? '<span class="reco">recommandée</span>' : ""}</b><p>${d}</p>
+  <div class="meter-touch" data-k="${k}"><div class="meter" id="m_${k}"><svg><path id="p_${k}"/></svg><div class="nf"></div><div class="th"></div><div class="lv"></div></div></div></div>`).join("");
+
+// ---------- Audio ----------
+const DB_MIN = -70, DB_MAX = 0, pct = d => Math.max(0, Math.min(1, (d - DB_MIN) / (DB_MAX - DB_MIN)));
+let ctx, an, td, fd, running = false, stream;
+let level = DB_MIN, shown = DB_MIN, noise = -60, thMan = null, peakClip = 0, voiceUntil = 0;
+const hist = []; // [temps ms, dB] pour la mémoire du volume
+async function startMic() {
+  ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume();
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  const src = ctx.createMediaStreamSource(stream);
+  an = ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0.5; an.minDecibels = -100; an.maxDecibels = -20;
+  src.connect(an);
+  td = new Float32Array(an.fftSize); fd = new Float32Array(an.frequencyBinCount);
+  running = true; requestAnimationFrame(frame);
+}
+function stopMic() { running = false; try { stream.getTracks().forEach(t => t.stop()); } catch {} hist.length = 0; level = shown = DB_MIN; drawAll(0); }
+$("go").onclick = async () => {
+  if (running) { stopMic(); $("go").textContent = "Démarrer"; $("go").classList.remove("on"); setMsg("Arrêté", ""); return; }
+  try { await startMic(); $("go").textContent = "Arrêter"; $("go").classList.add("on"); }
+  catch (e) { setMsg("Micro refusé : autorise-le dans Réglages", "warn"); }
+};
+
+// ---------- Seuil (horizontal, commun) ----------
+const thr = () => thMan ?? Math.max(noise + 8, -60);
+function setManual(el, x) { const r = el.getBoundingClientRect(); thMan = Math.round(Math.max(-65, Math.min(-10, DB_MIN + (x - r.left) / r.width * (DB_MAX - DB_MIN)))); }
+document.querySelectorAll(".meter-touch").forEach(el => {
+  el.addEventListener("pointerdown", e => { e.preventDefault(); el.setPointerCapture(e.pointerId); setManual(el, e.clientX); });
+  el.addEventListener("pointermove", e => { if (el.hasPointerCapture(e.pointerId)) setManual(el, e.clientX); });
+});
+$("auto").onclick = () => { thMan = null; };
+
+// ---------- Dessins ----------
+const H = 24, MID = 12, taper = (x, end) => Math.min(1, (end - x) / 10);
+const line = pts => pts.length < 2 ? "" : "M" + pts.map(p => p[0].toFixed(1) + " " + Math.max(1, Math.min(H - 1, p[1])).toFixed(2)).join(" L");
+const ampDb = d => Math.pow(Math.max(0, Math.min(1, (d + 62) / 50)), 1.3) * 11; // dB → hauteur de vague (0 à 11 px)
+const DRAW = {
+  actuelle(w, end, t) { const pts = [], ph = t * 0.006; for (let x = 0; x <= end; x += 1.5) pts.push([x, MID + Math.sin(x * .55 - ph) * Math.min(11, 2 + x / w * 14) * (0.55 + 0.45 * Math.sin(x * .09)) * taper(x, end)]); return line(pts); },
+  osc(w, end) { const n = Math.min(td.length, Math.round(ctx.sampleRate * 0.02)), o = td.length - n, pts = [];
+    for (let x = 0; x <= end; x += 1) pts.push([x, MID - td[o + Math.round(x / Math.max(1, end) * (n - 1))] * 11 / 0.35 * taper(x, end)]); return line(pts); },
+  mem(w, end, t) { const pts = [], span = 1500;
+    for (let x = 0; x <= end; x += 1.5) { const at = t - (1 - x / Math.max(1, end)) * span; pts.push([x, MID + Math.sin(x * .55) * ampDb(histAt(at)) * taper(x, end)]); } return line(pts); },
+  freq(w, end) { const pts = [], binHz = ctx.sampleRate / an.fftSize;
+    for (let x = 0; x <= end; x += 1.5) { const f = 80 * Math.pow(6000 / 80, x / w), i = Math.min(fd.length - 1, Math.round(f / binHz));
+      const a = Math.pow(Math.max(0, Math.min(1, (fd[i] + 95) / 60)), 1.3) * 11; pts.push([x, MID + Math.sin(x * .55) * a * taper(x, end)]); } return line(pts); },
+};
+function histAt(t) { // volume à l'instant t (interpolé), silence avant le début
+  if (!hist.length || t < hist[0][0]) return DB_MIN;
+  let lo = 0, hi = hist.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (hist[m][0] <= t) lo = m; else hi = m; }
+  const a = hist[lo], b = hist[hi]; if (b[0] === a[0]) return a[1]; const k = Math.max(0, Math.min(1, (t - a[0]) / (b[0] - a[0]))); return a[1] + (b[1] - a[1]) * k;
+}
+function setMsg(t, c) { $("msg").textContent = t; $("msg").className = "msg " + (c || ""); }
+function drawAll(t) {
+  const th = thr(), voice = level >= th, clip = performance.now() < peakClip, weak = !voice && level > noise + 3;
+  const talking = voice || performance.now() < voiceUntil;
+  const cls = "meter" + (clip ? " clip" : talking ? " voice" : weak ? " weak" : "");
+  for (const [k] of VARIANTS) {
+    const m = $("m_" + k), w = m.clientWidth || 300, end = pct(shown) * w;
+    m.className = cls; $("p_" + k).setAttribute("d", running ? DRAW[k](w, end, t) : "");
+    m.querySelector(".lv").style.left = (running ? pct(shown) * 100 : 0) + "%";
+    m.querySelector(".th").style.left = pct(th) * 100 + "%";
+    m.querySelector(".nf").style.left = pct(noise) * 100 + "%";
+    m.parentNode.classList.toggle("manual", thMan != null);
+  }
+  $("thr").textContent = "seuil " + (thMan != null ? "manuel " : "auto ") + Math.round(th) + " dB · niveau " + Math.round(level) + " dB";
+  $("auto").style.visibility = thMan != null ? "visible" : "hidden";
+  if (!running) return;
+  if (clip) setMsg("Trop près : saturation", "clip");
+  else if (talking) setMsg("Parole détectée", "voice");
+  else if (weak) setMsg("Voix faible : rapproche le téléphone", "warn");
+  else setMsg("Silence", "");
+}
+
+// ---------- Boucle ----------
+function frame(t) {
+  if (!running) return;
+  an.getFloatTimeDomainData(td); an.getFloatFrequencyData(fd);
+  const n = Math.round(ctx.sampleRate * 0.02); let s = 0, pk = 0;
+  for (let i = td.length - n; i < td.length; i++) { s += td[i] * td[i]; const a = Math.abs(td[i]); if (a > pk) pk = a; }
+  level = 20 * Math.log10(Math.sqrt(s / n) + 1e-9);
+  if (pk > 0.98) peakClip = performance.now() + 400;
+  // bruit de fond : descend vite, remonte lentement (comme dans l'app)
+  noise = level < noise ? noise + (level - noise) * 0.2 : noise + (level - noise) * 0.004;
+  if (level >= thr()) voiceUntil = performance.now() + 500; // petites pauses d'une réplique : reste vert
+  shown += (level - shown) * 0.35;
+  hist.push([t, level]); while (hist.length && hist[0][0] < t - 1700) hist.shift();
+  drawAll(t);
+  requestAnimationFrame(frame);
+}
+drawAll(0);
+</script>
+</body></html>
