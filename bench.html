@@ -124,18 +124,21 @@ main{flex:1;display:flex;flex-direction:column;gap:12px;padding-block:8px 16px}
 .bub.me.typing i{background:#fff}
 .bub.me.wait .fr{font-weight:500;font-style:italic;opacity:.9}
 .meta.me,.tools.me{align-self:flex-end;margin-right:10px;text-align:right}
-/* Jauge : gris = silence / bruit, vert = voix captée, rouge = saturation */
-.meter{position:relative;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--surface-2) 0%,var(--surface-2) 85%,color-mix(in srgb,var(--bad) 25%,var(--surface-2)) 85%);overflow:hidden}
-.meter .fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:7px;background:var(--quiet);transition:width 60ms linear}
-.meter .fill.voice{background:var(--good)}
-.meter .fill.clip{background:var(--bad)}
-.meter .th{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--fg);border-radius:2px;left:0}
+/* Jauge en ruban (v44) : une onde fine jusqu'au niveau capté, terminée par un point lumineux.
+   Couleur = état, comme le message dessous : gris silence/bruit, orange voix faible, vert parole, rouge saturation.
+   La boîte garde 14 px de haut (zone du bas inchangée) ; l'onde déborde de 5 px dessus et dessous. */
+.meter{position:relative;height:14px;--c:var(--quiet)}
+.meter::before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:linear-gradient(90deg,var(--surface-2) 85%,color-mix(in srgb,var(--bad) 30%,var(--surface-2)) 85%)}
+.meter .wave{position:absolute;left:0;top:-5px;width:100%;height:24px;overflow:visible;pointer-events:none}
+.meter .wave path{fill:none;stroke:var(--c);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.meter .lv{position:absolute;top:50%;left:0;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--c);border:1.5px solid var(--bg);box-sizing:border-box;box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 28%,transparent);z-index:3;pointer-events:none}
+.meter.weak{--c:var(--mid)}.meter.voice{--c:var(--good)}.meter.clip{--c:var(--bad)}
+.meter .th{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--fg);border-radius:2px;left:0;z-index:2}
 .meter-touch{padding:12px 0;margin:-12px 0;touch-action:none;cursor:ew-resize;-webkit-user-select:none;user-select:none}
-.meter-touch .meter{overflow:visible}
 .meter-touch .th::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:22px;transform:translate(-50%,-50%);border-radius:6px;background:var(--fg);opacity:.9;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 .meter-touch.manual .th,.meter-touch.manual .th::after{background:var(--mid)}
 .thauto{appearance:none;border:1px solid var(--line);background:none;color:var(--fg);border-radius:8px;padding:1px 8px;font:600 12px var(--sans);cursor:pointer;flex:none;height:22px}
-.meter .nf{position:absolute;top:0;bottom:0;width:2px;background:var(--muted);opacity:.6;left:0}
+.meter .nf{position:absolute;top:0;bottom:0;width:2px;z-index:1;background:var(--muted);opacity:.6;left:0}
 .state{display:flex;flex-direction:column;gap:2px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
 .sl{display:flex;align-items:center;gap:8px;height:20px;min-width:0;overflow:hidden;white-space:nowrap}
 .sl > b,#stateR{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -203,7 +206,7 @@ button.who{appearance:none;border:0;background:none;padding:0;cursor:pointer;tex
 .gsel{margin:4px 0 0 4px}
 .addp{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
 .muted{color:var(--muted);font-size:13px}
-@media (prefers-reduced-motion:reduce){.meter .fill,.mic{transition:none}.dot{animation:none}}
+@media (prefers-reduced-motion:reduce){.mic{transition:none}.dot{animation:none}}
 /* Pas de zoom : iOS zoome sur un champ dont le texte fait moins de 16 px, et au double toucher */
 input,textarea,select{font-size:16px!important}
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -253,7 +256,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
         <span id="talkLabel">Je parle</span>
       </button>
     </div>
-    <div class="meter-touch" id="meterTouch" role="slider" aria-label="Seuil de parole : fais glisser le trait"><div class="meter"><div class="fill" id="fill"></div><div class="nf" id="nf"></div><div class="th" id="th"></div></div></div>
+    <div class="meter-touch" id="meterTouch" role="slider" aria-label="Seuil de parole : fais glisser le trait"><div class="meter" id="meter"><svg class="wave" id="wave" aria-hidden="true"><path id="wavePath"/></svg><div class="nf" id="nf"></div><div class="th" id="th"></div><div class="lv" id="lv"></div></div></div>
     <!-- Zone d'état à hauteur fixe : deux lignes qui ne se replient jamais (texte trop long coupé par « … ») -->
     <div class="state">
       <div class="sl sub"><span id="stateR"></span><button type="button" class="thauto off" id="thAuto">Auto</button></div>
@@ -293,10 +296,12 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 
     <h3>La jauge sonore</h3>
     <div class="field">
-      <div class="meter" aria-hidden="true"><div class="fill voice" style="width:62%"></div><div class="nf" style="left:28%"></div><div class="th" style="left:40%"></div></div>
+      <div class="meter voice" id="legMeter" aria-hidden="true"><svg class="wave"><path id="legWave"/></svg><div class="nf" style="left:28%"></div><div class="th" style="left:40%"></div><div class="lv" style="left:62%"></div></div>
       <div class="legend">
         <span class="sw" style="background:var(--quiet)"></span><span>Gris : silence ou bruit de fond, rien n'est envoyé</span>
+        <span class="sw" style="background:var(--mid)"></span><span>Orange : une voix trop faible, sous le seuil : rapproche le téléphone</span>
         <span class="sw" style="background:var(--good)"></span><span>Vert : une voix est bien captée</span>
+        <span class="sw" style="background:var(--good);width:10px;height:10px;border-radius:50%;justify-self:center"></span><span>Point au bout de l'onde : le niveau capté en ce moment</span>
         <span class="sw" style="background:var(--bad)"></span><span>Rouge : saturation, quelqu'un parle trop près du téléphone</span>
         <span class="sw" style="background:var(--fg);width:4px;justify-self:center"></span><span>Trait blanc : seuil de parole, placé automatiquement au-dessus du bruit de fond. Pose le doigt sur la jauge et fais-le glisser pour le placer toi-même : il devient orange et ne bouge plus. Touche « Auto » pour revenir au réglage automatique.</span>
         <span class="sw" style="background:var(--muted);width:3px;justify-self:center"></span><span>Trait gris : bruit de fond mesuré dans la pièce</span>
@@ -342,7 +347,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const VERSION = "v43 · 24/10 16:36";
+  const VERSION = "v44 · 24/10 18:45";
   const MODEL = "gemini-3.8-flash";
   const PRICE_IN = 0.75, PRICE_OUT = 3.75; // $ par million de tokens (tarif 2026)
   const CFG = "derja-bench-listen";
@@ -363,7 +368,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
   save();
   $("key").value = cfg.key;
   $("saveKey").onclick = () => { cfg.key = $("key").value.trim(); save(); $("saveKey").textContent = "Enregistrée"; renderFeed(); };
-  $("openSettings").onclick = () => { renderStats(); renderGallery(); $("sheet").hidden = false; };
+  $("openSettings").onclick = () => { renderStats(); renderGallery(); $("sheet").hidden = false; $("legWave").setAttribute("d", wavePath($("legMeter").clientWidth || 300, 62, 0)); };
   $("closeSettings").onclick = () => { $("sheet").hidden = true; };
   $("sheet").onclick = e => { if (e.target.id === "sheet") $("sheet").hidden = true; };
   const bindBox = (id, k) => { $(id).checked = !!cfg[k]; $(id).onchange = e => { cfg[k] = e.target.checked; save(); if (k === "clean") applyFilter(); }; };
@@ -440,7 +445,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
     try { srcNode && srcNode.disconnect(); hp && hp.disconnect(); lp && lp.disconnect(); proc && proc.disconnect(); sink && sink.disconnect(); } catch {}
     try { stream && stream.getTracks().forEach(t => t.stop()); } catch {}
     stream = srcNode = proc = sink = null;
-    $("fill").style.width = "0";
+    shown = DB_MIN; drawWave(0, 0); $("lv").style.left = "0";
   }
   function releaseWake() { if (!listening && !talk) { try { wake && wake.release(); } catch {} wake = null; } }
 
@@ -1367,11 +1372,30 @@ Réponds uniquement avec ce JSON : {"francais":"...","arabizi":"...","arabe":"..
   // ---------- Affichage ----------
   function setState(t, cls) { $("state").textContent = t; $("state").className = cls || ""; }
   function showPending() { const n = items.filter(x => x.status === "run").length; $("pending").textContent = n ? n + " en traduction" : ""; }
+  // Ruban : sinusoïde du bord gauche jusqu'au niveau (p en %), amplitude croissante vers la droite (2 → 11 px),
+  // modulée lentement ; elle revient sur l'axe dans les 10 derniers px pour que le point soit centré.
+  // t (ms) fait défiler l'onde ; 0 = immobile (mouvement réduit, légende).
+  let shown = DB_MIN;
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  function wavePath(w, p, t) {
+    const end = w * p / 100, ph = still.matches ? 0 : t * 0.006; let d = "M0 12";
+    for (let x = 1.5; x <= end; x += 1.5) {
+      const a = Math.min(11, 2 + x / w * 14) * (0.55 + 0.45 * Math.sin(x * .09)) * Math.min(1, (end - x) / 10);
+      d += " L" + x.toFixed(1) + " " + (12 + Math.sin(x * .55 - ph) * a).toFixed(2);
+    }
+    return end < 1 ? "" : d;
+  }
+  function drawWave(p, t) { $("wavePath").setAttribute("d", wavePath($("meter").clientWidth || 300, p, t)); }
   function draw() {
     if (!micOpen) { drawing = false; return; }
-    const p = pct(level), voice = level >= thr;
-    $("fill").style.width = p + "%";
-    $("fill").className = "fill" + (clipped ? " clip" : voice ? " voice" : "");
+    const voice = level >= thr;
+    shown += (level - shown) * 0.35; // lissage : le point ne tremble pas
+    const p = pct(shown), weak = !voice && level > noise + 3;
+    // même règle que le message dessous : une réplique en cours reste verte pendant ses petites pauses
+    const talking = voice || talk === "rec" || (listening && seg);
+    $("meter").className = "meter" + (clipped ? " clip" : talking ? " voice" : weak ? " weak" : "");
+    $("lv").style.left = p + "%";
+    drawWave(p, performance.now());
     showTh();
     $("nf").style.left = "calc(" + pct(noise) + "% - 1px)";
     if (talk === "rec") setState("Ta réponse · " + (talkLen / talkRate).toFixed(1) + " s", "voice");

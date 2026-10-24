@@ -304,6 +304,15 @@ Choix validés avec Nicolas le 24/10.
 - **Messages raccourcis :** « Voix faible : rapproche le téléphone », « Trop près : saturation », « Voix tunisienne en cours », « Trop court : maintiens Je parle », « Rien entendu : parle plus près », « Arrête l'écoute pour relancer », « Ajoute ta clé Gemini (réglages) », « Micro refusé : autorise-le dans Réglages ».
 - **Vérifié à 390 et 375 px de large,** sur un parcours complet : écoute, seuil manuel, voix faible, Je parle, traduction, voix, appui trop court, arrêt. Une seule géométrie de la zone a été mesurée du début à la fin. Avec les textes les plus longs injectés, la hauteur ne change pas et les boutons restent à 72 px.
 
+## Jauge en ruban (banc v44)
+Choisie le 24/10 parmi plusieurs maquettes : barres verticales défilantes (rejetées, car le seuil se réglerait verticalement, moins précis), puis cinq jauges horizontales, puis six variantes de ruban, et enfin trois styles de curseur. Retenu : **ruban fin (version 1) + point lumineux (style B)**.
+- **Dessin.** Un `<svg class="wave">` dans `.meter` : une sinusoïde (`wavePath`) part du bord gauche et va jusqu'au niveau capté. Son amplitude passe de 2 à 11 px de gauche à droite et varie lentement. Elle revient sur l'axe dans les 10 derniers px, pour que le point soit centré. Au-delà du niveau, il ne reste que la piste plate de 3 px ; ses 15 derniers % sont teintés de rouge.
+- **Point de niveau `#lv`** : rond de 10 px, de la couleur de l'état, avec une lueur de 4 px (`box-shadow`, 28 %). `z-index:3` : il passe devant le curseur de seuil (2) et le trait du bruit (1), pour qu'on voie toujours le niveau. Le seuil se règle quand même, puisque toute la zone `#meterTouch` réagit au doigt. Rond = niveau, rectangle = seuil.
+- **Couleur = règle du message dessous**, avec la variable CSS `--c` et les classes `weak` / `voice` / `clip` sur `#meter` : gris pour le silence ou le bruit, orange pour une voix au-dessus du bruit (+3 dB) mais sous le seuil, vert pour la parole, rouge pour la saturation. Une réplique en cours (`seg`) ou « Je parle » qui enregistre restent verts pendant leurs petites pauses, comme le message ; sinon l'onde redevenait grise sous « Parole détectée ».
+- **Mouvement.** L'onde défile à chaque image (`requestAnimationFrame`, phase `t × 0,006`). Le point est lissé (`shown += (level − shown) × 0,35`) pour ne pas trembler. Avec « réduire les animations » d'iOS, l'onde ne défile plus.
+- **Hauteur inchangée.** `.meter` garde 14 px ; le SVG (24 px) déborde de 5 px dessus et dessous, dans la marge tactile existante. Zone du bas mesurée identique (671/173/46) à 390 et 320 px.
+- À l'arrêt du micro, l'onde est effacée et le point revient à gauche. Dans les réglages, la légende montre un ruban fixe (dessiné à l'ouverture, car sa largeur n'est connue qu'à ce moment) et explique l'orange et le point.
+
 ## Zoom et orientation (banc v37)
 - **Pas de zoom :**
   - balise viewport avec `maximum-scale=1, user-scalable=no` ;
