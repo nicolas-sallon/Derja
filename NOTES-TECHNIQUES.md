@@ -1,7 +1,7 @@
 # Notes techniques — Derja
 
 Comment chaque fonctionnalité est codée, et pourquoi. À relire avant toute modification.
-Mise à jour : 24/10/2026 (app v2.5, banc v42).
+Mise à jour : 24/10/2026 (app v2.5, banc v43).
 
 ## Fichiers
 - `index.html` : l'application (web app, page unique, sans build). Ajoutée à l'écran d'accueil de l'iPhone.
@@ -278,6 +278,17 @@ Choix validés avec Nicolas le 24/10.
   - Fichiers : `icons/derja-logo.svg`, `icons/derja-180.png` (icône de l'écran d'accueil, `apple-touch-icon`), `icons/derja-512.png`, `icons/derja-32.png` (onglet).
   - En haut à gauche de la page : le logo (40 px), « Derja », et la version en petit en dessous. « Banc d'essai » est retiré du titre.
   - iOS garde l'icône de l'écran d'accueil telle qu'elle était au moment de l'ajout : il faut retirer puis rajouter l'app pour voir la nouvelle.
+
+## Barre de titre (banc v43, proposition « B » retenue le 24/10)
+- **Fond :** un léger dégradé, du bleu nuit `#141a28` en haut au noir de l'app en bas, sur toute la largeur, avec un filet en bas. La bande de la barre d'état d'iOS (`body::before`) est de la même couleur que le haut du dégradé.
+- **Accueil :** le logo (40 px), « Derja » en dégradé bleu → rose comme le logo (`.wm`), la version en petit dessous, et les réglages à droite.
+- **Discussion :**
+  - en haut, « ‹ Discussions » à gauche, le petit logo (28 px) au centre et les réglages à droite ;
+  - le grand en-tête « Derja » disparaît, et la version reste visible sur l'accueil et dans les réglages ;
+  - dessous, le titre centré, modifiable d'un toucher, puis le contexte centré en gris, qui se déplie d'un toucher.
+- **Écartées :**
+  - la barre compacte (A) ;
+  - les étiquettes de voix présentes sous le titre (C) : toucher une étiquette pour retirer une voix n'était pas intuitif, pour un seul toucher gagné.
 
 ## Zone du bas (banc v39)
 - **Retirés :** le sélecteur à 3 cases (Je parle / J'écoute / Écoute continue), puisque seul le mode discussion est gardé, et la ligne d'aide sous la jauge.
